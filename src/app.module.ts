@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { KingdomModule } from './modules/kingdom/kingdom.module';
@@ -50,11 +48,6 @@ import { TelegramModule } from './modules/telegram/telegram.module';
     }),
 
     ScheduleModule.forRoot(),
-
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
-      exclude: ['/api/(.*)'],
-    }),
 
     AuthModule,
     KingdomModule,

@@ -38,14 +38,11 @@ import { TelegramModule } from './modules/telegram/telegram.module';
         }
         return {
           type: 'postgres',
-          host: config.get('DB_HOST', 'localhost'),
-          port: config.get<number>('DB_PORT', 5432),
-          username: config.get('DB_USERNAME', 'postgres'),
-          password: config.get('DB_PASSWORD', 'password'),
-          database: config.get('DB_DATABASE', 'kingdom_wars'),
+          url: config.get('DATABASE_URL'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: false,
+          synchronize: true,
           logging: false,
+          ssl: { rejectUnauthorized: false },
         };
       },
     }),

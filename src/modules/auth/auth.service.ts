@@ -51,10 +51,10 @@ export class AuthService {
 
     if (calculatedHash !== hash) throw new UnauthorizedException('Invalid Telegram data');
 
-    // Check data freshness (5 minutes max)
+    // Check data freshness (24 hours max)
     const authDate = parseInt(params.get('auth_date') || '0', 10);
     const now = Math.floor(Date.now() / 1000);
-    if (now - authDate > 300) throw new UnauthorizedException('Telegram data expired');
+    if (now - authDate > 86400) throw new UnauthorizedException('Telegram data expired');
 
     return Object.fromEntries(params.entries());
   }

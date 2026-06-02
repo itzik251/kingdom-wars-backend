@@ -8,8 +8,8 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'telegram_id', type: 'bigint', unique: true })
-  telegramId: number;
+  @Column({ name: 'telegram_id', type: 'varchar', unique: true })
+  telegramId: string;
 
   @Column({ nullable: true })
   username: string;

@@ -71,7 +71,7 @@ export class AuthService {
     const data = this.validateTelegramData(initData);
     const tgUser = JSON.parse(data.user);
 
-    let user = await this.userRepo.findOne({ where: { telegramId: tgUser.id } });
+    let user = await this.userRepo.findOne({ where: { telegramId: String(tgUser.id) } });
 
     if (!user) {
       user = await this.createNewUser(tgUser, referralCode);
@@ -91,7 +91,7 @@ export class AuthService {
     }
 
     const user = this.userRepo.create({
-      telegramId: tgUser.id,
+      telegramId: String(tgUser.id),
       username: tgUser.username,
       firstName: tgUser.first_name,
       referralCode: this.generateReferralCode(),

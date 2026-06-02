@@ -34,5 +34,13 @@ export declare class BuildingController {
         gemCost: number;
         newLevel: number;
     }>;
+    buildNew(req: any, dto: UpgradeDto): Promise<{
+        building: import("./building.entity").Building;
+        cost: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+    }>;
 }
 export {};

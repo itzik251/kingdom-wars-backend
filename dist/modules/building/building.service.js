@@ -88,6 +88,30 @@ let BuildingService = class BuildingService {
         const base = game_constants_1.BUILDING_BASE_TIMES[type];
         return Math.floor(base * Math.pow(game_constants_1.BUILD_TIME_MULTIPLIER, currentLevel));
     }
+    async buildNew(kingdomId, buildingType) {
+        const [existing, kingdom] = await Promise.all([
+            this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
+            this.kingdomRepo.findOne({ where: { id: kingdomId } }),
+        ]);
+        if (existing)
+            throw new common_1.BadRequestException('Building already exists');
+        const cost = game_constants_1.BUILDING_BASE_COSTS[buildingType];
+        if (!cost)
+            throw new common_1.BadRequestException('Invalid building type');
+        if (kingdom.gold < cost.gold)
+            throw new common_1.BadRequestException('Not enough gold');
+        if (kingdom.wood < cost.wood)
+            throw new common_1.BadRequestException('Not enough wood');
+        if (kingdom.stone < cost.stone)
+            throw new common_1.BadRequestException('Not enough stone');
+        kingdom.gold -= cost.gold;
+        kingdom.wood -= cost.wood;
+        kingdom.stone -= cost.stone;
+        await this.kingdomRepo.save(kingdom);
+        const building = this.buildingRepo.create({ kingdom: { id: kingdomId }, type: buildingType, level: 1 });
+        await this.buildingRepo.save(building);
+        return { building, cost };
+    }
     async getAllUpgradeCosts(kingdomId) {
         const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
         return buildings.map(b => ({

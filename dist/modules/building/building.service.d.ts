@@ -25,6 +25,14 @@ export declare class BuildingService {
         stone: number;
     };
     getBuildTime(type: BuildingType, currentLevel: number): number;
+    buildNew(kingdomId: string, buildingType: BuildingType): Promise<{
+        building: Building;
+        cost: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+    }>;
     getAllUpgradeCosts(kingdomId: string): Promise<{
         type: BuildingType;
         level: number;

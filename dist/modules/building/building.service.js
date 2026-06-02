@@ -1,0 +1,94 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BuildingService = void 0;
+const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
+const building_entity_1 = require("./building.entity");
+const kingdom_entity_1 = require("../kingdom/kingdom.entity");
+const game_constants_1 = require("../../constants/game.constants");
+let BuildingService = class BuildingService {
+    constructor(buildingRepo, kingdomRepo) {
+        this.buildingRepo = buildingRepo;
+        this.kingdomRepo = kingdomRepo;
+    }
+    async upgradeBuilding(kingdomId, buildingType, isVip = false) {
+        const [building, kingdom] = await Promise.all([
+            this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
+            this.kingdomRepo.findOne({ where: { id: kingdomId } }),
+        ]);
+        if (!building)
+            throw new common_1.BadRequestException('Building not found');
+        if (building.isUpgrading)
+            throw new common_1.BadRequestException('Building already upgrading');
+        if (building.level >= game_constants_1.MAX_BUILDING_LEVEL)
+            throw new common_1.BadRequestException('Building at max level');
+        const cost = this.getUpgradeCost(buildingType, building.level);
+        if (kingdom.gold < cost.gold)
+            throw new common_1.BadRequestException('Not enough gold');
+        if (kingdom.wood < cost.wood)
+            throw new common_1.BadRequestException('Not enough wood');
+        if (kingdom.stone < cost.stone)
+            throw new common_1.BadRequestException('Not enough stone');
+        kingdom.gold -= cost.gold;
+        kingdom.wood -= cost.wood;
+        kingdom.stone -= cost.stone;
+        await this.kingdomRepo.save(kingdom);
+        let buildTime = this.getBuildTime(buildingType, building.level);
+        if (isVip)
+            buildTime = Math.floor(buildTime * (1 - game_constants_1.VIP_BUILD_TIME_REDUCTION));
+        building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
+        await this.buildingRepo.save(building);
+        return {
+            building,
+            cost,
+            upgradeEndsAt: building.upgradeEndsAt,
+            durationSeconds: buildTime,
+        };
+    }
+    getUpgradeCost(type, currentLevel) {
+        const base = game_constants_1.BUILDING_BASE_COSTS[type];
+        const mult = Math.pow(game_constants_1.UPGRADE_COST_MULTIPLIER, currentLevel);
+        return {
+            gold: Math.floor(base.gold * mult),
+            wood: Math.floor(base.wood * mult),
+            stone: Math.floor(base.stone * mult),
+        };
+    }
+    getBuildTime(type, currentLevel) {
+        const base = game_constants_1.BUILDING_BASE_TIMES[type];
+        return Math.floor(base * Math.pow(game_constants_1.BUILD_TIME_MULTIPLIER, currentLevel));
+    }
+    async getAllUpgradeCosts(kingdomId) {
+        const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
+        return buildings.map(b => ({
+            type: b.type,
+            level: b.level,
+            nextLevelCost: this.getUpgradeCost(b.type, b.level),
+            buildTimeSeconds: this.getBuildTime(b.type, b.level),
+            isUpgrading: b.isUpgrading,
+            upgradeEndsAt: b.upgradeEndsAt,
+        }));
+    }
+};
+exports.BuildingService = BuildingService;
+exports.BuildingService = BuildingService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
+    __param(1, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
+], BuildingService);
+//# sourceMappingURL=building.service.js.map

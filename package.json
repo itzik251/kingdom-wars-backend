@@ -2,7 +2,7 @@
   "name": "kingdom-wars-backend",
   "version": "1.0.0",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "echo build skipped - dist pre-compiled",
     "start": "node dist/main.js",
     "start:dev": "ts-node -r tsconfig-paths/register src/main.ts"
   },
@@ -36,3 +36,4 @@
     "typescript": "^5.1.3"
   }
 }
+

@@ -28,6 +28,28 @@ export class KingdomService {
       this.unitRepo.find({ where: { kingdom: { id: kingdom.id } } }),
     ]);
 
+    // Complete finished building upgrades
+    const now = new Date();
+    const buildingsToSave = buildings.filter(
+      b => b.upgradeEndsAt && now >= new Date(b.upgradeEndsAt),
+    );
+    for (const b of buildingsToSave) {
+      b.level += 1;
+      b.upgradeEndsAt = null;
+    }
+    if (buildingsToSave.length > 0) await this.buildingRepo.save(buildingsToSave);
+
+    // Complete finished unit training
+    const unitsToSave = units.filter(
+      u => u.trainingEndsAt && now >= new Date(u.trainingEndsAt) && u.trainingCount > 0,
+    );
+    for (const u of unitsToSave) {
+      u.count += u.trainingCount;
+      u.trainingCount = 0;
+      u.trainingEndsAt = null;
+    }
+    if (unitsToSave.length > 0) await this.unitRepo.save(unitsToSave);
+
     const productionRates = this.economyService.getProductionRates(buildings);
 
     return {

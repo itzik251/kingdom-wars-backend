@@ -11,6 +11,7 @@ export declare class ReferralService {
         referredCount: number;
         milestones: ({
             reached: boolean;
+            alreadyClaimed: boolean;
             count: number;
             gems: number;
             label: string;
@@ -18,6 +19,7 @@ export declare class ReferralService {
             hero?: undefined;
         } | {
             reached: boolean;
+            alreadyClaimed: boolean;
             count: number;
             gems: number;
             label: string;
@@ -25,6 +27,7 @@ export declare class ReferralService {
             hero?: undefined;
         } | {
             reached: boolean;
+            alreadyClaimed: boolean;
             count: number;
             gems: number;
             label: string;

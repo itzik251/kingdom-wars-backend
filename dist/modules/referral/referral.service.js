@@ -32,9 +32,11 @@ let ReferralService = class ReferralService {
     async getStats(userId) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
+        const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
         const milestones = MILESTONES.map(m => ({
             ...m,
-            reached: referredCount >= m.count,
+            reached: referredCount >= m.count && !claimedSet.has(m.count),
+            alreadyClaimed: claimedSet.has(m.count),
         }));
         const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'KingdomWarsBot';
         const link = `https://t.me/${botUsername}?start=ref_${user.referralCode}`;
@@ -53,6 +55,11 @@ let ReferralService = class ReferralService {
             return { error: 'milestone not found' };
         if (referredCount < milestone.count)
             return { error: 'not reached yet' };
+        const claimed = user.claimedReferralMilestones ?? [];
+        if (claimed.map(Number).includes(milestoneCount))
+            return { error: 'already claimed' };
+        user.claimedReferralMilestones = [...claimed.map(Number), milestoneCount];
+        await this.userRepo.save(user);
         const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
         if (!kingdom)
             return { error: 'kingdom not found' };

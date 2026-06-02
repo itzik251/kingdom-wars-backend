@@ -8,4 +8,5 @@ export declare class User {
     referredBy: User;
     createdAt: Date;
     lastLogin: Date;
+    claimedReferralMilestones: number[];
 }

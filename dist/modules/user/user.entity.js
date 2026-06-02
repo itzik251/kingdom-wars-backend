@@ -51,6 +51,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'last_login', nullable: true }),
     __metadata("design:type", Date)
 ], User.prototype, "lastLogin", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'claimed_referral_milestones', type: 'simple-array', default: '' }),
+    __metadata("design:type", Array)
+], User.prototype, "claimedReferralMilestones", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

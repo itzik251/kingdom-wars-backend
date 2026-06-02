@@ -4,3 +4,13 @@ dist/
 *.sqlite
 .env
 *.log
+frontend/src/
+frontend/node_modules/
+frontend/dist/
+frontend/.claude/
+frontend/tsconfig.json
+frontend/vite.config.ts
+frontend/index.html
+frontend/package*.json
+frontend/.gitignore
+.claude/

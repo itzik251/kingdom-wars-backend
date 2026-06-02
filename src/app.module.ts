@@ -41,6 +41,7 @@ import { TelegramModule } from './modules/telegram/telegram.module';
           url: config.get('DATABASE_URL'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: true,
+          dropSchema: true,  // ONE-TIME: drop and recreate all tables
           logging: false,
           ssl: { rejectUnauthorized: false },
         };

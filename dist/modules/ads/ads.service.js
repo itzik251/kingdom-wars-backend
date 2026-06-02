@@ -46,6 +46,19 @@ let AdsService = class AdsService {
             await this.kingdomRepo.save(kingdom);
             return { reward: 'gems', gemsAdded: 10 };
         }
+        const resourceBonuses = {
+            gold_bonus: { amount: 500, max: 0, apply: (k, v) => { k.gold = Math.min(k.maxGold, k.gold + v); } },
+            wood_bonus: { amount: 400, max: 0, apply: (k, v) => { k.wood = Math.min(k.maxWood, k.wood + v); } },
+            stone_bonus: { amount: 300, max: 0, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
+            food_bonus: { amount: 200, max: 0, apply: (k, v) => { k.food = Math.min(k.maxFood, k.food + v); } },
+        };
+        if (resourceBonuses[rewardType]) {
+            const { amount, apply } = resourceBonuses[rewardType];
+            const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+            apply(kingdom, amount);
+            await this.kingdomRepo.save(kingdom);
+            return { reward: rewardType, amount };
+        }
     }
     getBoostStatus(userId) {
         const until = boostStore.get(userId);

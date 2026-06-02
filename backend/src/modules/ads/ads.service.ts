@@ -15,7 +15,7 @@ const BOOST_DURATION_HOURS = 1;
 export class AdsService {
   constructor(@InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>) {}
 
-  async claimReward(userId: string, kingdomId: string, rewardType: 'double_production' | 'gems') {
+  async claimReward(userId: string, kingdomId: string, rewardType: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus') {
     const today = new Date().toISOString().split('T')[0];
     const cooldown = adCooldown.get(userId);
 
@@ -40,6 +40,20 @@ export class AdsService {
       kingdom.gems += 10;
       await this.kingdomRepo.save(kingdom);
       return { reward: 'gems', gemsAdded: 10 };
+    }
+
+    const resourceBonuses: Record<string, { amount: number; max: number; apply: (k: Kingdom, v: number) => void }> = {
+      gold_bonus:  { amount: 500, max: 0, apply: (k, v) => { k.gold  = Math.min(k.maxGold,  k.gold  + v); } },
+      wood_bonus:  { amount: 400, max: 0, apply: (k, v) => { k.wood  = Math.min(k.maxWood,  k.wood  + v); } },
+      stone_bonus: { amount: 300, max: 0, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
+      food_bonus:  { amount: 200, max: 0, apply: (k, v) => { k.food  = Math.min(k.maxFood,  k.food  + v); } },
+    };
+    if (resourceBonuses[rewardType]) {
+      const { amount, apply } = resourceBonuses[rewardType];
+      const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+      apply(kingdom, amount);
+      await this.kingdomRepo.save(kingdom);
+      return { reward: rewardType, amount };
     }
   }
 

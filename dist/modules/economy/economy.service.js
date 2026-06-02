@@ -67,8 +67,12 @@ let EconomyService = class EconomyService {
                 continue;
             const baseRate = game_constants_1.BASE_PRODUCTION[key];
             const rate = baseRate * Math.pow(game_constants_1.PRODUCTION_MULTIPLIER, building.level - 1);
-            const resource = key.split('_')[0];
-            result[resource] += rate * hours;
+            const RESOURCE_MAP = {
+                gold_mine: 'gold', lumber_mill: 'wood', stone_quarry: 'stone', farm: 'food',
+            };
+            const resource = RESOURCE_MAP[key];
+            if (resource)
+                result[resource] += rate * hours;
         }
         return result;
     }

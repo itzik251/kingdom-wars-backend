@@ -76,8 +76,11 @@ export class EconomyService {
 
       const baseRate = BASE_PRODUCTION[key];
       const rate = baseRate * Math.pow(PRODUCTION_MULTIPLIER, building.level - 1);
-      const resource = key.split('_')[0] as keyof typeof result;
-      result[resource] += rate * hours;
+      const RESOURCE_MAP: Record<string, string> = {
+        gold_mine: 'gold', lumber_mill: 'wood', stone_quarry: 'stone', farm: 'food',
+      };
+      const resource = RESOURCE_MAP[key];
+      if (resource) result[resource as keyof typeof result] += rate * hours;
     }
 
     return result;

@@ -5,8 +5,8 @@ import { AdsService } from './ads.service';
 import { KingdomService } from '../kingdom/kingdom.service';
 
 class RewardDto {
-  @IsEnum(['double_production', 'gems'])
-  type: 'double_production' | 'gems';
+  @IsEnum(['double_production', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus'])
+  type: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus';
 }
 
 @Controller('ads')

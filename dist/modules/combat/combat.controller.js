@@ -37,6 +37,10 @@ let CombatController = class CombatController {
         const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.combatService.getTargets(myKingdom.kingdom);
     }
+    async getProfile(req, targetId) {
+        const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.combatService.getKingdomProfile(myKingdom.kingdom.id, targetId);
+    }
 };
 exports.CombatController = CombatController;
 __decorate([
@@ -54,6 +58,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CombatController.prototype, "getTargets", null);
+__decorate([
+    (0, common_1.Get)('profile/:kingdomId'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('kingdomId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CombatController.prototype, "getProfile", null);
 exports.CombatController = CombatController = __decorate([
     (0, common_1.Controller)('combat'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

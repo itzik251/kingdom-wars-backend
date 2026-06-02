@@ -72,6 +72,48 @@ let CombatService = class CombatService {
             .limit(20)
             .getMany();
     }
+    async getKingdomProfile(myKingdomId, targetKingdomId) {
+        const [myKingdom, target, targetUnits, targetBuildings] = await Promise.all([
+            this.kingdomRepo.findOne({ where: { id: myKingdomId } }),
+            this.kingdomRepo.findOne({ where: { id: targetKingdomId }, relations: ['user'] }),
+            this.unitRepo.find({ where: { kingdom: { id: targetKingdomId } } }),
+            this.buildingRepo.find({ where: { kingdom: { id: targetKingdomId } } }),
+        ]);
+        if (!target)
+            throw new common_1.BadRequestException('Kingdom not found');
+        const myUnits = await this.unitRepo.find({ where: { kingdom: { id: myKingdomId } } });
+        const wallLevel = targetBuildings.find(b => b.type === building_entity_1.BuildingType.WALL)?.level ?? 0;
+        const myAttackPower = myUnits.reduce((s, u) => s + u.count * (game_constants_1.UNIT_STATS[u.type]?.attackPower ?? 0), 0);
+        const defPower = targetUnits.reduce((s, u) => s + u.count * (game_constants_1.UNIT_STATS[u.type]?.defensePower ?? 0), 0) +
+            wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
+        const lootable = {
+            gold: Math.floor(target.gold * game_constants_1.LOOT_PERCENTAGE),
+            wood: Math.floor(target.wood * game_constants_1.LOOT_PERCENTAGE),
+            stone: Math.floor(target.stone * game_constants_1.LOOT_PERCENTAGE),
+        };
+        const scoreDiff = Math.abs((myKingdom?.score ?? 0) - target.score);
+        const marchSeconds = 30 + Math.floor(scoreDiff / 20);
+        const winChance = myAttackPower > 0 && defPower > 0
+            ? Math.round(Math.min(95, Math.max(5, (myAttackPower / (myAttackPower + defPower)) * 100)))
+            : myAttackPower > 0 ? 90 : 10;
+        return {
+            id: target.id,
+            name: target.name,
+            username: target.user?.username || target.user?.firstName,
+            score: target.score,
+            isShielded: target.isShielded,
+            shieldUntil: target.shieldUntil,
+            resources: { gold: target.gold, wood: target.wood, stone: target.stone },
+            lootable,
+            defPower,
+            myAttackPower,
+            winChance,
+            marchSeconds,
+            wallLevel,
+            armySize: targetUnits.reduce((s, u) => s + u.count, 0),
+            buildings: targetBuildings.map(b => ({ type: b.type, level: b.level })),
+        };
+    }
     simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings) {
         const wallLevel = defenderBuildings.find(b => b.type === building_entity_1.BuildingType.WALL)?.level ?? 0;
         const wallBonus = wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
@@ -121,6 +163,17 @@ let CombatService = class CombatService {
         defender.stone = Math.max(0, defender.stone - report.loot.stone);
         if (report.attackerWins) {
             attacker.score += 10 + Math.floor(report.loot.gold / 100);
+            attacker.winStreak = (attacker.winStreak || 0) + 1;
+            const streakBonus = Math.min(attacker.winStreak * 0.05, 0.5);
+            const bonusGold = Math.floor(report.loot.gold * streakBonus);
+            attacker.gold = Math.min(attacker.maxGold, attacker.gold + bonusGold);
+            report.winStreak = attacker.winStreak;
+            report.streakBonus = bonusGold;
+        }
+        else {
+            attacker.winStreak = 0;
+            report.winStreak = 0;
+            report.streakBonus = 0;
         }
         defender.shieldUntil = new Date(Date.now() + game_constants_1.POST_ATTACK_SHIELD_HOURS * 3_600_000);
         await this.kingdomRepo.save([attacker, defender]);

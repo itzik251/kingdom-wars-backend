@@ -14,6 +14,7 @@ export declare class Kingdom {
     maxFood: number;
     shieldUntil: Date;
     score: number;
+    winStreak: number;
     lastResourceTick: Date;
     createdAt: Date;
     get isShielded(): boolean;

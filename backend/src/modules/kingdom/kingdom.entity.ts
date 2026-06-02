@@ -49,6 +49,9 @@ export class Kingdom {
   @Column({ default: 0 })
   score: number;
 
+  @Column({ name: 'win_streak', default: 0 })
+  winStreak: number;
+
   @Column({ name: 'last_resource_tick', nullable: true })
   lastResourceTick: Date;
 

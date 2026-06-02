@@ -43,6 +43,14 @@ let KingdomService = class KingdomService {
         for (const b of buildingsToSave) {
             b.level += 1;
             b.upgradeEndsAt = null;
+            if (b.type === 'town_hall') {
+                const mult = 1 + (b.level - 1) * 0.3;
+                updated.maxGold = Math.floor(5000 * mult);
+                updated.maxWood = Math.floor(4000 * mult);
+                updated.maxStone = Math.floor(3000 * mult);
+                updated.maxFood = Math.floor(2000 * mult);
+                await this.kingdomRepo.save(updated);
+            }
         }
         if (buildingsToSave.length > 0)
             await this.buildingRepo.save(buildingsToSave);

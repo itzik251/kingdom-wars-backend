@@ -88,6 +88,17 @@ let EconomyService = class EconomyService {
                 building.level += 1;
                 building.upgradeEndsAt = null;
                 await this.buildingRepo.save(building);
+                if (building.type === building_entity_1.BuildingType.TOWN_HALL) {
+                    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+                    if (kingdom) {
+                        const mult = 1 + (building.level - 1) * 0.3;
+                        kingdom.maxGold = Math.floor(5000 * mult);
+                        kingdom.maxWood = Math.floor(4000 * mult);
+                        kingdom.maxStone = Math.floor(3000 * mult);
+                        kingdom.maxFood = Math.floor(2000 * mult);
+                        await this.kingdomRepo.save(kingdom);
+                    }
+                }
             }
         }
     }

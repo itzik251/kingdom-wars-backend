@@ -26,6 +26,8 @@ export interface BattleReport {
   loot: { gold: number; wood: number; stone: number };
   attackerLosses: Record<string, number>;
   defenderLosses: Record<string, number>;
+  winStreak?: number;
+  streakBonus?: number;
 }
 
 @Injectable()
@@ -84,6 +86,56 @@ export class CombatService {
       .orderBy('RANDOM()')
       .limit(20)
       .getMany();
+  }
+
+  async getKingdomProfile(myKingdomId: string, targetKingdomId: string) {
+    const [myKingdom, target, targetUnits, targetBuildings] = await Promise.all([
+      this.kingdomRepo.findOne({ where: { id: myKingdomId } }),
+      this.kingdomRepo.findOne({ where: { id: targetKingdomId }, relations: ['user'] }),
+      this.unitRepo.find({ where: { kingdom: { id: targetKingdomId } } }),
+      this.buildingRepo.find({ where: { kingdom: { id: targetKingdomId } } }),
+    ]);
+    if (!target) throw new BadRequestException('Kingdom not found');
+
+    const myUnits = await this.unitRepo.find({ where: { kingdom: { id: myKingdomId } } });
+
+    const wallLevel = targetBuildings.find(b => b.type === BuildingType.WALL)?.level ?? 0;
+    const myAttackPower = myUnits.reduce((s, u) => s + u.count * (UNIT_STATS[u.type]?.attackPower ?? 0), 0);
+    const defPower =
+      targetUnits.reduce((s, u) => s + u.count * (UNIT_STATS[u.type]?.defensePower ?? 0), 0) +
+      wallLevel * WALL_DEFENSE_BONUS_PER_LEVEL;
+
+    const lootable = {
+      gold:  Math.floor(target.gold  * LOOT_PERCENTAGE),
+      wood:  Math.floor(target.wood  * LOOT_PERCENTAGE),
+      stone: Math.floor(target.stone * LOOT_PERCENTAGE),
+    };
+
+    // Simulated march time: 30 seconds base + score difference factor
+    const scoreDiff = Math.abs((myKingdom?.score ?? 0) - target.score);
+    const marchSeconds = 30 + Math.floor(scoreDiff / 20);
+
+    const winChance = myAttackPower > 0 && defPower > 0
+      ? Math.round(Math.min(95, Math.max(5, (myAttackPower / (myAttackPower + defPower)) * 100)))
+      : myAttackPower > 0 ? 90 : 10;
+
+    return {
+      id: target.id,
+      name: target.name,
+      username: target.user?.username || target.user?.firstName,
+      score: target.score,
+      isShielded: target.isShielded,
+      shieldUntil: target.shieldUntil,
+      resources: { gold: target.gold, wood: target.wood, stone: target.stone },
+      lootable,
+      defPower,
+      myAttackPower,
+      winChance,
+      marchSeconds,
+      wallLevel,
+      armySize: targetUnits.reduce((s, u) => s + u.count, 0),
+      buildings: targetBuildings.map(b => ({ type: b.type, level: b.level })),
+    };
   }
 
   private simulate(
@@ -162,6 +214,18 @@ export class CombatService {
 
     if (report.attackerWins) {
       attacker.score += 10 + Math.floor(report.loot.gold / 100);
+
+      // Victory streak — up to 50% bonus loot
+      attacker.winStreak = (attacker.winStreak || 0) + 1;
+      const streakBonus = Math.min(attacker.winStreak * 0.05, 0.5);
+      const bonusGold = Math.floor(report.loot.gold * streakBonus);
+      attacker.gold = Math.min(attacker.maxGold, attacker.gold + bonusGold);
+      report.winStreak = attacker.winStreak;
+      report.streakBonus = bonusGold;
+    } else {
+      attacker.winStreak = 0;
+      report.winStreak = 0;
+      report.streakBonus = 0;
     }
 
     defender.shieldUntil = new Date(Date.now() + POST_ATTACK_SHIELD_HOURS * 3_600_000);

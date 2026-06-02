@@ -76,6 +76,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Kingdom.prototype, "score", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'win_streak', default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "winStreak", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'last_resource_tick', nullable: true }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "lastResourceTick", void 0);

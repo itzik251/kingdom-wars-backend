@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, Query, Param } from '@nestjs/common';
 import { IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CombatService } from './combat.service';
@@ -28,5 +28,12 @@ export class CombatController {
   async getTargets(@Request() req) {
     const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.combatService.getTargets(myKingdom.kingdom);
+  }
+
+  // Full intel profile for a target kingdom before attacking
+  @Get('profile/:kingdomId')
+  async getProfile(@Request() req, @Param('kingdomId') targetId: string) {
+    const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.combatService.getKingdomProfile(myKingdom.kingdom.id, targetId);
   }
 }

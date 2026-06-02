@@ -32,6 +32,12 @@ export class AdsService {
     if (rewardType === 'double_production') {
       const until = new Date(Date.now() + BOOST_DURATION_HOURS * 3_600_000);
       boostStore.set(userId, until);
+      // Persist on the kingdom so the economy tick (cron) actually doubles production
+      const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+      if (kingdom) {
+        kingdom.productionBoostUntil = until;
+        await this.kingdomRepo.save(kingdom);
+      }
       return { reward: 'double_production', boostUntil: until, adsRemainingToday: MAX_ADS_PER_DAY - (adCooldown.get(userId)?.count || 0) };
     }
 

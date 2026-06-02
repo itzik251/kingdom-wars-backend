@@ -2,5 +2,13 @@ import { LeaderboardService } from './leaderboard.service';
 export declare class LeaderboardController {
     private leaderboardService;
     constructor(leaderboardService: LeaderboardService);
-    getTop(): Promise<import("../kingdom/kingdom.entity").Kingdom[]>;
+    getTop(): Promise<{
+        id: string;
+        rank: number;
+        kingdomName: string;
+        username: string;
+        avatarUrl: string;
+        score: number;
+        isShielded: boolean;
+    }[]>;
 }

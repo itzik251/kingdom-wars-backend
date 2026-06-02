@@ -16,6 +16,7 @@ export declare class Kingdom {
     score: number;
     winStreak: number;
     lastResourceTick: Date;
+    productionBoostUntil: Date;
     createdAt: Date;
     get isShielded(): boolean;
 }

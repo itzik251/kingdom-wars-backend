@@ -41,16 +41,26 @@ let UnitsService = class UnitsService {
         if (barracks.level < stats.requiredBarracksLevel) {
             throw new common_1.BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
         }
+        let unitRow = unit;
+        if (!unitRow) {
+            unitRow = this.unitRepo.create({
+                kingdom: { id: kingdomId },
+                type: unitType,
+                count: 0,
+                trainingCount: 0,
+                trainingEndsAt: null,
+            });
+        }
         const totalGold = stats.goldCost * amount;
         if (kingdom.gold < totalGold)
             throw new common_1.BadRequestException('Not enough gold');
         kingdom.gold -= totalGold;
         await this.kingdomRepo.save(kingdom);
         const trainingSeconds = stats.trainingTime * amount;
-        unit.trainingCount = amount;
-        unit.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
-        await this.unitRepo.save(unit);
-        return { unit, trainingEndsAt: unit.trainingEndsAt, durationSeconds: trainingSeconds };
+        unitRow.trainingCount = amount;
+        unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
+        await this.unitRepo.save(unitRow);
+        return { unit: unitRow, trainingEndsAt: unitRow.trainingEndsAt, durationSeconds: trainingSeconds };
     }
     getAvailableUnits(barracksLevel) {
         return Object.entries(game_constants_1.UNIT_STATS)

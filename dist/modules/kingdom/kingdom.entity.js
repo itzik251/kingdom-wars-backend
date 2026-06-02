@@ -84,6 +84,10 @@ __decorate([
     __metadata("design:type", Date)
 ], Kingdom.prototype, "lastResourceTick", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'production_boost_until', nullable: true }),
+    __metadata("design:type", Date)
+], Kingdom.prototype, "productionBoostUntil", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "createdAt", void 0);

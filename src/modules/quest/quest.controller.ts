@@ -23,7 +23,7 @@ export class QuestController {
     return this.questService.getWeeklyQuests(kingdom.id);
   }
 
-  @Post(':id/claim')
+  @Post('claim/:id')
   async claim(@Request() req, @Param('id') questId: string) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.questService.claimReward(kingdom.id, questId);

@@ -22,13 +22,26 @@ let LeaderboardService = class LeaderboardService {
         this.kingdomRepo = kingdomRepo;
     }
     async getTop(limit = 50) {
-        return this.kingdomRepo
+        const rows = await this.kingdomRepo
             .createQueryBuilder('k')
             .leftJoinAndSelect('k.user', 'u')
-            .select(['k.id', 'k.name', 'k.score', 'u.username', 'u.firstName', 'u.avatarUrl'])
+            .select([
+            'k.id', 'k.name', 'k.score', 'k.shieldUntil',
+            'u.username', 'u.firstName', 'u.avatarUrl',
+        ])
             .orderBy('k.score', 'DESC')
             .limit(limit)
             .getMany();
+        const now = new Date();
+        return rows.map((k, i) => ({
+            id: k.id,
+            rank: i + 1,
+            kingdomName: k.name,
+            username: k.user?.username || k.user?.firstName || null,
+            avatarUrl: k.user?.avatarUrl || null,
+            score: k.score,
+            isShielded: !!(k.shieldUntil && now < new Date(k.shieldUntil)),
+        }));
     }
 };
 exports.LeaderboardService = LeaderboardService;

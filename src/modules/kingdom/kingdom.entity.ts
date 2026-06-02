@@ -55,6 +55,9 @@ export class Kingdom {
   @Column({ name: 'last_resource_tick', nullable: true })
   lastResourceTick: Date;
 
+  @Column({ name: 'production_boost_until', nullable: true })
+  productionBoostUntil: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

@@ -51,7 +51,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], QuestController.prototype, "weekly", null);
 __decorate([
-    (0, common_1.Post)(':id/claim'),
+    (0, common_1.Post)('claim/:id'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),

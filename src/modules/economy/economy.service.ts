@@ -51,7 +51,10 @@ export class EconomyService {
     const upkeep = this.calculateUpkeep(units, hoursElapsed);
     const isWeak = kingdom.score < 1000;
 
-    const bonus = isWeak ? 1 + WEAK_PLAYER_RESOURCE_BONUS : 1;
+    const weakBonus = isWeak ? WEAK_PLAYER_RESOURCE_BONUS : 0;
+    const boostActive = kingdom.productionBoostUntil && now < new Date(kingdom.productionBoostUntil);
+    const boostBonus = boostActive ? 1 : 0; // double_production = +100%
+    const bonus = 1 + weakBonus + boostBonus;
 
     kingdom.gold  = Math.min(kingdom.maxGold,  Math.floor(kingdom.gold  + production.gold  * bonus));
     kingdom.wood  = Math.min(kingdom.maxWood,  Math.floor(kingdom.wood  + production.wood  * bonus));

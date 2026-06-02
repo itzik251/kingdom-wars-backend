@@ -38,6 +38,11 @@ let AdsService = class AdsService {
         if (rewardType === 'double_production') {
             const until = new Date(Date.now() + BOOST_DURATION_HOURS * 3_600_000);
             boostStore.set(userId, until);
+            const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+            if (kingdom) {
+                kingdom.productionBoostUntil = until;
+                await this.kingdomRepo.save(kingdom);
+            }
             return { reward: 'double_production', boostUntil: until, adsRemainingToday: MAX_ADS_PER_DAY - (adCooldown.get(userId)?.count || 0) };
         }
         if (rewardType === 'gems') {
@@ -47,10 +52,10 @@ let AdsService = class AdsService {
             return { reward: 'gems', gemsAdded: 10 };
         }
         const resourceBonuses = {
-            gold_bonus: { amount: 500, max: 0, apply: (k, v) => { k.gold = Math.min(k.maxGold, k.gold + v); } },
-            wood_bonus: { amount: 400, max: 0, apply: (k, v) => { k.wood = Math.min(k.maxWood, k.wood + v); } },
-            stone_bonus: { amount: 300, max: 0, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
-            food_bonus: { amount: 200, max: 0, apply: (k, v) => { k.food = Math.min(k.maxFood, k.food + v); } },
+            gold_bonus: { amount: 500, apply: (k, v) => { k.gold = Math.min(k.maxGold, k.gold + v); } },
+            wood_bonus: { amount: 400, apply: (k, v) => { k.wood = Math.min(k.maxWood, k.wood + v); } },
+            stone_bonus: { amount: 300, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
+            food_bonus: { amount: 200, apply: (k, v) => { k.food = Math.min(k.maxFood, k.food + v); } },
         };
         if (resourceBonuses[rewardType]) {
             const { amount, apply } = resourceBonuses[rewardType];

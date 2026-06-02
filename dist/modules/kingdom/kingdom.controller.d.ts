@@ -10,4 +10,11 @@ export declare class KingdomController {
         shieldActive: boolean;
         shieldUntil: Date;
     }>;
+    buyShield(req: any): Promise<{
+        shieldUntil: Date;
+    }>;
+    expandStorage(req: any): Promise<{
+        maxGold: number;
+        maxWood: number;
+    }>;
 }

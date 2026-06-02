@@ -15,6 +15,10 @@ export declare class BuildingService {
         upgradeEndsAt: Date;
         durationSeconds: number;
     }>;
+    speedUpUpgrade(kingdomId: string, buildingType: BuildingType): Promise<{
+        gemCost: number;
+        newLevel: number;
+    }>;
     getUpgradeCost(type: BuildingType, currentLevel: number): {
         gold: number;
         wood: number;

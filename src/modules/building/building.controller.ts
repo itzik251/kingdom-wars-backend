@@ -29,4 +29,10 @@ export class BuildingController {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.buildingService.upgradeBuilding(kingdom.id, dto.type);
   }
+
+  @Post('speedup')
+  async speedUp(@Request() req, @Body() dto: UpgradeDto) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.buildingService.speedUpUpgrade(kingdom.id, dto.type);
+  }
 }

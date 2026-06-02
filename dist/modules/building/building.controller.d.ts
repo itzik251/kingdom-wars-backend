@@ -30,5 +30,9 @@ export declare class BuildingController {
         upgradeEndsAt: Date;
         durationSeconds: number;
     }>;
+    speedUp(req: any, dto: UpgradeDto): Promise<{
+        gemCost: number;
+        newLevel: number;
+    }>;
 }
 export {};

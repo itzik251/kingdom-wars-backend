@@ -58,6 +58,23 @@ let BuildingService = class BuildingService {
             durationSeconds: buildTime,
         };
     }
+    async speedUpUpgrade(kingdomId, buildingType) {
+        const [building, kingdom] = await Promise.all([
+            this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
+            this.kingdomRepo.findOne({ where: { id: kingdomId } }),
+        ]);
+        if (!building?.upgradeEndsAt || new Date() > new Date(building.upgradeEndsAt))
+            throw new common_1.BadRequestException('Building is not upgrading');
+        const secsLeft = Math.max(0, (new Date(building.upgradeEndsAt).getTime() - Date.now()) / 1000);
+        const gemCost = Math.max(1, Math.ceil(secsLeft / 60));
+        if (kingdom.gems < gemCost)
+            throw new common_1.BadRequestException(`Need ${gemCost} gems`);
+        kingdom.gems -= gemCost;
+        building.level += 1;
+        building.upgradeEndsAt = null;
+        await Promise.all([this.kingdomRepo.save(kingdom), this.buildingRepo.save(building)]);
+        return { gemCost, newLevel: building.level };
+    }
     getUpgradeCost(type, currentLevel) {
         const base = game_constants_1.BUILDING_BASE_COSTS[type];
         const mult = Math.pow(game_constants_1.UPGRADE_COST_MULTIPLIER, currentLevel);

@@ -23,6 +23,14 @@ let KingdomController = class KingdomController {
     getMyKingdom(req) {
         return this.kingdomService.getKingdomByUser(req.user.userId);
     }
+    async buyShield(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.buyShield(kingdom.id);
+    }
+    async expandStorage(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.expandStorage(kingdom.id);
+    }
 };
 exports.KingdomController = KingdomController;
 __decorate([
@@ -32,6 +40,20 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], KingdomController.prototype, "getMyKingdom", null);
+__decorate([
+    (0, common_1.Post)('shield'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "buyShield", null);
+__decorate([
+    (0, common_1.Post)('expand-storage'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "expandStorage", null);
 exports.KingdomController = KingdomController = __decorate([
     (0, common_1.Controller)('kingdom'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

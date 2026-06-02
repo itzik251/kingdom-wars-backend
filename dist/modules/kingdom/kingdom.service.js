@@ -64,6 +64,29 @@ let KingdomService = class KingdomService {
             shieldUntil: updated.shieldUntil,
         };
     }
+    async buyShield(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        const SHIELD_COST = 50;
+        if (kingdom.gems < SHIELD_COST)
+            throw new common_1.BadRequestException('Need 50 gems');
+        kingdom.gems -= SHIELD_COST;
+        kingdom.shieldUntil = new Date(Date.now() + 24 * 3600 * 1000);
+        await this.kingdomRepo.save(kingdom);
+        return { shieldUntil: kingdom.shieldUntil };
+    }
+    async expandStorage(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        const COST = 100;
+        if (kingdom.gems < COST)
+            throw new common_1.BadRequestException('Need 100 gems');
+        kingdom.gems -= COST;
+        kingdom.maxGold = Math.floor(kingdom.maxGold * 1.5);
+        kingdom.maxWood = Math.floor(kingdom.maxWood * 1.5);
+        kingdom.maxStone = Math.floor(kingdom.maxStone * 1.5);
+        kingdom.maxFood = Math.floor(kingdom.maxFood * 1.5);
+        await this.kingdomRepo.save(kingdom);
+        return { maxGold: kingdom.maxGold, maxWood: kingdom.maxWood };
+    }
 };
 exports.KingdomService = KingdomService;
 exports.KingdomService = KingdomService = __decorate([

@@ -38,6 +38,10 @@ let BuildingController = class BuildingController {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.buildingService.upgradeBuilding(kingdom.id, dto.type);
     }
+    async speedUp(req, dto) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.buildingService.speedUpUpgrade(kingdom.id, dto.type);
+    }
 };
 exports.BuildingController = BuildingController;
 __decorate([
@@ -55,6 +59,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, UpgradeDto]),
     __metadata("design:returntype", Promise)
 ], BuildingController.prototype, "upgrade", null);
+__decorate([
+    (0, common_1.Post)('speedup'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, UpgradeDto]),
+    __metadata("design:returntype", Promise)
+], BuildingController.prototype, "speedUp", null);
 exports.BuildingController = BuildingController = __decorate([
     (0, common_1.Controller)('buildings'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

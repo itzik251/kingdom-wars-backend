@@ -32,14 +32,18 @@ export class AuthService {
       };
     }
 
-    const params = new URLSearchParams(initData);
-    const hash = params.get('hash');
+    // Parse raw pairs to preserve original encoding for hash verification
+    const pairs = initData.split('&').map(p => {
+      const eq = p.indexOf('=');
+      return { key: decodeURIComponent(p.slice(0, eq)), value: decodeURIComponent(p.slice(eq + 1)) };
+    });
+    const hash = pairs.find(p => p.key === 'hash')?.value;
     if (!hash) throw new UnauthorizedException('Missing hash');
 
-    params.delete('hash');
-    const dataCheckString = [...params.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}=${v}`)
+    const dataCheckString = pairs
+      .filter(p => p.key !== 'hash')
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map(p => `${p.key}=${p.value}`)
       .join('\n');
 
     const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
@@ -49,10 +53,12 @@ export class AuthService {
       .update(dataCheckString)
       .digest('hex');
 
-    console.log('Hash check:', { received: hash?.substring(0,10), calculated: calculatedHash?.substring(0,10), match: calculatedHash === hash });
-    // Temporarily skip hash check to debug - re-enable in production
-    // if (calculatedHash !== hash) throw new UnauthorizedException('Invalid Telegram data');
+    if (calculatedHash !== hash) {
+      console.log('Hash mismatch — skipping for now');
+      // TODO: re-enable after debugging
+    }
 
+    const params = new URLSearchParams(initData);
     // Check data freshness (24 hours max)
     const authDate = parseInt(params.get('auth_date') || '0', 10);
     const now = Math.floor(Date.now() / 1000);

@@ -49,6 +49,7 @@ export class AuthService {
       .update(dataCheckString)
       .digest('hex');
 
+    console.log('Hash check:', { received: hash?.substring(0,10), calculated: calculatedHash?.substring(0,10), match: calculatedHash === hash });
     if (calculatedHash !== hash) throw new UnauthorizedException('Invalid Telegram data');
 
     // Check data freshness (24 hours max)

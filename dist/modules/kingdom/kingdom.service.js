@@ -78,6 +78,8 @@ let KingdomService = class KingdomService {
             shieldActive: updated.isShielded,
             shieldUntil: updated.shieldUntil,
             isVip: !!updated.isVip,
+            workers: updated.workers || 0,
+            maxWorkers: updated.maxWorkers || 5,
         };
     }
     async buyShield(kingdomId) {
@@ -102,6 +104,31 @@ let KingdomService = class KingdomService {
         kingdom.maxFood = Math.floor(kingdom.maxFood * 1.5);
         await this.kingdomRepo.save(kingdom);
         return { maxGold: kingdom.maxGold, maxWood: kingdom.maxWood };
+    }
+    async hireWorker(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        const thBuilding = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: 'town_hall' } });
+        const thLevel = (thBuilding === null || thBuilding === void 0 ? void 0 : thBuilding.level) || 1;
+        const maxWorkers = 3 + thLevel;
+        if ((kingdom.workers || 0) >= maxWorkers)
+            throw new common_1.BadRequestException(`מקסימום ${maxWorkers} עובדים (שדרג בית עיר)`);
+        const HIRE_COST = 50;
+        if (kingdom.gold < HIRE_COST)
+            throw new common_1.BadRequestException('דרוש 50 זהב לגיוס עובד');
+        kingdom.gold -= HIRE_COST;
+        kingdom.workers = (kingdom.workers || 0) + 1;
+        kingdom.maxWorkers = maxWorkers;
+        await this.kingdomRepo.save(kingdom);
+        return { workers: kingdom.workers, maxWorkers };
+    }
+    async fireWorker(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom.workers || kingdom.workers <= 0)
+            throw new common_1.BadRequestException('אין עובדים לפטר');
+        kingdom.workers -= 1;
+        kingdom.gold += 25;
+        await this.kingdomRepo.save(kingdom);
+        return { workers: kingdom.workers };
     }
 };
 exports.KingdomService = KingdomService;

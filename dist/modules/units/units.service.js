@@ -34,15 +34,13 @@ let UnitsService = class UnitsService {
         ]);
         if (!barracks)
             throw new common_1.BadRequestException('No Barracks');
-        if (unit?.trainingEndsAt && new Date() < unit.trainingEndsAt) {
-            throw new common_1.BadRequestException('Already training units');
-        }
         const stats = game_constants_1.UNIT_STATS[unitType];
         if (barracks.level < stats.requiredBarracksLevel) {
-            throw new common_1.BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
+            throw new common_1.BadRequestException(`נדרשת צריף רמה ${stats.requiredBarracksLevel}`);
         }
-        if (stats.requiresVip && !kingdom.isVip) {
-            throw new common_1.BadRequestException('VIP required');
+        const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
+        if (stats.requiresVip && !isVip) {
+            throw new common_1.BadRequestException('נדרש VIP פעיל');
         }
         let unitRow = unit;
         if (!unitRow) {
@@ -68,8 +66,13 @@ let UnitsService = class UnitsService {
         }
         await this.kingdomRepo.save(kingdom);
         const trainingSeconds = stats.trainingTime * amount;
-        unitRow.trainingCount = amount;
-        unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
+        if (unitRow.trainingEndsAt && new Date() < unitRow.trainingEndsAt) {
+            unitRow.trainingCount += amount;
+            unitRow.trainingEndsAt = new Date(unitRow.trainingEndsAt.getTime() + trainingSeconds * 1000);
+        } else {
+            unitRow.trainingCount = amount;
+            unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
+        }
         await this.unitRepo.save(unitRow);
         return { unit: unitRow, trainingEndsAt: unitRow.trainingEndsAt, durationSeconds: trainingSeconds };
     }

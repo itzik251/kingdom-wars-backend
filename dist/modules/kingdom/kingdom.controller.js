@@ -31,6 +31,14 @@ let KingdomController = class KingdomController {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.kingdomService.expandStorage(kingdom.id);
     }
+    async hireWorker(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.hireWorker(kingdom.id);
+    }
+    async fireWorker(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.fireWorker(kingdom.id);
+    }
 };
 exports.KingdomController = KingdomController;
 __decorate([
@@ -54,6 +62,20 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], KingdomController.prototype, "expandStorage", null);
+__decorate([
+    (0, common_1.Post)('hire-worker'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "hireWorker", null);
+__decorate([
+    (0, common_1.Post)('fire-worker'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "fireWorker", null);
 exports.KingdomController = KingdomController = __decorate([
     (0, common_1.Controller)('kingdom'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

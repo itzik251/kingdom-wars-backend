@@ -22,16 +22,15 @@ export class UnitsService {
     ]);
 
     if (!barracks) throw new BadRequestException('No Barracks');
-    if (unit?.trainingEndsAt && new Date() < unit.trainingEndsAt) {
-      throw new BadRequestException('Already training units');
-    }
 
     const stats = UNIT_STATS[unitType];
     if (barracks.level < stats.requiredBarracksLevel) {
-      throw new BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
+      throw new BadRequestException(`נדרשת צריף רמה ${stats.requiredBarracksLevel}`);
     }
-    if (stats.requiresVip && !kingdom.isVip) {
-      throw new BadRequestException('VIP required');
+    // Use direct column comparison — the getter may not be available on a plain DB row
+    const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
+    if (stats.requiresVip && !isVip) {
+      throw new BadRequestException('נדרש VIP פעיל');
     }
 
     // Create the unit row lazily if it doesn't exist yet (avoids null crash below)
@@ -58,8 +57,14 @@ export class UnitsService {
     await this.kingdomRepo.save(kingdom);
 
     const trainingSeconds = stats.trainingTime * amount;
-    unitRow.trainingCount = amount;
-    unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
+    if (unitRow.trainingEndsAt && new Date() < unitRow.trainingEndsAt) {
+      // Stack on existing training queue instead of blocking
+      unitRow.trainingCount += amount;
+      unitRow.trainingEndsAt = new Date(unitRow.trainingEndsAt.getTime() + trainingSeconds * 1000);
+    } else {
+      unitRow.trainingCount = amount;
+      unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
+    }
     await this.unitRepo.save(unitRow);
 
     return { unit: unitRow, trainingEndsAt: unitRow.trainingEndsAt, durationSeconds: trainingSeconds };

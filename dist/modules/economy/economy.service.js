@@ -57,12 +57,30 @@ let EconomyService = class EconomyService {
         const weakBonus = isWeak ? game_constants_1.WEAK_PLAYER_RESOURCE_BONUS : 0;
         const boostActive = kingdom.productionBoostUntil && now < new Date(kingdom.productionBoostUntil);
         const boostBonus = boostActive ? 1 : 0;
-        const bonus = 1 + weakBonus + boostBonus;
-        kingdom.gold = Math.min(kingdom.maxGold, Math.floor(kingdom.gold + production.gold * bonus));
+        const workerCount = kingdom.workers || 0;
+        const workerBonus = 1 + workerCount * 0.04;
+        const bonus = (1 + weakBonus + boostBonus) * workerBonus;
+        const workerSalary = workerCount * 5 * hoursElapsed;
+        const newFood = kingdom.food + production.food * bonus - upkeep;
+        const foodShortfall = Math.max(0, -newFood);
+        kingdom.gold = Math.min(kingdom.maxGold, Math.max(0, Math.floor(kingdom.gold + production.gold * bonus - workerSalary)));
         kingdom.wood = Math.min(kingdom.maxWood, Math.floor(kingdom.wood + production.wood * bonus));
         kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
-        kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(kingdom.food + production.food * bonus - upkeep)));
+        kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(newFood)));
         kingdom.lastResourceTick = now;
+        if (foodShortfall > 0) {
+            const desertionRate = Math.min(0.05, foodShortfall * 0.005);
+            let desertionChanged = false;
+            for (const unit of units) {
+                if (unit.count > 0) {
+                    const lost = Math.max(1, Math.floor(unit.count * desertionRate));
+                    unit.count = Math.max(0, unit.count - lost);
+                    desertionChanged = true;
+                }
+            }
+            if (desertionChanged)
+                await this.unitRepo.save(units.filter(u => u.count >= 0));
+        }
         const hospital = buildings.find(b => b.type === building_entity_1.BuildingType.HOSPITAL);
         const healRate = 5 + (hospital ? hospital.level * 10 : 0);
         let woundedChanged = false;
@@ -143,9 +161,12 @@ let EconomyService = class EconomyService {
         const boostActive = !!(kingdom?.productionBoostUntil && now < new Date(kingdom.productionBoostUntil));
         const weakBonus = isWeak ? game_constants_1.WEAK_PLAYER_RESOURCE_BONUS : 0;
         const boostBonus = boostActive ? 1 : 0;
-        const bonus = 1 + weakBonus + boostBonus;
+        const workerCount = (kingdom === null || kingdom === void 0 ? void 0 : kingdom.workers) || 0;
+        const workerBonus = 1 + workerCount * 0.04;
+        const workerSalary = workerCount * 5;
+        const bonus = (1 + weakBonus + boostBonus) * workerBonus;
         return {
-            gold: Math.floor(rates.gold * bonus),
+            gold: Math.floor(rates.gold * bonus - workerSalary),
             wood: Math.floor(rates.wood * bonus),
             stone: Math.floor(rates.stone * bonus),
             food: Math.floor(rates.food * bonus),

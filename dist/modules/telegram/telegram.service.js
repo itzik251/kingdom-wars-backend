@@ -33,8 +33,11 @@ let TelegramService = class TelegramService {
             return;
         const chatId = msg.chat.id;
         const text = msg.text;
-        const miniAppUrl = this.config.get('MINI_APP_URL', 'https://t.me/Kingdomw_bot');
-        if (text.startsWith('/start')) {
+        // Use Railway URL as fallback — MINI_APP_URL must be an HTTPS URL, not a t.me link
+        const miniAppUrl = this.config.get('MINI_APP_URL') || 'https://kingdom-wars-backend-production.up.railway.app';
+        // Normalize command: strip @BotName suffix and lowercase
+        const cmd = text.split('@')[0].toLowerCase();
+        if (cmd.startsWith('/start')) {
             const parts = text.split(' ');
             const param = parts[1] || '';
             await this.sendMessage(chatId, `⚔️ <b>ברוך הבא ל-Kingdom Wars!</b>\n\n` +
@@ -47,27 +50,36 @@ let TelegramService = class TelegramService {
                     inline_keyboard: [[
                             {
                                 text: '🏰 פתח את Kingdom Wars',
-                                web_app: { url: param ? `${miniAppUrl}?ref=${param.replace('ref_', '')}` : miniAppUrl },
+                                web_app: { url: param ? `${miniAppUrl}?startapp=${param.replace('ref_', 'ref_')}` : miniAppUrl },
                             },
                         ]],
                 },
             });
         }
-        if (text === '/kingdom') {
+        else if (cmd === '/help') {
+            await this.sendMessage(chatId,
+                `⚔️ <b>Kingdom Wars — פקודות</b>\n\n` +
+                `/start — התחל לשחק\n` +
+                `/kingdom — פתח ממלכה\n` +
+                `/leaderboard — דירוג עולמי\n` +
+                `/referral — הזמן חברים\n` +
+                `/help — הצג עזרה`);
+        }
+        else if (cmd === '/kingdom') {
             await this.sendMessage(chatId, '🏰 פתח את המשחק כדי לראות את הממלכה שלך:', {
                 reply_markup: {
                     inline_keyboard: [[{ text: '🏰 פתח', web_app: { url: miniAppUrl } }]],
                 },
             });
         }
-        if (text === '/leaderboard') {
+        else if (cmd === '/leaderboard') {
             await this.sendMessage(chatId, '🏆 ראה את הדירוג העולמי:', {
                 reply_markup: {
                     inline_keyboard: [[{ text: '🏆 דירוג', web_app: { url: miniAppUrl } }]],
                 },
             });
         }
-        if (text === '/referral') {
+        else if (cmd === '/referral') {
             await this.sendMessage(chatId, '🔗 הזמן חברים וקבל פרסים!\nפתח את המשחק לקישור האישי שלך:', {
                 reply_markup: {
                     inline_keyboard: [[{ text: '🔗 הזמן חברים', web_app: { url: miniAppUrl } }]],

@@ -51,13 +51,13 @@ exports.TOWN_HALL_GATES = {
 };
 exports.UNIT_STATS = {
     [unit_entity_1.UnitType.SPEARMAN]: { goldCost: 10, foodCost: 5, upkeep: 1, attackPower: 1, defensePower: 1, trainingTime: 10, requiredBarracksLevel: 1 },
-    [unit_entity_1.UnitType.ARCHER]: { goldCost: 20, foodCost: 8, upkeep: 1, attackPower: 2, defensePower: 1, trainingTime: 20, requiredBarracksLevel: 2 },
-    [unit_entity_1.UnitType.SWORDSMAN]: { goldCost: 40, foodCost: 12, upkeep: 2, attackPower: 4, defensePower: 3, trainingTime: 40, requiredBarracksLevel: 3 },
-    [unit_entity_1.UnitType.CAVALRY]: { goldCost: 80, foodCost: 20, upkeep: 3, attackPower: 9, defensePower: 5, trainingTime: 80, requiredBarracksLevel: 5 },
-    [unit_entity_1.UnitType.CATAPULT]: { goldCost: 200, foodCost: 40, upkeep: 5, attackPower: 15, defensePower: 2, trainingTime: 200, requiredBarracksLevel: 8 },
-    [unit_entity_1.UnitType.ELITE_GUARD]: { goldCost: 500, foodCost: 80, upkeep: 8, attackPower: 25, defensePower: 20, trainingTime: 600, requiredBarracksLevel: 12 },
-    [unit_entity_1.UnitType.PALADIN]: { goldCost: 0, gemsCost: 100, foodCost: 0, upkeep: 5, attackPower: 80, defensePower: 60, trainingTime: 300, requiredBarracksLevel: 5, requiresVip: true },
-    [unit_entity_1.UnitType.DRAGON_RIDER]: { goldCost: 0, gemsCost: 300, foodCost: 0, upkeep: 15, attackPower: 250, defensePower: 150, trainingTime: 600, requiredBarracksLevel: 10, requiresVip: true },
+    [unit_entity_1.UnitType.ARCHER]: { goldCost: 20, foodCost: 8, upkeep: 1, attackPower: 2, defensePower: 1, trainingTime: 20, requiredBarracksLevel: 1 },
+    [unit_entity_1.UnitType.SWORDSMAN]: { goldCost: 40, foodCost: 12, upkeep: 2, attackPower: 4, defensePower: 3, trainingTime: 40, requiredBarracksLevel: 2 },
+    [unit_entity_1.UnitType.CAVALRY]: { goldCost: 80, foodCost: 20, upkeep: 3, attackPower: 9, defensePower: 5, trainingTime: 80, requiredBarracksLevel: 3 },
+    [unit_entity_1.UnitType.CATAPULT]: { goldCost: 200, foodCost: 40, upkeep: 5, attackPower: 15, defensePower: 2, trainingTime: 200, requiredBarracksLevel: 5 },
+    [unit_entity_1.UnitType.ELITE_GUARD]: { goldCost: 500, foodCost: 80, upkeep: 8, attackPower: 25, defensePower: 20, trainingTime: 600, requiredBarracksLevel: 8 },
+    [unit_entity_1.UnitType.PALADIN]: { goldCost: 0, gemsCost: 100, foodCost: 0, upkeep: 5, attackPower: 80, defensePower: 60, trainingTime: 300, requiredBarracksLevel: 3, requiresVip: true },
+    [unit_entity_1.UnitType.DRAGON_RIDER]: { goldCost: 0, gemsCost: 300, foodCost: 0, upkeep: 15, attackPower: 250, defensePower: 150, trainingTime: 600, requiredBarracksLevel: 5, requiresVip: true },
 };
 exports.COMBAT_RANDOM_MIN = 0.85;
 exports.COMBAT_RANDOM_MAX = 1.15;

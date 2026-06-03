@@ -103,11 +103,11 @@ __decorate([
     __metadata("design:type", String)
 ], Kingdom.prototype, "adsWatchedDate", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
+    (0, typeorm_1.Column)({ default: 0, nullable: true }),
     __metadata("design:type", Number)
 ], Kingdom.prototype, "workers", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'max_workers', default: 5 }),
+    (0, typeorm_1.Column)({ name: 'max_workers', default: 5, nullable: true }),
     __metadata("design:type", Number)
 ], Kingdom.prototype, "maxWorkers", void 0);
 __decorate([

@@ -10,14 +10,13 @@ export declare class KingdomService {
     private economyService;
     constructor(kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>, economyService: EconomyService);
     getKingdomByUser(userId: string): Promise<{
-        kingdom: Kingdom & {
-            isVip: boolean;
-        };
+        kingdom: Kingdom;
         buildings: Building[];
         units: Unit[];
         productionRates: Record<string, number>;
         shieldActive: boolean;
         shieldUntil: Date;
+        isVip: boolean;
     }>;
     buyShield(kingdomId: string): Promise<{
         shieldUntil: Date;

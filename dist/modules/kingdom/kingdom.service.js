@@ -64,12 +64,13 @@ let KingdomService = class KingdomService {
             await this.unitRepo.save(unitsToSave);
         const productionRates = this.economyService.getProductionRates(buildings, updated);
         return {
-            kingdom: Object.assign(updated, { isVip: updated.isVip }),
+            kingdom: updated,
             buildings,
             units,
             productionRates,
             shieldActive: updated.isShielded,
             shieldUntil: updated.shieldUntil,
+            isVip: !!updated.isVip,
         };
     }
     async buyShield(kingdomId) {

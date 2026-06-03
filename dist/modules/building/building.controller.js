@@ -26,6 +26,11 @@ __decorate([
     (0, class_validator_1.IsEnum)(building_entity_1.BuildingType),
     __metadata("design:type", String)
 ], UpgradeDto.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpgradeDto.prototype, "buildingId", void 0);
 let BuildingController = class BuildingController {
     constructor(buildingService, kingdomService, questService) {
         this.buildingService = buildingService;
@@ -38,17 +43,21 @@ let BuildingController = class BuildingController {
     }
     async upgrade(req, dto) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        const result = await this.buildingService.upgradeBuilding(kingdom.id, dto.type);
+        const result = await this.buildingService.upgradeBuilding(kingdom.id, dto.type, false, dto.buildingId);
         await this.questService.incrementQuest(kingdom.id, 'upgrade_building', 1).catch(() => { });
         return result;
     }
     async speedUp(req, dto) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.buildingService.speedUpUpgrade(kingdom.id, dto.type);
+        return this.buildingService.speedUpUpgrade(kingdom.id, dto.type, dto.buildingId);
     }
     async buildNew(req, dto) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.buildingService.buildNew(kingdom.id, dto.type);
+    }
+    async repair(req, buildingId) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.buildingService.repairBuilding(kingdom.id, buildingId);
     }
 };
 exports.BuildingController = BuildingController;
@@ -83,6 +92,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, UpgradeDto]),
     __metadata("design:returntype", Promise)
 ], BuildingController.prototype, "buildNew", null);
+__decorate([
+    (0, common_1.Post)('repair/:id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], BuildingController.prototype, "repair", null);
 exports.BuildingController = BuildingController = __decorate([
     (0, common_1.Controller)('buildings'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

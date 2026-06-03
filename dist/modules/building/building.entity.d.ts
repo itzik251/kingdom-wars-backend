@@ -19,6 +19,7 @@ export declare class Building {
     level: number;
     slot: number;
     upgradeEndsAt: Date;
+    needsRepair: boolean;
     createdAt: Date;
     get isUpgrading(): boolean;
 }

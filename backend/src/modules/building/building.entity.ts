@@ -38,6 +38,9 @@ export class Building {
   @Column({ name: 'upgrade_ends_at', nullable: true })
   upgradeEndsAt: Date;
 
+  @Column({ name: 'needs_repair', default: false })
+  needsRepair: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

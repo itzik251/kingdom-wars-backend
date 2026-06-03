@@ -24,9 +24,11 @@ let BuildingService = class BuildingService {
         this.buildingRepo = buildingRepo;
         this.kingdomRepo = kingdomRepo;
     }
-    async upgradeBuilding(kingdomId, buildingType, isVip = false) {
+    async upgradeBuilding(kingdomId, buildingType, isVip = false, buildingId) {
         const [building, kingdom] = await Promise.all([
-            this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
+            buildingId
+                ? this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } })
+                : this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
             this.kingdomRepo.findOne({ where: { id: kingdomId } }),
         ]);
         if (!building)
@@ -35,7 +37,7 @@ let BuildingService = class BuildingService {
             throw new common_1.BadRequestException('Building already upgrading');
         if (building.level >= game_constants_1.MAX_BUILDING_LEVEL)
             throw new common_1.BadRequestException('Building at max level');
-        const cost = this.getUpgradeCost(buildingType, building.level);
+        const cost = this.getUpgradeCost(building.type, building.level);
         if (kingdom.gold < cost.gold)
             throw new common_1.BadRequestException('Not enough gold');
         if (kingdom.wood < cost.wood)
@@ -46,7 +48,7 @@ let BuildingService = class BuildingService {
         kingdom.wood -= cost.wood;
         kingdom.stone -= cost.stone;
         await this.kingdomRepo.save(kingdom);
-        let buildTime = this.getBuildTime(buildingType, building.level);
+        let buildTime = this.getBuildTime(building.type, building.level);
         if (isVip)
             buildTime = Math.floor(buildTime * (1 - game_constants_1.VIP_BUILD_TIME_REDUCTION));
         building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
@@ -58,9 +60,11 @@ let BuildingService = class BuildingService {
             durationSeconds: buildTime,
         };
     }
-    async speedUpUpgrade(kingdomId, buildingType) {
+    async speedUpUpgrade(kingdomId, buildingType, buildingId) {
         const [building, kingdom] = await Promise.all([
-            this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
+            buildingId
+                ? this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } })
+                : this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
             this.kingdomRepo.findOne({ where: { id: kingdomId } }),
         ]);
         if (!building?.upgradeEndsAt || new Date() > new Date(building.upgradeEndsAt))
@@ -124,6 +128,30 @@ let BuildingService = class BuildingService {
         const slot = existing.length;
         const building = this.buildingRepo.create({ kingdom: { id: kingdomId }, type: buildingType, level: 1, slot });
         await this.buildingRepo.save(building);
+        return { building, cost };
+    }
+    async repairBuilding(kingdomId, buildingId) {
+        const [building, kingdom] = await Promise.all([
+            this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } }),
+            this.kingdomRepo.findOne({ where: { id: kingdomId } }),
+        ]);
+        if (!building)
+            throw new common_1.BadRequestException('Building not found');
+        if (!building.needsRepair)
+            throw new common_1.BadRequestException('Building does not need repair');
+        const baseCost = this.getUpgradeCost(building.type, building.level);
+        const cost = { gold: Math.floor(baseCost.gold * 0.5), wood: Math.floor(baseCost.wood * 0.5), stone: Math.floor(baseCost.stone * 0.5) };
+        if (kingdom.gold < cost.gold)
+            throw new common_1.BadRequestException('Not enough gold');
+        if (kingdom.wood < cost.wood)
+            throw new common_1.BadRequestException('Not enough wood');
+        if (kingdom.stone < cost.stone)
+            throw new common_1.BadRequestException('Not enough stone');
+        kingdom.gold -= cost.gold;
+        kingdom.wood -= cost.wood;
+        kingdom.stone -= cost.stone;
+        building.needsRepair = false;
+        await Promise.all([this.kingdomRepo.save(kingdom), this.buildingRepo.save(building)]);
         return { building, cost };
     }
     async getAllUpgradeCosts(kingdomId) {

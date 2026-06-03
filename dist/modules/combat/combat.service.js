@@ -211,6 +211,7 @@ let CombatService = class CombatService {
             if (candidates.length > 0) {
                 const target = candidates[Math.floor(Math.random() * candidates.length)];
                 target.level = Math.max(1, target.level - 1);
+                target.needsRepair = true;
                 await this.buildingRepo.save(target);
                 report.buildingDamaged = { type: target.type, newLevel: target.level };
             }

@@ -4,6 +4,7 @@ import { KingdomService } from '../kingdom/kingdom.service';
 import { QuestService } from '../quest/quest.service';
 declare class UpgradeDto {
     type: BuildingType;
+    buildingId?: string;
 }
 export declare class BuildingController {
     private buildingService;
@@ -37,6 +38,14 @@ export declare class BuildingController {
         newLevel: number;
     }>;
     buildNew(req: any, dto: UpgradeDto): Promise<{
+        building: import("./building.entity").Building;
+        cost: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+    }>;
+    repair(req: any, buildingId: string): Promise<{
         building: import("./building.entity").Building;
         cost: {
             gold: number;

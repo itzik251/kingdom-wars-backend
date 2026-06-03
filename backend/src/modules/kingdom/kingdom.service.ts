@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Kingdom } from './kingdom.entity';
 import { Building } from '../building/building.entity';
-import { Unit } from '../units/unit.entity';
+import { Unit, UnitType } from '../units/unit.entity';
 import { EconomyService } from '../economy/economy.service';
 
 @Injectable()
@@ -27,6 +27,17 @@ export class KingdomService {
       this.buildingRepo.find({ where: { kingdom: { id: kingdom.id } } }),
       this.unitRepo.find({ where: { kingdom: { id: kingdom.id } } }),
     ]);
+
+    // Backfill missing unit rows (e.g. VIP heroes added after kingdom creation)
+    const allUnitTypes = Object.values(UnitType);
+    const existingTypes = new Set(units.map(u => u.type));
+    const missingTypes = allUnitTypes.filter(t => !existingTypes.has(t));
+    if (missingTypes.length > 0) {
+      const newRows = await this.unitRepo.save(
+        missingTypes.map(type => this.unitRepo.create({ kingdom: { id: kingdom.id } as any, type, count: 0, trainingCount: 0, woundedCount: 0 })),
+      );
+      units.push(...newRows);
+    }
 
     // Complete finished building upgrades
     const now = new Date();

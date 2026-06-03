@@ -38,6 +38,13 @@ let KingdomService = class KingdomService {
             this.buildingRepo.find({ where: { kingdom: { id: kingdom.id } } }),
             this.unitRepo.find({ where: { kingdom: { id: kingdom.id } } }),
         ]);
+        const allUnitTypes = Object.values(unit_entity_1.UnitType);
+        const existingTypes = new Set(units.map(u => u.type));
+        const missingTypes = allUnitTypes.filter(t => !existingTypes.has(t));
+        if (missingTypes.length > 0) {
+            const newRows = await this.unitRepo.save(missingTypes.map(type => this.unitRepo.create({ kingdom: { id: kingdom.id }, type, count: 0, trainingCount: 0, woundedCount: 0 })));
+            units.push(...newRows);
+        }
         const now = new Date();
         const buildingsToSave = buildings.filter(b => b.upgradeEndsAt && now >= new Date(b.upgradeEndsAt));
         for (const b of buildingsToSave) {

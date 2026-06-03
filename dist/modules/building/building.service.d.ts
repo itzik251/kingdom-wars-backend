@@ -5,7 +5,7 @@ export declare class BuildingService {
     private buildingRepo;
     private kingdomRepo;
     constructor(buildingRepo: Repository<Building>, kingdomRepo: Repository<Kingdom>);
-    upgradeBuilding(kingdomId: string, buildingType: BuildingType, isVip?: boolean): Promise<{
+    upgradeBuilding(kingdomId: string, buildingType: BuildingType, isVip?: boolean, buildingId?: string): Promise<{
         building: Building;
         cost: {
             gold: number;
@@ -15,7 +15,7 @@ export declare class BuildingService {
         upgradeEndsAt: Date;
         durationSeconds: number;
     }>;
-    speedUpUpgrade(kingdomId: string, buildingType: BuildingType): Promise<{
+    speedUpUpgrade(kingdomId: string, buildingType: BuildingType, buildingId?: string): Promise<{
         gemCost: number;
         newLevel: number;
     }>;
@@ -26,6 +26,14 @@ export declare class BuildingService {
     };
     getBuildTime(type: BuildingType, currentLevel: number): number;
     buildNew(kingdomId: string, buildingType: BuildingType): Promise<{
+        building: Building;
+        cost: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+    }>;
+    repairBuilding(kingdomId: string, buildingId: string): Promise<{
         building: Building;
         cost: {
             gold: number;

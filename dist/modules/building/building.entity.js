@@ -58,6 +58,10 @@ __decorate([
     __metadata("design:type", Date)
 ], Building.prototype, "upgradeEndsAt", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'needs_repair', default: false }),
+    __metadata("design:type", Boolean)
+], Building.prototype, "needsRepair", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Building.prototype, "createdAt", void 0);

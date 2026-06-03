@@ -1,13 +1,15 @@
 import { BuildingService } from './building.service';
 import { BuildingType } from './building.entity';
 import { KingdomService } from '../kingdom/kingdom.service';
+import { QuestService } from '../quest/quest.service';
 declare class UpgradeDto {
     type: BuildingType;
 }
 export declare class BuildingController {
     private buildingService;
     private kingdomService;
-    constructor(buildingService: BuildingService, kingdomService: KingdomService);
+    private questService;
+    constructor(buildingService: BuildingService, kingdomService: KingdomService, questService: QuestService);
     getCosts(req: any): Promise<{
         type: BuildingType;
         level: number;

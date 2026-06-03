@@ -33,9 +33,22 @@ export class QuestService {
   }
 
   async incrementQuest(kingdomId: string, questKey: string, amount = 1) {
+    // A quest key may belong to the daily set (periodDate = today) or the
+    // weekly set (periodDate = weekStart). Make sure the rows exist for the
+    // current period, then increment whichever one matches this key.
     const today = new Date().toISOString().split('T')[0];
+    const weekStart = this.getWeekStart();
+    const isWeekly = WEEKLY_QUESTS.some(q => q.key === questKey);
+    const periodDate = isWeekly ? weekStart : today;
+
+    if (isWeekly) {
+      await this.ensureQuests(kingdomId, WEEKLY_QUESTS, QuestPeriod.WEEKLY, weekStart);
+    } else {
+      await this.ensureQuests(kingdomId, DAILY_QUESTS, QuestPeriod.DAILY, today);
+    }
+
     const quest = await this.questRepo.findOne({
-      where: { kingdom: { id: kingdomId }, questKey, periodDate: today },
+      where: { kingdom: { id: kingdomId }, questKey, periodDate },
     });
     if (!quest || quest.completed) return;
 

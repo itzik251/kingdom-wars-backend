@@ -32,4 +32,7 @@ export class User {
 
   @Column({ name: 'last_login', nullable: true })
   lastLogin: Date;
+
+  @Column({ name: 'claimed_referral_milestones', type: 'simple-array', default: '' })
+  claimedReferralMilestones: number[];
 }

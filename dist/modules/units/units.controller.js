@@ -19,6 +19,7 @@ const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const units_service_1 = require("./units.service");
 const unit_entity_1 = require("./unit.entity");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
+const quest_service_1 = require("../quest/quest.service");
 class TrainDto {
 }
 __decorate([
@@ -31,13 +32,16 @@ __decorate([
     __metadata("design:type", Number)
 ], TrainDto.prototype, "amount", void 0);
 let UnitsController = class UnitsController {
-    constructor(unitsService, kingdomService) {
+    constructor(unitsService, kingdomService, questService) {
         this.unitsService = unitsService;
         this.kingdomService = kingdomService;
+        this.questService = questService;
     }
     async train(req, dto) {
         const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.unitsService.trainUnits(myKingdom.kingdom.id, dto.type, dto.amount);
+        const result = await this.unitsService.trainUnits(myKingdom.kingdom.id, dto.type, dto.amount);
+        await this.questService.incrementQuest(myKingdom.kingdom.id, 'train_500_soldiers', dto.amount).catch(() => { });
+        return result;
     }
 };
 exports.UnitsController = UnitsController;
@@ -53,6 +57,7 @@ exports.UnitsController = UnitsController = __decorate([
     (0, common_1.Controller)('units'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [units_service_1.UnitsService,
-        kingdom_service_1.KingdomService])
+        kingdom_service_1.KingdomService,
+        quest_service_1.QuestService])
 ], UnitsController);
 //# sourceMappingURL=units.controller.js.map

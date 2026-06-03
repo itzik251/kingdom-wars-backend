@@ -130,7 +130,22 @@ export class EconomyService {
     }
   }
 
-  getProductionRates(buildings: Building[]): Record<string, number> {
-    return this.calculateProduction(buildings, 1); // per-hour rates
+  getProductionRates(buildings: Building[], kingdom?: Kingdom): Record<string, number> {
+    const rates = this.calculateProduction(buildings, 1); // per-hour rates
+
+    // Apply the same bonuses the tick applies, so the UI shows the real rate.
+    const now = new Date();
+    const isWeak = kingdom ? kingdom.score < 1000 : false;
+    const boostActive = !!(kingdom?.productionBoostUntil && now < new Date(kingdom.productionBoostUntil));
+    const weakBonus = isWeak ? WEAK_PLAYER_RESOURCE_BONUS : 0;
+    const boostBonus = boostActive ? 1 : 0;
+    const bonus = 1 + weakBonus + boostBonus;
+
+    return {
+      gold:  Math.floor(rates.gold  * bonus),
+      wood:  Math.floor(rates.wood  * bonus),
+      stone: Math.floor(rates.stone * bonus),
+      food:  Math.floor(rates.food  * bonus),
+    };
   }
 }

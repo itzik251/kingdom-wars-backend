@@ -9,9 +9,10 @@ import { User } from '../user/user.entity';
 import { EconomyModule } from '../economy/economy.module';
 import { KingdomModule } from '../kingdom/kingdom.module';
 import { NotificationModule } from '../notifications/notification.module';
+import { QuestModule } from '../quest/quest.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Kingdom, Unit, Building, User]), EconomyModule, KingdomModule, NotificationModule],
+  imports: [TypeOrmModule.forFeature([Kingdom, Unit, Building, User]), EconomyModule, KingdomModule, NotificationModule, QuestModule],
   controllers: [CombatController],
   providers: [CombatService],
 })

@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BuildingService } from './building.service';
 import { BuildingType } from './building.entity';
 import { KingdomService } from '../kingdom/kingdom.service';
+import { QuestService } from '../quest/quest.service';
 
 class UpgradeDto {
   @IsEnum(BuildingType)
@@ -16,6 +17,7 @@ export class BuildingController {
   constructor(
     private buildingService: BuildingService,
     private kingdomService: KingdomService,
+    private questService: QuestService,
   ) {}
 
   @Get()
@@ -27,7 +29,9 @@ export class BuildingController {
   @Post('upgrade')
   async upgrade(@Request() req, @Body() dto: UpgradeDto) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-    return this.buildingService.upgradeBuilding(kingdom.id, dto.type);
+    const result = await this.buildingService.upgradeBuilding(kingdom.id, dto.type);
+    await this.questService.incrementQuest(kingdom.id, 'upgrade_building', 1).catch(() => {});
+    return result;
   }
 
   @Post('speedup')

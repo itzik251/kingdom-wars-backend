@@ -42,8 +42,17 @@ let QuestService = class QuestService {
     }
     async incrementQuest(kingdomId, questKey, amount = 1) {
         const today = new Date().toISOString().split('T')[0];
+        const weekStart = this.getWeekStart();
+        const isWeekly = WEEKLY_QUESTS.some(q => q.key === questKey);
+        const periodDate = isWeekly ? weekStart : today;
+        if (isWeekly) {
+            await this.ensureQuests(kingdomId, WEEKLY_QUESTS, quest_entity_1.QuestPeriod.WEEKLY, weekStart);
+        }
+        else {
+            await this.ensureQuests(kingdomId, DAILY_QUESTS, quest_entity_1.QuestPeriod.DAILY, today);
+        }
         const quest = await this.questRepo.findOne({
-            where: { kingdom: { id: kingdomId }, questKey, periodDate: today },
+            where: { kingdom: { id: kingdomId }, questKey, periodDate },
         });
         if (!quest || quest.completed)
             return;

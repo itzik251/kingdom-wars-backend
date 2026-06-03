@@ -115,8 +115,20 @@ let EconomyService = class EconomyService {
             }
         }
     }
-    getProductionRates(buildings) {
-        return this.calculateProduction(buildings, 1);
+    getProductionRates(buildings, kingdom) {
+        const rates = this.calculateProduction(buildings, 1);
+        const now = new Date();
+        const isWeak = kingdom ? kingdom.score < 1000 : false;
+        const boostActive = !!(kingdom?.productionBoostUntil && now < new Date(kingdom.productionBoostUntil));
+        const weakBonus = isWeak ? game_constants_1.WEAK_PLAYER_RESOURCE_BONUS : 0;
+        const boostBonus = boostActive ? 1 : 0;
+        const bonus = 1 + weakBonus + boostBonus;
+        return {
+            gold: Math.floor(rates.gold * bonus),
+            wood: Math.floor(rates.wood * bonus),
+            stone: Math.floor(rates.stone * bonus),
+            food: Math.floor(rates.food * bonus),
+        };
     }
 };
 exports.EconomyService = EconomyService;

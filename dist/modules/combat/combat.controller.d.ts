@@ -1,12 +1,14 @@
 import { CombatService } from './combat.service';
 import { KingdomService } from '../kingdom/kingdom.service';
+import { QuestService } from '../quest/quest.service';
 declare class AttackDto {
     defenderKingdomId: string;
 }
 export declare class CombatController {
     private combatService;
     private kingdomService;
-    constructor(combatService: CombatService, kingdomService: KingdomService);
+    private questService;
+    constructor(combatService: CombatService, kingdomService: KingdomService, questService: QuestService);
     attack(req: any, dto: AttackDto): Promise<import("./combat.service").BattleReport>;
     getTargets(req: any): Promise<import("../kingdom/kingdom.entity").Kingdom[]>;
     getProfile(req: any, targetId: string): Promise<{

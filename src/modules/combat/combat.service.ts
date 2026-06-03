@@ -231,16 +231,15 @@ export class CombatService {
     defender.shieldUntil = new Date(Date.now() + POST_ATTACK_SHIELD_HOURS * 3_600_000);
     await this.kingdomRepo.save([attacker, defender]);
 
-    // Notify defender
-    const defenderUser = await this.userRepo.findOne({ where: { id: (defender as any).userId || '' } });
-    const attackerKingdomFull = await this.kingdomRepo.findOne({ where: { id: attacker.id }, relations: ['user'] });
-    if (attackerKingdomFull?.user) {
-      this.notifService.create(attackerKingdomFull.user.id, 'attacked', {
+    // Notify the DEFENDER's user that they were attacked
+    const defenderKingdomFull = await this.kingdomRepo.findOne({ where: { id: defender.id }, relations: ['user'] });
+    if (defenderKingdomFull?.user) {
+      this.notifService.create(defenderKingdomFull.user.id, 'attacked', {
         attackerName: attacker.name,
         gold: report.loot.gold,
         wood: report.loot.wood,
         won: report.attackerWins,
-        telegramId: defenderUser?.telegramId,
+        telegramId: defenderKingdomFull.user.telegramId,
       }).catch(() => {});
     }
 

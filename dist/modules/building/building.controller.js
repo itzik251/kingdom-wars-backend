@@ -19,6 +19,7 @@ const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const building_service_1 = require("./building.service");
 const building_entity_1 = require("./building.entity");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
+const quest_service_1 = require("../quest/quest.service");
 class UpgradeDto {
 }
 __decorate([
@@ -26,9 +27,10 @@ __decorate([
     __metadata("design:type", String)
 ], UpgradeDto.prototype, "type", void 0);
 let BuildingController = class BuildingController {
-    constructor(buildingService, kingdomService) {
+    constructor(buildingService, kingdomService, questService) {
         this.buildingService = buildingService;
         this.kingdomService = kingdomService;
+        this.questService = questService;
     }
     async getCosts(req) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -36,7 +38,9 @@ let BuildingController = class BuildingController {
     }
     async upgrade(req, dto) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.buildingService.upgradeBuilding(kingdom.id, dto.type);
+        const result = await this.buildingService.upgradeBuilding(kingdom.id, dto.type);
+        await this.questService.incrementQuest(kingdom.id, 'upgrade_building', 1).catch(() => { });
+        return result;
     }
     async speedUp(req, dto) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -83,6 +87,7 @@ exports.BuildingController = BuildingController = __decorate([
     (0, common_1.Controller)('buildings'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [building_service_1.BuildingService,
-        kingdom_service_1.KingdomService])
+        kingdom_service_1.KingdomService,
+        quest_service_1.QuestService])
 ], BuildingController);
 //# sourceMappingURL=building.controller.js.map

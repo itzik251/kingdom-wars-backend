@@ -62,7 +62,7 @@ let KingdomService = class KingdomService {
         }
         if (unitsToSave.length > 0)
             await this.unitRepo.save(unitsToSave);
-        const productionRates = this.economyService.getProductionRates(buildings);
+        const productionRates = this.economyService.getProductionRates(buildings, updated);
         return {
             kingdom: updated,
             buildings,

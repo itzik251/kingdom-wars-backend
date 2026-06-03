@@ -3,6 +3,7 @@ import { IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CombatService } from './combat.service';
 import { KingdomService } from '../kingdom/kingdom.service';
+import { QuestService } from '../quest/quest.service';
 
 class AttackDto {
   @IsUUID()
@@ -15,12 +16,26 @@ export class CombatController {
   constructor(
     private combatService: CombatService,
     private kingdomService: KingdomService,
+    private questService: QuestService,
   ) {}
 
   @Post('attack')
   async attack(@Request() req, @Body() dto: AttackDto) {
     const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
-    return this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId);
+    const report = await this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId);
+
+    const kid = myKingdom.kingdom.id;
+    await Promise.all([
+      this.questService.incrementQuest(kid, 'perform_attack', 1),
+      report.loot?.gold > 0
+        ? this.questService.incrementQuest(kid, 'collect_gold_1000', report.loot.gold)
+        : Promise.resolve(),
+      report.attackerWins
+        ? this.questService.incrementQuest(kid, 'win_20_battles', 1)
+        : Promise.resolve(),
+    ]).catch(() => {});
+
+    return report;
   }
 
   // List potential attack targets (excludes shielded, excludes self)

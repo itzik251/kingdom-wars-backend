@@ -177,15 +177,14 @@ let CombatService = class CombatService {
         }
         defender.shieldUntil = new Date(Date.now() + game_constants_1.POST_ATTACK_SHIELD_HOURS * 3_600_000);
         await this.kingdomRepo.save([attacker, defender]);
-        const defenderUser = await this.userRepo.findOne({ where: { id: defender.userId || '' } });
-        const attackerKingdomFull = await this.kingdomRepo.findOne({ where: { id: attacker.id }, relations: ['user'] });
-        if (attackerKingdomFull?.user) {
-            this.notifService.create(attackerKingdomFull.user.id, 'attacked', {
+        const defenderKingdomFull = await this.kingdomRepo.findOne({ where: { id: defender.id }, relations: ['user'] });
+        if (defenderKingdomFull?.user) {
+            this.notifService.create(defenderKingdomFull.user.id, 'attacked', {
                 attackerName: attacker.name,
                 gold: report.loot.gold,
                 wood: report.loot.wood,
                 won: report.attackerWins,
-                telegramId: defenderUser?.telegramId,
+                telegramId: defenderKingdomFull.user.telegramId,
             }).catch(() => { });
         }
         for (const unit of attackerUnits) {

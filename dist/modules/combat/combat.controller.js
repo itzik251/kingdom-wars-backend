@@ -18,6 +18,7 @@ const class_validator_1 = require("class-validator");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const combat_service_1 = require("./combat.service");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
+const quest_service_1 = require("../quest/quest.service");
 class AttackDto {
 }
 __decorate([
@@ -25,13 +26,25 @@ __decorate([
     __metadata("design:type", String)
 ], AttackDto.prototype, "defenderKingdomId", void 0);
 let CombatController = class CombatController {
-    constructor(combatService, kingdomService) {
+    constructor(combatService, kingdomService, questService) {
         this.combatService = combatService;
         this.kingdomService = kingdomService;
+        this.questService = questService;
     }
     async attack(req, dto) {
         const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId);
+        const report = await this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId);
+        const kid = myKingdom.kingdom.id;
+        await Promise.all([
+            this.questService.incrementQuest(kid, 'perform_attack', 1),
+            report.loot?.gold > 0
+                ? this.questService.incrementQuest(kid, 'collect_gold_1000', report.loot.gold)
+                : Promise.resolve(),
+            report.attackerWins
+                ? this.questService.incrementQuest(kid, 'win_20_battles', 1)
+                : Promise.resolve(),
+        ]).catch(() => { });
+        return report;
     }
     async getTargets(req) {
         const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -70,6 +83,7 @@ exports.CombatController = CombatController = __decorate([
     (0, common_1.Controller)('combat'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [combat_service_1.CombatService,
-        kingdom_service_1.KingdomService])
+        kingdom_service_1.KingdomService,
+        quest_service_1.QuestService])
 ], CombatController);
 //# sourceMappingURL=combat.controller.js.map

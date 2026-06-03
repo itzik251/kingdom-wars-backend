@@ -29,6 +29,9 @@ let TelegramController = class TelegramController {
     deleteWebhook() {
         return this.telegramService.deleteWebhook();
     }
+    setCommands() {
+        return this.telegramService.setMyCommands();
+    }
 };
 exports.TelegramController = TelegramController;
 __decorate([
@@ -51,6 +54,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], TelegramController.prototype, "deleteWebhook", null);
+__decorate([
+    (0, common_1.Get)('set-commands'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], TelegramController.prototype, "setCommands", null);
 exports.TelegramController = TelegramController = __decorate([
     (0, common_1.Controller)('telegram'),
     __metadata("design:paramtypes", [telegram_service_1.TelegramService])

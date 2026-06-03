@@ -87,13 +87,31 @@ let TelegramService = class TelegramService {
             });
         }
     }
+    async setMyCommands() {
+        const commands = [
+            { command: 'start',       description: '🏰 התחל לשחק' },
+            { command: 'kingdom',     description: '🏰 פתח ממלכה' },
+            { command: 'leaderboard', description: '🏆 דירוג עולמי' },
+            { command: 'referral',    description: '🔗 הזמן חברים' },
+            { command: 'help',        description: '❓ עזרה' },
+        ];
+        const res = await fetch(`${this.apiBase}/setMyCommands`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commands }),
+        });
+        return res.json();
+    }
     async setWebhook(webhookUrl) {
         const res = await fetch(`${this.apiBase}/setWebhook`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: webhookUrl, allowed_updates: ['message', 'callback_query'] }),
         });
-        return res.json();
+        const result = await res.json();
+        // Also register commands when setting webhook
+        await this.setMyCommands().catch(() => {});
+        return result;
     }
     async deleteWebhook() {
         const res = await fetch(`${this.apiBase}/deleteWebhook`, { method: 'POST' });

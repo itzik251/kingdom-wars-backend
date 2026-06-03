@@ -95,6 +95,14 @@ __decorate([
     __metadata("design:type", Date)
 ], Kingdom.prototype, "vipExpiresAt", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'ads_watched_today', default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "adsWatchedToday", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'ads_watched_date', nullable: true }),
+    __metadata("design:type", String)
+], Kingdom.prototype, "adsWatchedDate", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "createdAt", void 0);

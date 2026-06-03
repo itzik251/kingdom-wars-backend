@@ -2,82 +2,89 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Kingdom } from '../kingdom/kingdom.entity';
-
-// Boost state: userId → expiresAt
-const boostStore = new Map<string, Date>();
-// Cooldown: userId → lastAdAt (max 5 ads/day)
-const adCooldown = new Map<string, { count: number; date: string }>();
+import { QuestService } from '../quest/quest.service';
 
 const MAX_ADS_PER_DAY = 10;
 const BOOST_DURATION_HOURS = 1;
 
 @Injectable()
 export class AdsService {
-  constructor(@InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>) {}
+  constructor(
+    @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
+    private questService: QuestService,
+  ) {}
 
   async claimReward(userId: string, kingdomId: string, rewardType: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus') {
     const today = new Date().toISOString().split('T')[0];
-    const cooldown = adCooldown.get(userId);
 
-    if (cooldown?.date === today && cooldown.count >= MAX_ADS_PER_DAY) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+
+    // Reset the daily counter when the date rolls over.
+    if (kingdom.adsWatchedDate !== today) {
+      kingdom.adsWatchedToday = 0;
+      kingdom.adsWatchedDate = today;
+    }
+
+    if (kingdom.adsWatchedToday >= MAX_ADS_PER_DAY) {
       throw new BadRequestException(`מקסימום ${MAX_ADS_PER_DAY} פרסומות ליום`);
     }
 
-    // Update cooldown
-    adCooldown.set(userId, {
-      date: today,
-      count: (cooldown?.date === today ? cooldown.count : 0) + 1,
-    });
+    kingdom.adsWatchedToday += 1;
+
+    let result: any;
 
     if (rewardType === 'double_production') {
       const until = new Date(Date.now() + BOOST_DURATION_HOURS * 3_600_000);
-      boostStore.set(userId, until);
-      // Persist on the kingdom so the economy tick (cron) actually doubles production
-      const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-      if (kingdom) {
-        kingdom.productionBoostUntil = until;
-        await this.kingdomRepo.save(kingdom);
-      }
-      return { reward: 'double_production', boostUntil: until, adsRemainingToday: MAX_ADS_PER_DAY - (adCooldown.get(userId)?.count || 0) };
-    }
-
-    if (rewardType === 'gems') {
-      const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+      kingdom.productionBoostUntil = until;
+      result = {
+        reward: 'double_production',
+        boostUntil: until,
+        adsRemainingToday: MAX_ADS_PER_DAY - kingdom.adsWatchedToday,
+      };
+    } else if (rewardType === 'gems') {
       kingdom.gems += 10;
-      await this.kingdomRepo.save(kingdom);
-      return { reward: 'gems', gemsAdded: 10 };
+      result = { reward: 'gems', gemsAdded: 10 };
+    } else {
+      const resourceBonuses: Record<string, { amount: number; apply: (k: Kingdom, v: number) => void }> = {
+        gold_bonus:  { amount: 500, apply: (k, v) => { k.gold  = Math.min(k.maxGold,  k.gold  + v); } },
+        wood_bonus:  { amount: 400, apply: (k, v) => { k.wood  = Math.min(k.maxWood,  k.wood  + v); } },
+        stone_bonus: { amount: 300, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
+        food_bonus:  { amount: 200, apply: (k, v) => { k.food  = Math.min(k.maxFood,  k.food  + v); } },
+      };
+      const bonus = resourceBonuses[rewardType];
+      if (!bonus) throw new BadRequestException('Invalid reward type');
+      bonus.apply(kingdom, bonus.amount);
+      result = { reward: rewardType, amount: bonus.amount };
     }
 
-    const resourceBonuses: Record<string, { amount: number; apply: (k: Kingdom, v: number) => void }> = {
-      gold_bonus:  { amount: 500, apply: (k, v) => { k.gold  = Math.min(k.maxGold,  k.gold  + v); } },
-      wood_bonus:  { amount: 400, apply: (k, v) => { k.wood  = Math.min(k.maxWood,  k.wood  + v); } },
-      stone_bonus: { amount: 300, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
-      food_bonus:  { amount: 200, apply: (k, v) => { k.food  = Math.min(k.maxFood,  k.food  + v); } },
-    };
-    if (resourceBonuses[rewardType]) {
-      const { amount, apply } = resourceBonuses[rewardType];
-      const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-      apply(kingdom, amount);
-      await this.kingdomRepo.save(kingdom);
-      return { reward: rewardType, amount };
+    // Single save includes the adsWatchedToday update and the reward.
+    await this.kingdomRepo.save(kingdom);
+
+    // Track the gold-collection quest when the player claims gold.
+    if (rewardType === 'gold_bonus') {
+      await this.questService.incrementQuest(kingdomId, 'collect_gold_1000', 500).catch(() => {});
     }
+
+    return result;
   }
 
-  getBoostStatus(userId: string) {
-    const until = boostStore.get(userId);
-    const active = until && new Date() < until;
+  async getBoostStatus(kingdomId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) {
+      return { boostActive: false, boostUntil: null, adsWatchedToday: 0, adsRemainingToday: MAX_ADS_PER_DAY };
+    }
+
     const today = new Date().toISOString().split('T')[0];
-    const cooldown = adCooldown.get(userId);
-    return {
-      boostActive: !!active,
-      boostUntil: active ? until : null,
-      adsWatchedToday: cooldown?.date === today ? cooldown.count : 0,
-      adsRemainingToday: MAX_ADS_PER_DAY - (cooldown?.date === today ? cooldown.count : 0),
-    };
-  }
+    const adsToday = kingdom.adsWatchedDate === today ? kingdom.adsWatchedToday : 0;
+    const until = kingdom.productionBoostUntil ? new Date(kingdom.productionBoostUntil) : null;
+    const active = !!(until && new Date() < until);
 
-  hasActiveBoost(userId: string): boolean {
-    const until = boostStore.get(userId);
-    return !!(until && new Date() < until);
+    return {
+      boostActive: active,
+      boostUntil: active ? until : null,
+      adsWatchedToday: adsToday,
+      adsRemainingToday: MAX_ADS_PER_DAY - adsToday,
+    };
   }
 }

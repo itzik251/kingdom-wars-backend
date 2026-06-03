@@ -18,6 +18,8 @@ export declare class Kingdom {
     lastResourceTick: Date;
     productionBoostUntil: Date;
     vipExpiresAt: Date;
+    adsWatchedToday: number;
+    adsWatchedDate: string;
     createdAt: Date;
     get isShielded(): boolean;
     get isVip(): boolean;

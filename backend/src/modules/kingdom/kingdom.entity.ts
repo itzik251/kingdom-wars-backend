@@ -61,6 +61,12 @@ export class Kingdom {
   @Column({ name: 'vip_expires_at', nullable: true })
   vipExpiresAt: Date;
 
+  @Column({ name: 'ads_watched_today', default: 0 })
+  adsWatchedToday: number;
+
+  @Column({ name: 'ads_watched_date', nullable: true })
+  adsWatchedDate: string; // ISO date string like '2024-01-15'
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

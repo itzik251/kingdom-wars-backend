@@ -13,12 +13,13 @@ const ads_controller_1 = require("./ads.controller");
 const ads_service_1 = require("./ads.service");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const kingdom_module_1 = require("../kingdom/kingdom.module");
+const quest_module_1 = require("../quest/quest.module");
 let AdsModule = class AdsModule {
 };
 exports.AdsModule = AdsModule;
 exports.AdsModule = AdsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom]), kingdom_module_1.KingdomModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom]), kingdom_module_1.KingdomModule, quest_module_1.QuestModule],
         controllers: [ads_controller_1.AdsController],
         providers: [ads_service_1.AdsService],
     })

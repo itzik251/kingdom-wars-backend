@@ -29,8 +29,9 @@ let AdsController = class AdsController {
         this.adsService = adsService;
         this.kingdomService = kingdomService;
     }
-    getStatus(req) {
-        return this.adsService.getBoostStatus(req.user.userId);
+    async getStatus(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.adsService.getBoostStatus(kingdom.id);
     }
     async claimReward(req, dto) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -43,7 +44,7 @@ __decorate([
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], AdsController.prototype, "getStatus", null);
 __decorate([
     (0, common_1.Post)('reward'),

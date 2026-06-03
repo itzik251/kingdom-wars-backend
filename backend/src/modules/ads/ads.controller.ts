@@ -18,8 +18,9 @@ export class AdsController {
   ) {}
 
   @Get('status')
-  getStatus(@Request() req) {
-    return this.adsService.getBoostStatus(req.user.userId);
+  async getStatus(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.adsService.getBoostStatus(kingdom.id);
   }
 
   @Post('reward')

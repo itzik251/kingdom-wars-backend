@@ -17,75 +17,82 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
-const boostStore = new Map();
-const adCooldown = new Map();
+const quest_service_1 = require("../quest/quest.service");
 const MAX_ADS_PER_DAY = 10;
 const BOOST_DURATION_HOURS = 1;
 let AdsService = class AdsService {
-    constructor(kingdomRepo) {
+    constructor(kingdomRepo, questService) {
         this.kingdomRepo = kingdomRepo;
+        this.questService = questService;
     }
     async claimReward(userId, kingdomId, rewardType) {
         const today = new Date().toISOString().split('T')[0];
-        const cooldown = adCooldown.get(userId);
-        if (cooldown?.date === today && cooldown.count >= MAX_ADS_PER_DAY) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
+        if (kingdom.adsWatchedDate !== today) {
+            kingdom.adsWatchedToday = 0;
+            kingdom.adsWatchedDate = today;
+        }
+        if (kingdom.adsWatchedToday >= MAX_ADS_PER_DAY) {
             throw new common_1.BadRequestException(`מקסימום ${MAX_ADS_PER_DAY} פרסומות ליום`);
         }
-        adCooldown.set(userId, {
-            date: today,
-            count: (cooldown?.date === today ? cooldown.count : 0) + 1,
-        });
+        kingdom.adsWatchedToday += 1;
+        let result;
         if (rewardType === 'double_production') {
             const until = new Date(Date.now() + BOOST_DURATION_HOURS * 3_600_000);
-            boostStore.set(userId, until);
-            const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-            if (kingdom) {
-                kingdom.productionBoostUntil = until;
-                await this.kingdomRepo.save(kingdom);
-            }
-            return { reward: 'double_production', boostUntil: until, adsRemainingToday: MAX_ADS_PER_DAY - (adCooldown.get(userId)?.count || 0) };
+            kingdom.productionBoostUntil = until;
+            result = {
+                reward: 'double_production',
+                boostUntil: until,
+                adsRemainingToday: MAX_ADS_PER_DAY - kingdom.adsWatchedToday,
+            };
         }
-        if (rewardType === 'gems') {
-            const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        else if (rewardType === 'gems') {
             kingdom.gems += 10;
-            await this.kingdomRepo.save(kingdom);
-            return { reward: 'gems', gemsAdded: 10 };
+            result = { reward: 'gems', gemsAdded: 10 };
         }
-        const resourceBonuses = {
-            gold_bonus: { amount: 500, apply: (k, v) => { k.gold = Math.min(k.maxGold, k.gold + v); } },
-            wood_bonus: { amount: 400, apply: (k, v) => { k.wood = Math.min(k.maxWood, k.wood + v); } },
-            stone_bonus: { amount: 300, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
-            food_bonus: { amount: 200, apply: (k, v) => { k.food = Math.min(k.maxFood, k.food + v); } },
-        };
-        if (resourceBonuses[rewardType]) {
-            const { amount, apply } = resourceBonuses[rewardType];
-            const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-            apply(kingdom, amount);
-            await this.kingdomRepo.save(kingdom);
-            return { reward: rewardType, amount };
+        else {
+            const resourceBonuses = {
+                gold_bonus: { amount: 500, apply: (k, v) => { k.gold = Math.min(k.maxGold, k.gold + v); } },
+                wood_bonus: { amount: 400, apply: (k, v) => { k.wood = Math.min(k.maxWood, k.wood + v); } },
+                stone_bonus: { amount: 300, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
+                food_bonus: { amount: 200, apply: (k, v) => { k.food = Math.min(k.maxFood, k.food + v); } },
+            };
+            const bonus = resourceBonuses[rewardType];
+            if (!bonus)
+                throw new common_1.BadRequestException('Invalid reward type');
+            bonus.apply(kingdom, bonus.amount);
+            result = { reward: rewardType, amount: bonus.amount };
         }
+        await this.kingdomRepo.save(kingdom);
+        if (rewardType === 'gold_bonus') {
+            await this.questService.incrementQuest(kingdomId, 'collect_gold_1000', 500).catch(() => { });
+        }
+        return result;
     }
-    getBoostStatus(userId) {
-        const until = boostStore.get(userId);
-        const active = until && new Date() < until;
+    async getBoostStatus(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom) {
+            return { boostActive: false, boostUntil: null, adsWatchedToday: 0, adsRemainingToday: MAX_ADS_PER_DAY };
+        }
         const today = new Date().toISOString().split('T')[0];
-        const cooldown = adCooldown.get(userId);
+        const adsToday = kingdom.adsWatchedDate === today ? kingdom.adsWatchedToday : 0;
+        const until = kingdom.productionBoostUntil ? new Date(kingdom.productionBoostUntil) : null;
+        const active = !!(until && new Date() < until);
         return {
-            boostActive: !!active,
+            boostActive: active,
             boostUntil: active ? until : null,
-            adsWatchedToday: cooldown?.date === today ? cooldown.count : 0,
-            adsRemainingToday: MAX_ADS_PER_DAY - (cooldown?.date === today ? cooldown.count : 0),
+            adsWatchedToday: adsToday,
+            adsRemainingToday: MAX_ADS_PER_DAY - adsToday,
         };
-    }
-    hasActiveBoost(userId) {
-        const until = boostStore.get(userId);
-        return !!(until && new Date() < until);
     }
 };
 exports.AdsService = AdsService;
 exports.AdsService = AdsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        quest_service_1.QuestService])
 ], AdsService);
 //# sourceMappingURL=ads.service.js.map

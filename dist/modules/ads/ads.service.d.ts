@@ -1,32 +1,15 @@
 import { Repository } from 'typeorm';
 import { Kingdom } from '../kingdom/kingdom.entity';
+import { QuestService } from '../quest/quest.service';
 export declare class AdsService {
     private kingdomRepo;
-    constructor(kingdomRepo: Repository<Kingdom>);
-    claimReward(userId: string, kingdomId: string, rewardType: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus'): Promise<{
-        reward: string;
-        boostUntil: Date;
-        adsRemainingToday: number;
-        gemsAdded?: undefined;
-        amount?: undefined;
-    } | {
-        reward: string;
-        gemsAdded: number;
-        boostUntil?: undefined;
-        adsRemainingToday?: undefined;
-        amount?: undefined;
-    } | {
-        reward: "gold_bonus" | "wood_bonus" | "stone_bonus" | "food_bonus";
-        amount: number;
-        boostUntil?: undefined;
-        adsRemainingToday?: undefined;
-        gemsAdded?: undefined;
-    }>;
-    getBoostStatus(userId: string): {
+    private questService;
+    constructor(kingdomRepo: Repository<Kingdom>, questService: QuestService);
+    claimReward(userId: string, kingdomId: string, rewardType: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus'): Promise<any>;
+    getBoostStatus(kingdomId: string): Promise<{
         boostActive: boolean;
         boostUntil: Date;
         adsWatchedToday: number;
         adsRemainingToday: number;
-    };
-    hasActiveBoost(userId: string): boolean;
+    }>;
 }

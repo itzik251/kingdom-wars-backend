@@ -23,4 +23,16 @@ export class KingdomController {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.kingdomService.expandStorage(kingdom.id);
   }
+
+  @Post('hire-worker')
+  async hireWorker(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.hireWorker(kingdom.id);
+  }
+
+  @Post('fire-worker')
+  async fireWorker(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.fireWorker(kingdom.id);
+  }
 }

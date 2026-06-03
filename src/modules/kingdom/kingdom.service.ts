@@ -79,6 +79,8 @@ export class KingdomService {
       shieldActive: updated.isShielded,
       shieldUntil: updated.shieldUntil,
       isVip: !!updated.isVip,
+      workers: updated.workers ?? 0,
+      maxWorkers: updated.maxWorkers ?? 5,
     };
   }
 
@@ -90,6 +92,30 @@ export class KingdomService {
     kingdom.shieldUntil = new Date(Date.now() + 24 * 3600 * 1000);
     await this.kingdomRepo.save(kingdom);
     return { shieldUntil: kingdom.shieldUntil };
+  }
+
+  async hireWorker(kingdomId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    const thBuilding = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: 'town_hall' as any } });
+    const thLevel = thBuilding?.level ?? 1;
+    const maxWorkers = 3 + thLevel; // max workers scales with TH level
+    if (kingdom.workers >= maxWorkers) throw new BadRequestException(`מקסימום ${maxWorkers} עובדים (שדרג בית עיר)`);
+    const HIRE_COST = 50;
+    if (kingdom.gold < HIRE_COST) throw new BadRequestException('דרוש 50 זהב לגיוס עובד');
+    kingdom.gold -= HIRE_COST;
+    kingdom.workers = (kingdom.workers || 0) + 1;
+    kingdom.maxWorkers = maxWorkers;
+    await this.kingdomRepo.save(kingdom);
+    return { workers: kingdom.workers, maxWorkers };
+  }
+
+  async fireWorker(kingdomId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom.workers || kingdom.workers <= 0) throw new BadRequestException('אין עובדים לפטר');
+    kingdom.workers -= 1;
+    kingdom.gold += 25; // partial refund
+    await this.kingdomRepo.save(kingdom);
+    return { workers: kingdom.workers };
   }
 
   async expandStorage(kingdomId: string) {

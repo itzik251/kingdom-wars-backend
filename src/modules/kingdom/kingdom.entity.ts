@@ -67,6 +67,12 @@ export class Kingdom {
   @Column({ name: 'ads_watched_date', nullable: true })
   adsWatchedDate: string; // ISO date string like '2024-01-15'
 
+  @Column({ default: 0 })
+  workers: number;
+
+  @Column({ name: 'max_workers', default: 5 })
+  maxWorkers: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

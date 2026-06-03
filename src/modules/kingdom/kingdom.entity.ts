@@ -58,10 +58,17 @@ export class Kingdom {
   @Column({ name: 'production_boost_until', nullable: true })
   productionBoostUntil: Date;
 
+  @Column({ name: 'vip_expires_at', nullable: true })
+  vipExpiresAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   get isShielded(): boolean {
     return this.shieldUntil && new Date() < new Date(this.shieldUntil);
+  }
+
+  get isVip(): boolean {
+    return this.vipExpiresAt && new Date() < new Date(this.vipExpiresAt);
   }
 }

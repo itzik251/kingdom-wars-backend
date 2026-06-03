@@ -89,15 +89,28 @@ let BuildingService = class BuildingService {
         return Math.floor(base * Math.pow(game_constants_1.BUILD_TIME_MULTIPLIER, currentLevel));
     }
     async buildNew(kingdomId, buildingType) {
-        const [existing, kingdom] = await Promise.all([
-            this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
-            this.kingdomRepo.findOne({ where: { id: kingdomId } }),
-        ]);
-        if (existing)
-            throw new common_1.BadRequestException('Building already exists');
-        const cost = game_constants_1.BUILDING_BASE_COSTS[buildingType];
-        if (!cost)
+        const baseCost = game_constants_1.BUILDING_BASE_COSTS[buildingType];
+        if (!baseCost)
             throw new common_1.BadRequestException('Invalid building type');
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        const MULTI_ALLOWED = [
+            building_entity_1.BuildingType.GOLD_MINE, building_entity_1.BuildingType.LUMBER_MILL, building_entity_1.BuildingType.STONE_QUARRY, building_entity_1.BuildingType.FARM,
+        ];
+        const existing = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId }, type: buildingType } });
+        if (existing.length > 0 && !MULTI_ALLOWED.includes(buildingType)) {
+            throw new common_1.BadRequestException('Building already exists');
+        }
+        if (existing.length >= 3)
+            throw new common_1.BadRequestException('Maximum 3 of this building');
+        if (buildingType === building_entity_1.BuildingType.ARCANE_TOWER && !kingdom.isVip) {
+            throw new common_1.BadRequestException('VIP required');
+        }
+        const mult = Math.pow(2, existing.length);
+        const cost = {
+            gold: Math.floor(baseCost.gold * mult),
+            wood: Math.floor(baseCost.wood * mult),
+            stone: Math.floor(baseCost.stone * mult),
+        };
         if (kingdom.gold < cost.gold)
             throw new common_1.BadRequestException('Not enough gold');
         if (kingdom.wood < cost.wood)
@@ -108,7 +121,8 @@ let BuildingService = class BuildingService {
         kingdom.wood -= cost.wood;
         kingdom.stone -= cost.stone;
         await this.kingdomRepo.save(kingdom);
-        const building = this.buildingRepo.create({ kingdom: { id: kingdomId }, type: buildingType, level: 1 });
+        const slot = existing.length;
+        const building = this.buildingRepo.create({ kingdom: { id: kingdomId }, type: buildingType, level: 1, slot });
         await this.buildingRepo.save(building);
         return { building, cost };
     }

@@ -37,6 +37,11 @@ let VipService = class VipService {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + game_constants_1.VIP_DURATION_DAYS);
         vipStore.set(userId, expiresAt);
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+        if (kingdom) {
+            kingdom.vipExpiresAt = expiresAt;
+            await this.kingdomRepo.save(kingdom);
+        }
         return { success: true, expiresAt, durationDays: game_constants_1.VIP_DURATION_DAYS };
     }
     isUserVip(userId) {

@@ -23,6 +23,8 @@ var BuildingType;
     BuildingType["ACADEMY"] = "academy";
     BuildingType["WALL"] = "wall";
     BuildingType["WATCH_TOWER"] = "watch_tower";
+    BuildingType["HOSPITAL"] = "hospital";
+    BuildingType["ARCANE_TOWER"] = "arcane_tower";
 })(BuildingType || (exports.BuildingType = BuildingType = {}));
 let Building = class Building {
     get isUpgrading() {
@@ -47,6 +49,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'integer', default: 1 }),
     __metadata("design:type", Number)
 ], Building.prototype, "level", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 0 }),
+    __metadata("design:type", Number)
+], Building.prototype, "slot", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'upgrade_ends_at', nullable: true }),
     __metadata("design:type", Date)

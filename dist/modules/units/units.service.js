@@ -41,6 +41,9 @@ let UnitsService = class UnitsService {
         if (barracks.level < stats.requiredBarracksLevel) {
             throw new common_1.BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
         }
+        if (stats.requiresVip && !kingdom.isVip) {
+            throw new common_1.BadRequestException('VIP required');
+        }
         let unitRow = unit;
         if (!unitRow) {
             unitRow = this.unitRepo.create({
@@ -51,10 +54,18 @@ let UnitsService = class UnitsService {
                 trainingEndsAt: null,
             });
         }
-        const totalGold = stats.goldCost * amount;
-        if (kingdom.gold < totalGold)
-            throw new common_1.BadRequestException('Not enough gold');
-        kingdom.gold -= totalGold;
+        if (stats.requiresVip) {
+            const totalGems = (stats.gemsCost ?? 0) * amount;
+            if (kingdom.gems < totalGems)
+                throw new common_1.BadRequestException('Not enough gems');
+            kingdom.gems -= totalGems;
+        }
+        else {
+            const totalGold = stats.goldCost * amount;
+            if (kingdom.gold < totalGold)
+                throw new common_1.BadRequestException('Not enough gold');
+            kingdom.gold -= totalGold;
+        }
         await this.kingdomRepo.save(kingdom);
         const trainingSeconds = stats.trainingTime * amount;
         unitRow.trainingCount = amount;

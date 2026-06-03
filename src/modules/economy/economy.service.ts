@@ -62,6 +62,23 @@ export class EconomyService {
     kingdom.food  = Math.min(kingdom.maxFood,  Math.max(0, Math.floor(kingdom.food + production.food * bonus - upkeep)));
     kingdom.lastResourceTick = now;
 
+    // Heal wounded soldiers (base 5/hour per unit type, hospital adds 10/level)
+    const hospital = buildings.find(b => b.type === BuildingType.HOSPITAL);
+    const healRate = 5 + (hospital ? hospital.level * 10 : 0);
+    let woundedChanged = false;
+    for (const unit of units) {
+      if ((unit.woundedCount || 0) > 0) {
+        const healed = Math.min(unit.woundedCount, Math.floor(healRate * hoursElapsed));
+        if (healed > 0) {
+          unit.woundedCount -= healed;
+          unit.count += healed;
+          woundedChanged = true;
+        }
+      }
+    }
+    if (woundedChanged) {
+      await this.unitRepo.save(units.filter(u => u.woundedCount >= 0));
+    }
 
     // Complete any finished building upgrades
     await this.completeBuildingUpgrades(kingdomId, buildings, now);

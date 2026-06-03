@@ -13,6 +13,8 @@ export enum BuildingType {
   ACADEMY      = 'academy',
   WALL         = 'wall',
   WATCH_TOWER  = 'watch_tower',
+  HOSPITAL     = 'hospital',
+  ARCANE_TOWER = 'arcane_tower',
 }
 
 @Entity('buildings')
@@ -29,6 +31,9 @@ export class Building {
 
   @Column({ type: 'integer', default: 1 })
   level: number;
+
+  @Column({ default: 0 })
+  slot: number;
 
   @Column({ name: 'upgrade_ends_at', nullable: true })
   upgradeEndsAt: Date;

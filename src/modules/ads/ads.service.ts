@@ -8,7 +8,7 @@ const boostStore = new Map<string, Date>();
 // Cooldown: userId → lastAdAt (max 5 ads/day)
 const adCooldown = new Map<string, { count: number; date: string }>();
 
-const MAX_ADS_PER_DAY = 5;
+const MAX_ADS_PER_DAY = 10;
 const BOOST_DURATION_HOURS = 1;
 
 @Injectable()

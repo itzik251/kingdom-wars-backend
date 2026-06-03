@@ -18,6 +18,10 @@ export interface BattleReport {
     defenderLosses: Record<string, number>;
     winStreak?: number;
     streakBonus?: number;
+    buildingDamaged?: {
+        type: string;
+        newLevel: number;
+    };
 }
 export declare class CombatService {
     private kingdomRepo;

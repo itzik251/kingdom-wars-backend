@@ -16,6 +16,9 @@ let Kingdom = class Kingdom {
     get isShielded() {
         return this.shieldUntil && new Date() < new Date(this.shieldUntil);
     }
+    get isVip() {
+        return this.vipExpiresAt && new Date() < new Date(this.vipExpiresAt);
+    }
 };
 exports.Kingdom = Kingdom;
 __decorate([
@@ -87,6 +90,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'production_boost_until', nullable: true }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "productionBoostUntil", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'vip_expires_at', nullable: true }),
+    __metadata("design:type", Date)
+], Kingdom.prototype, "vipExpiresAt", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)

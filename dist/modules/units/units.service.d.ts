@@ -20,6 +20,8 @@ export declare class UnitsService {
         defensePower: number;
         trainingTime: number;
         requiredBarracksLevel: number;
+        gemsCost?: number;
+        requiresVip?: boolean;
         type: string;
     }[];
 }

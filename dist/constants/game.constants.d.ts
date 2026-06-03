@@ -20,6 +20,8 @@ export interface UnitStats {
     defensePower: number;
     trainingTime: number;
     requiredBarracksLevel: number;
+    gemsCost?: number;
+    requiresVip?: boolean;
 }
 export declare const UNIT_STATS: Record<UnitType, UnitStats>;
 export declare const COMBAT_RANDOM_MIN = 0.85;
@@ -28,7 +30,7 @@ export declare const LOOT_PERCENTAGE = 0.3;
 export declare const DEFENDER_LOSS_MAX = 0.2;
 export declare const WALL_DEFENSE_BONUS_PER_LEVEL = 50;
 export declare const NEWBIE_SHIELD_HOURS = 72;
-export declare const POST_ATTACK_SHIELD_HOURS = 4;
+export declare const POST_ATTACK_SHIELD_HOURS = 1;
 export declare const SNOWBALL_SCORE_RATIO = 3;
 export declare const SNOWBALL_LOOT_PENALTY = 0.5;
 export declare const WEAK_PLAYER_RESOURCE_BONUS = 0.2;

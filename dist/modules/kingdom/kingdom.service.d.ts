@@ -10,7 +10,9 @@ export declare class KingdomService {
     private economyService;
     constructor(kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>, economyService: EconomyService);
     getKingdomByUser(userId: string): Promise<{
-        kingdom: Kingdom;
+        kingdom: Kingdom & {
+            isVip: boolean;
+        };
         buildings: Building[];
         units: Unit[];
         productionRates: Record<string, number>;

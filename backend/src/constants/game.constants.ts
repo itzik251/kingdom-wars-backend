@@ -24,6 +24,8 @@ export const BUILDING_BASE_COSTS: Record<BuildingType, { gold: number; wood: num
   [BuildingType.ACADEMY]:      { gold: 500,  wood: 300,  stone: 200 },
   [BuildingType.WALL]:         { gold: 200,  wood: 0,    stone: 400 },
   [BuildingType.WATCH_TOWER]:  { gold: 150,  wood: 200,  stone: 100 },
+  [BuildingType.HOSPITAL]:     { gold: 300,  wood: 200,  stone: 100 },
+  [BuildingType.ARCANE_TOWER]: { gold: 800,  wood: 400,  stone: 400 },
 };
 
 export const UPGRADE_COST_MULTIPLIER = 1.35;
@@ -39,6 +41,8 @@ export const BUILDING_BASE_TIMES: Record<BuildingType, number> = {
   [BuildingType.ACADEMY]:      90,
   [BuildingType.WALL]:         40,
   [BuildingType.WATCH_TOWER]:  35,
+  [BuildingType.HOSPITAL]:     45,
+  [BuildingType.ARCANE_TOWER]: 120,
 };
 
 export const BUILD_TIME_MULTIPLIER = 1.4;
@@ -66,6 +70,8 @@ export interface UnitStats {
   defensePower: number;
   trainingTime: number;   // seconds per unit
   requiredBarracksLevel: number;
+  gemsCost?:    number;   // VIP units cost gems instead of gold
+  requiresVip?: boolean;
 }
 
 export const UNIT_STATS: Record<UnitType, UnitStats> = {
@@ -75,6 +81,8 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   [UnitType.CAVALRY]:    { goldCost: 80,  foodCost: 20, upkeep: 3, attackPower: 9,  defensePower: 5,  trainingTime: 80, requiredBarracksLevel: 5 },
   [UnitType.CATAPULT]:   { goldCost: 200, foodCost: 40, upkeep: 5, attackPower: 15, defensePower: 2,  trainingTime: 200, requiredBarracksLevel: 8 },
   [UnitType.ELITE_GUARD]:{ goldCost: 500, foodCost: 80, upkeep: 8, attackPower: 25, defensePower: 20, trainingTime: 600, requiredBarracksLevel: 12 },
+  [UnitType.PALADIN]:     { goldCost: 0, gemsCost: 100, foodCost: 0, upkeep: 5,  attackPower: 80,  defensePower: 60,  trainingTime: 300, requiredBarracksLevel: 5,  requiresVip: true },
+  [UnitType.DRAGON_RIDER]:{ goldCost: 0, gemsCost: 300, foodCost: 0, upkeep: 15, attackPower: 250, defensePower: 150, trainingTime: 600, requiredBarracksLevel: 10, requiresVip: true },
 };
 
 // ─── Combat ──────────────────────────────────────────────────
@@ -92,7 +100,7 @@ export const WALL_DEFENSE_BONUS_PER_LEVEL = 50;
 
 // ─── Shields ─────────────────────────────────────────────────
 export const NEWBIE_SHIELD_HOURS = 72;
-export const POST_ATTACK_SHIELD_HOURS = 4;
+export const POST_ATTACK_SHIELD_HOURS = 1;
 
 // ─── Anti-Snowball ────────────────────────────────────────────
 // Loot penalty when attacker score >> defender score

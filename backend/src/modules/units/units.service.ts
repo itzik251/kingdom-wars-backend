@@ -30,6 +30,9 @@ export class UnitsService {
     if (barracks.level < stats.requiredBarracksLevel) {
       throw new BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
     }
+    if (stats.requiresVip && !kingdom.isVip) {
+      throw new BadRequestException('VIP required');
+    }
 
     // Create the unit row lazily if it doesn't exist yet (avoids null crash below)
     let unitRow = unit;
@@ -43,10 +46,15 @@ export class UnitsService {
       });
     }
 
-    const totalGold = stats.goldCost * amount;
-    if (kingdom.gold < totalGold) throw new BadRequestException('Not enough gold');
-
-    kingdom.gold -= totalGold;
+    if (stats.requiresVip) {
+      const totalGems = (stats.gemsCost ?? 0) * amount;
+      if (kingdom.gems < totalGems) throw new BadRequestException('Not enough gems');
+      kingdom.gems -= totalGems;
+    } else {
+      const totalGold = stats.goldCost * amount;
+      if (kingdom.gold < totalGold) throw new BadRequestException('Not enough gold');
+      kingdom.gold -= totalGold;
+    }
     await this.kingdomRepo.save(kingdom);
 
     const trainingSeconds = stats.trainingTime * amount;

@@ -8,13 +8,16 @@ export declare enum BuildingType {
     BARRACKS = "barracks",
     ACADEMY = "academy",
     WALL = "wall",
-    WATCH_TOWER = "watch_tower"
+    WATCH_TOWER = "watch_tower",
+    HOSPITAL = "hospital",
+    ARCANE_TOWER = "arcane_tower"
 }
 export declare class Building {
     id: string;
     kingdom: Kingdom;
     type: BuildingType;
     level: number;
+    slot: number;
     upgradeEndsAt: Date;
     createdAt: Date;
     get isUpgrading(): boolean;

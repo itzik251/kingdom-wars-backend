@@ -20,6 +20,8 @@ var UnitType;
     UnitType["CAVALRY"] = "cavalry";
     UnitType["CATAPULT"] = "catapult";
     UnitType["ELITE_GUARD"] = "elite_guard";
+    UnitType["PALADIN"] = "paladin";
+    UnitType["DRAGON_RIDER"] = "dragon_rider";
 })(UnitType || (exports.UnitType = UnitType = {}));
 let Unit = class Unit {
 };
@@ -49,6 +51,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'training_ends_at', nullable: true }),
     __metadata("design:type", Date)
 ], Unit.prototype, "trainingEndsAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'wounded_count', default: 0 }),
+    __metadata("design:type", Number)
+], Unit.prototype, "woundedCount", void 0);
 exports.Unit = Unit = __decorate([
     (0, typeorm_1.Entity)('units')
 ], Unit);

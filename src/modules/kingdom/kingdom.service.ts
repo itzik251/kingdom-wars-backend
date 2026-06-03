@@ -61,7 +61,7 @@ export class KingdomService {
     const productionRates = this.economyService.getProductionRates(buildings, updated);
 
     return {
-      kingdom: updated,
+      kingdom: Object.assign(updated, { isVip: updated.isVip }),
       buildings,
       units,
       productionRates,

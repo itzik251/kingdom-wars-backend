@@ -53,7 +53,8 @@ let CombatService = class CombatService {
             this.unitRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
             this.buildingRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
         ]);
-        const report = this.simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings);
+        const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
+        const report = this.simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings, attackerBuildings);
         await this.applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report);
         return report;
     }
@@ -114,10 +115,12 @@ let CombatService = class CombatService {
             buildings: targetBuildings.map(b => ({ type: b.type, level: b.level })),
         };
     }
-    simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings) {
+    simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings, attackerBuildings = []) {
         const wallLevel = defenderBuildings.find(b => b.type === building_entity_1.BuildingType.WALL)?.level ?? 0;
         const wallBonus = wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
-        let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * game_constants_1.UNIT_STATS[u.type].attackPower, 0);
+        const arcaneLevel = attackerBuildings.find(b => b.type === building_entity_1.BuildingType.ARCANE_TOWER)?.level ?? 0;
+        const arcaneMult = 1 + arcaneLevel * 0.1;
+        let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * game_constants_1.UNIT_STATS[u.type].attackPower, 0) * arcaneMult;
         let defensePower = defenderUnits.reduce((sum, u) => sum + u.count * game_constants_1.UNIT_STATS[u.type].defensePower, 0) + wallBonus;
         attackPower *= this.random(game_constants_1.COMBAT_RANDOM_MIN, game_constants_1.COMBAT_RANDOM_MAX);
         defensePower *= this.random(game_constants_1.COMBAT_RANDOM_MIN, game_constants_1.COMBAT_RANDOM_MAX);
@@ -188,12 +191,30 @@ let CombatService = class CombatService {
             }).catch(() => { });
         }
         for (const unit of attackerUnits) {
-            unit.count = Math.max(0, unit.count - (report.attackerLosses[unit.type] ?? 0));
+            const losses = report.attackerLosses[unit.type] ?? 0;
+            const actualDead = Math.floor(losses * 0.8);
+            const wounded = losses - actualDead;
+            unit.count = Math.max(0, unit.count - actualDead);
+            unit.woundedCount = (unit.woundedCount || 0) + wounded;
         }
         for (const unit of defenderUnits) {
-            unit.count = Math.max(0, unit.count - (report.defenderLosses[unit.type] ?? 0));
+            const losses = report.defenderLosses[unit.type] ?? 0;
+            const actualDead = Math.floor(losses * 0.7);
+            const wounded = losses - actualDead;
+            unit.count = Math.max(0, unit.count - actualDead);
+            unit.woundedCount = (unit.woundedCount || 0) + wounded;
         }
         await this.unitRepo.save([...attackerUnits, ...defenderUnits]);
+        if (report.attackerWins && report.attackerPower > report.defenderPower * 2) {
+            const defenderBuildings = await this.buildingRepo.find({ where: { kingdom: { id: defender.id } } });
+            const candidates = defenderBuildings.filter(b => b.type !== building_entity_1.BuildingType.TOWN_HALL && b.level > 1);
+            if (candidates.length > 0) {
+                const target = candidates[Math.floor(Math.random() * candidates.length)];
+                target.level = Math.max(1, target.level - 1);
+                await this.buildingRepo.save(target);
+                report.buildingDamaged = { type: target.type, newLevel: target.level };
+            }
+        }
     }
     random(min, max) {
         return min + Math.random() * (max - min);

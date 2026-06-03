@@ -5,7 +5,9 @@ export declare enum UnitType {
     SWORDSMAN = "swordsman",
     CAVALRY = "cavalry",
     CATAPULT = "catapult",
-    ELITE_GUARD = "elite_guard"
+    ELITE_GUARD = "elite_guard",
+    PALADIN = "paladin",
+    DRAGON_RIDER = "dragon_rider"
 }
 export declare class Unit {
     id: string;
@@ -14,4 +16,5 @@ export declare class Unit {
     count: number;
     trainingCount: number;
     trainingEndsAt: Date;
+    woundedCount: number;
 }

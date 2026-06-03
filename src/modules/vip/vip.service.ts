@@ -35,6 +35,13 @@ export class VipService {
     expiresAt.setDate(expiresAt.getDate() + VIP_DURATION_DAYS);
     vipStore.set(userId, expiresAt);
 
+    // Persist on the kingdom so combat/building/unit VIP gates work off the entity.
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+    if (kingdom) {
+      kingdom.vipExpiresAt = expiresAt;
+      await this.kingdomRepo.save(kingdom);
+    }
+
     return { success: true, expiresAt, durationDays: VIP_DURATION_DAYS };
   }
 

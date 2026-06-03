@@ -19,7 +19,7 @@ const typeorm_2 = require("typeorm");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const boostStore = new Map();
 const adCooldown = new Map();
-const MAX_ADS_PER_DAY = 5;
+const MAX_ADS_PER_DAY = 10;
 const BOOST_DURATION_HOURS = 1;
 let AdsService = class AdsService {
     constructor(kingdomRepo) {

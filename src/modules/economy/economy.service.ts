@@ -42,10 +42,17 @@ export class EconomyService {
     const units = await this.unitRepo.find({ where: { kingdom: { id: kingdomId } } });
 
     const now = new Date();
-    const lastTick = kingdom.lastResourceTick ? new Date(kingdom.lastResourceTick) : now;
+    // If never ticked, initialise the tick timestamp and continue (first tick earns 0)
+    if (!kingdom.lastResourceTick) {
+      kingdom.lastResourceTick = now;
+      await this.kingdomRepo.save(kingdom);
+      return kingdom;
+    }
+
+    const lastTick = new Date(kingdom.lastResourceTick);
     const hoursElapsed = (now.getTime() - lastTick.getTime()) / 3_600_000;
 
-    if (hoursElapsed < 0.016) return kingdom; // less than 1 minute, skip
+    if (hoursElapsed < 0.016) return kingdom; // less than ~1 minute, skip
 
     const production = this.calculateProduction(buildings, hoursElapsed);
     const upkeep = this.calculateUpkeep(units, hoursElapsed);

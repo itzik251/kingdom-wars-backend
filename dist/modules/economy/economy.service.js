@@ -42,7 +42,12 @@ let EconomyService = class EconomyService {
         const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
         const units = await this.unitRepo.find({ where: { kingdom: { id: kingdomId } } });
         const now = new Date();
-        const lastTick = kingdom.lastResourceTick ? new Date(kingdom.lastResourceTick) : now;
+        if (!kingdom.lastResourceTick) {
+            kingdom.lastResourceTick = now;
+            await this.kingdomRepo.save(kingdom);
+            return kingdom;
+        }
+        const lastTick = new Date(kingdom.lastResourceTick);
         const hoursElapsed = (now.getTime() - lastTick.getTime()) / 3_600_000;
         if (hoursElapsed < 0.016)
             return kingdom;

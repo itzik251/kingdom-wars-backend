@@ -28,8 +28,8 @@ const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.FARM]: 'farm',
 };
 const BUILDING_NAMES_HE = {
-    town_hall: 'בית עיר', gold_mine: 'מכרה זהב', lumber_mill: 'מסור',
-    stone_quarry: 'מחצבה', farm: 'חווה', barracks: 'כפר',
+    town_hall: 'עירייה', gold_mine: 'מכרה זהב', lumber_mill: 'נגרייה',
+    stone_quarry: 'מחצבה', farm: 'חווה', barracks: 'בסיס צבאי',
     academy: 'אקדמיה', wall: 'חומה', watch_tower: 'מגדל שמירה',
     hospital: 'בית חולים', arcane_tower: 'מגדל ארקני',
 };

@@ -83,6 +83,30 @@ let AllianceService = class AllianceService {
             take: limit,
         });
     }
+    async donateResources(kingdomId, gold = 0, wood = 0, stone = 0) {
+        const member = await this.memberRepo.findOne({ where: { kingdomId }, relations: ['alliance'] });
+        if (!member) throw new common_1.BadRequestException('Not in an alliance');
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom) throw new common_1.BadRequestException('Kingdom not found');
+        const MIN = 100, MAX = 10000;
+        const totalDonate = gold + wood + stone;
+        if (totalDonate < MIN) throw new common_1.BadRequestException(`מינימום תרומה ${MIN} משאבים`);
+        if (totalDonate > MAX) throw new common_1.BadRequestException(`מקסימום תרומה ${MAX} משאבים`);
+        if (gold > 0 && kingdom.gold < gold) throw new common_1.BadRequestException('Not enough gold');
+        if (wood > 0 && kingdom.wood < wood) throw new common_1.BadRequestException('Not enough wood');
+        if (stone > 0 && kingdom.stone < stone) throw new common_1.BadRequestException('Not enough stone');
+        kingdom.gold -= gold;
+        kingdom.wood -= wood;
+        kingdom.stone -= stone;
+        // Bonus: 5 gems per 1000 donated, plus alliance score
+        const gemsBonus = Math.floor(totalDonate / 1000) * 5;
+        kingdom.gems += gemsBonus;
+        await this.kingdomRepo.save(kingdom);
+        const alliance = member.alliance;
+        alliance.score = (alliance.score || 0) + Math.floor(totalDonate / 10);
+        await this.allianceRepo.save(alliance);
+        return { donated: { gold, wood, stone }, gemsBonus, allianceScore: alliance.score };
+    }
 };
 exports.AllianceService = AllianceService;
 exports.AllianceService = AllianceService = __decorate([

@@ -39,11 +39,10 @@ let AdminController = class AdminController {
             this.kingdomRepo.count({ where: { vipExpiresAt: (0, typeorm_2.MoreThan)(now) } }),
         ]);
         const activeToday = await this.userRepo.count({ where: { lastLogin: (0, typeorm_2.MoreThan)(today) } });
-        const activeWeek = await this.userRepo.count({ where: { lastLogin: (0, typeorm_2.MoreThan)(week) } });
+        const activeWeek  = await this.userRepo.count({ where: { lastLogin: (0, typeorm_2.MoreThan)(week) } });
         const topKingdoms = await this.kingdomRepo.find({ order: { score: 'DESC' }, take: 10, relations: ['user'] });
         return {
-            totalUsers, totalKingdoms, vipUsers,
-            activeToday, activeWeek,
+            totalUsers, totalKingdoms, vipUsers, activeToday, activeWeek,
             topKingdoms: topKingdoms.map(k => ({
                 name: k.name, score: k.score,
                 username: k.user?.username || k.user?.firstName,
@@ -72,8 +71,10 @@ let AdminController = class AdminController {
 exports.AdminController = AdminController;
 __decorate([(0, common_1.Get)('stats'), __param(0, (0, common_1.Request)()), __metadata("design:type", Function), __metadata("design:paramtypes", [Object]), __metadata("design:returntype", Promise)], AdminController.prototype, "getStats", null);
 __decorate([(0, common_1.Post)('vip/:userId'), __param(0, (0, common_1.Request)()), __param(1, (0, common_1.Param)('userId')), __metadata("design:type", Function), __metadata("design:paramtypes", [Object, String]), __metadata("design:returntype", Promise)], AdminController.prototype, "giveVip", null);
-__decorate([(0, common_1.Post)('gems/:userId/:gems'), __param(0, (0, common_1.Request)()), __param(1, (0, common_1.Param)('userId')), __param(2, (0, common_1.Param)('gems')), __metadata("design:type", Function), __metadata("design:paramtypes", [Object, String, Number]), __metadata("design:returntype", Promise)], AdminController.prototype, "giveGems", null);
+__decorate([(0, common_1.Post)('gems/:userId/:gems'), __param(0, (0, common_1.Request)()), __param(1, (0, common_1.Param)('userId')), __param(2, (0, common_1.Param)('gems')), __metadata("design:type", Function), __metadata("design:paramtypes", [Object, String, String]), __metadata("design:returntype", Promise)], AdminController.prototype, "giveGems", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
+    __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(1, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
     __metadata("design:paramtypes", [typeorm_2.Repository, typeorm_2.Repository])
 ], AdminController);

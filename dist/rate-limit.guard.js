@@ -3,33 +3,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RateLimitGuard = exports.RateLimit = void 0;
 const common_1 = require("@nestjs/common");
 
-// Per-user per-action rate limiter (in-memory)
-const limitMap = new Map(); // key: "userId:action" -> { count, resetAt }
-
-function RateLimit(maxRequests, windowSeconds) {
-    return (0, common_1.SetMetadata)('rateLimit', { maxRequests, windowSeconds });
-}
-exports.RateLimit = RateLimit;
+// Per-user rate limiter — NO DI needed, instantiated with new RateLimitGuard(max, windowSecs)
+const limitMap = new Map();
 
 class RateLimitGuard {
-    constructor(reflector) {
-        this.reflector = reflector;
+    constructor(maxRequests, windowSeconds) {
+        this.maxRequests = maxRequests;
+        this.windowSeconds = windowSeconds;
     }
     canActivate(ctx) {
-        const meta = this.reflector.get('rateLimit', ctx.getHandler());
-        if (!meta) return true;
         const req = ctx.switchToHttp().getRequest();
-        const userId = req.user?.userId || req.ip;
-        const action = `${userId}:${req.url}`;
+        const userId = req.user?.userId || req.ip || 'anon';
+        const key = `${userId}:${req.method}:${req.route?.path || req.url}`;
         const now = Date.now();
-        const entry = limitMap.get(action);
+        const entry = limitMap.get(key);
         if (!entry || now > entry.resetAt) {
-            limitMap.set(action, { count: 1, resetAt: now + meta.windowSeconds * 1000 });
+            limitMap.set(key, { count: 1, resetAt: now + this.windowSeconds * 1000 });
             return true;
         }
-        if (entry.count >= meta.maxRequests) {
+        if (entry.count >= this.maxRequests) {
+            const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
             throw new common_1.HttpException(
-                `יותר מדי בקשות — נסה שוב בעוד ${Math.ceil((entry.resetAt - now) / 1000)} שניות`,
+                `יותר מדי בקשות — נסה שוב בעוד ${retryAfter} שניות`,
                 429
             );
         }
@@ -38,7 +33,12 @@ class RateLimitGuard {
     }
 }
 exports.RateLimitGuard = RateLimitGuard;
-RateLimitGuard.prototype['__guards__'] = true;
+
+// Dummy decorator kept for compatibility (no longer needed but harmless)
+function RateLimit(maxRequests, windowSeconds) {
+    return () => {};
+}
+exports.RateLimit = RateLimit;
 
 // Cleanup old entries every 10 minutes
 setInterval(() => {

@@ -67,8 +67,7 @@ let CombatController = class CombatController {
 exports.CombatController = CombatController;
 __decorate([
     (0, common_1.Post)('attack'),
-    (0, common_1.UseGuards)(rate_limit_guard_1.RateLimitGuard),
-    (0, rate_limit_guard_1.RateLimit)(5, 60),
+    (0, common_1.UseGuards)(new rate_limit_guard_1.RateLimitGuard(5, 60)),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

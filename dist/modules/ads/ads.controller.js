@@ -49,8 +49,7 @@ __decorate([
 ], AdsController.prototype, "getStatus", null);
 __decorate([
     (0, common_1.Post)('reward'),
-    (0, common_1.UseGuards)(rate_limit_guard_1.RateLimitGuard),
-    (0, rate_limit_guard_1.RateLimit)(3, 30),
+    (0, common_1.UseGuards)(new rate_limit_guard_1.RateLimitGuard(3, 30)),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

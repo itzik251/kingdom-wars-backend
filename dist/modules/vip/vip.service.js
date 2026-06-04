@@ -26,9 +26,15 @@ let VipService = class VipService {
         this.kingdomRepo = kingdomRepo;
     }
     async getStatus(userId) {
-        const expiresAt = vipStore.get(userId);
-        const isVip = expiresAt && new Date() < expiresAt;
-        return { isVip: !!isVip, expiresAt: isVip ? expiresAt : null, priceToN: game_constants_1.VIP_PRICE_TON };
+        // Always read from DB — in-memory vipStore resets on server restart
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+        const dbExpiry = kingdom?.vipExpiresAt;
+        const isVip = dbExpiry && new Date() < new Date(dbExpiry);
+        return {
+            isVip: !!isVip,
+            expiresAt: isVip ? dbExpiry : null,
+            priceUsdt: 5,
+        };
     }
     async activateVip(userId, tonTxHash) {
         if (!tonTxHash || tonTxHash.length < 10) {

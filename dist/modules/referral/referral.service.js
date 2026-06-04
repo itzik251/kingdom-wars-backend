@@ -22,7 +22,7 @@ const MILESTONES = [
     { count: 1,  gems: 100, label: '1 חבר' },
     { count: 5,  gems: 200, label: '5 חברים' },
     { count: 10, gems: 0,   label: '10 חברים', hero: 'ragnar' },
-    // count: 50 reserved for future crypto feature
+    { count: 50, gems: 0,   label: '50 חברים', usdt: 1 },
 ];
 let ReferralService = class ReferralService {
     constructor(userRepo, kingdomRepo) {

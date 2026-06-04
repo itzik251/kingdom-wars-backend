@@ -25,7 +25,7 @@ export class UnitsService {
 
     const stats = UNIT_STATS[unitType];
     if (barracks.level < stats.requiredBarracksLevel) {
-      throw new BadRequestException(`נדרשת צריף רמה ${stats.requiredBarracksLevel}`);
+      throw new BadRequestException(`נדרש בסיס צבאי ברמה ${stats.requiredBarracksLevel}`);
     }
     // Use direct column comparison — the getter may not be available on a plain DB row
     const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);

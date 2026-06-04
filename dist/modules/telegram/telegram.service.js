@@ -33,12 +33,8 @@ let TelegramService = class TelegramService {
             return;
         const chatId = msg.chat.id;
         const text = msg.text;
-        // MINI_APP_URL must be a direct HTTPS URL (not t.me link) for web_app buttons to work
-        const rawUrl = this.config.get('MINI_APP_URL') || '';
-        // If it's a t.me link, ignore it and use the direct Railway URL
-        const miniAppUrl = rawUrl.startsWith('https://') && !rawUrl.includes('t.me')
-            ? rawUrl
-            : 'https://kingdom-wars-backend-production.up.railway.app';
+        // Always use the Railway URL — the correct production webapp URL
+        const miniAppUrl = 'https://kingdom-wars-backend-production.up.railway.app';
         // Normalize command: strip @BotName suffix and lowercase
         const cmd = text.split('@')[0].toLowerCase();
         if (cmd.startsWith('/start')) {

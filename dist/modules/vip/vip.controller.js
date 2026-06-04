@@ -42,6 +42,10 @@ let VipController = class VipController {
     setupWebhook() {
         return this.vipService.setupWebhook();
     }
+    testActivate(req) {
+        // Simulate paid invoice — for testing only
+        return this.vipService.testActivate(req.user.userId);
+    }
 };
 exports.VipController = VipController;
 __decorate([
@@ -88,4 +92,5 @@ __decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard)], VipControll
 __decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard)], VipController.prototype, "activate", null);
 __decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard)], VipController.prototype, "createInvoice", null);
 // webhook and setupWebhook are intentionally public
+__decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard), (0, common_1.Post)('test-activate')], VipController.prototype, "testActivate", null);
 //# sourceMappingURL=vip.controller.js.map

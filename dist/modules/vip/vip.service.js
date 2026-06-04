@@ -88,6 +88,10 @@ let VipService = class VipService {
         }
         return { ok: true };
     }
+    async testActivate(userId) {
+        // DEV ONLY: simulate a successful payment and activate VIP
+        return this.activateVipForUser(userId);
+    }
     async setupWebhook() {
         const token = process.env.CRYPTO_BOT_TOKEN;
         if (!token) return { error: 'no token' };

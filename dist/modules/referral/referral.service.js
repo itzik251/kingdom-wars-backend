@@ -18,12 +18,38 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
-const STATIC_MILESTONES = [
-    { count: 1,  gems: 100, label: '1 חבר' },
-    { count: 5,  gems: 200, label: '5 חברים' },
-    { count: 10, gems: 0,   label: '10 חברים', hero: 'ragnar' },
+
+// Each milestone type has a unique offset range to avoid key collisions.
+// claimKey = offset + count (stored in claimedReferralMilestones)
+const MILESTONE_TYPES = [
+    { interval: 1,  offset: 0,     gems: 100, usdt: 0, hero: null, labelFn: (c) => `חבר מספר ${c}` },
+    { interval: 5,  offset: 10000, gems: 200, usdt: 0, hero: null, labelFn: (c) => `${c} חברים` },
+    { interval: 10, offset: 20000, gems: 0,   usdt: 0, hero: 'ragnar', labelFn: (c) => `${c} חברים` },
+    { interval: 20, offset: 30000, gems: 0,   usdt: 1, hero: null, labelFn: (c) => `${c} חברים` },
 ];
-const USDT_MILESTONE_INTERVAL = 20;
+
+function buildMilestones(claimedSet, referredCount) {
+    return MILESTONE_TYPES.map(type => {
+        // Find all claimed keys belonging to this type's offset range
+        const claimedOfType = [...claimedSet].filter(k => k > type.offset && k < type.offset + 10000);
+        const claimedCounts = claimedOfType.map(k => k - type.offset);
+        const nextCount = claimedCounts.length > 0
+            ? Math.max(...claimedCounts) + type.interval
+            : type.interval;
+        const claimKey = type.offset + nextCount;
+        return {
+            claimKey,
+            count: nextCount,
+            label: type.labelFn(nextCount),
+            gems: type.gems,
+            usdt: type.usdt,
+            hero: type.hero,
+            reached: referredCount >= nextCount && !claimedSet.has(claimKey),
+            alreadyClaimed: claimedSet.has(claimKey),
+        };
+    });
+}
+
 let ReferralService = class ReferralService {
     constructor(userRepo, kingdomRepo) {
         this.userRepo = userRepo;
@@ -33,22 +59,7 @@ let ReferralService = class ReferralService {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
         const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
-
-        // Dynamic USDT milestone: next unclaimed multiple of 20
-        const claimedUsdtRounds = [...claimedSet].filter(n => n % USDT_MILESTONE_INTERVAL === 0 && n > 10);
-        const nextUsdtCount = claimedUsdtRounds.length > 0
-            ? Math.max(...claimedUsdtRounds) + USDT_MILESTONE_INTERVAL
-            : USDT_MILESTONE_INTERVAL;
-        const MILESTONES = [
-            ...STATIC_MILESTONES,
-            { count: nextUsdtCount, gems: 0, label: `${nextUsdtCount} חברים`, usdt: 1 },
-        ];
-
-        const milestones = MILESTONES.map(m => ({
-            ...m,
-            reached: referredCount >= m.count && !claimedSet.has(m.count),
-            alreadyClaimed: claimedSet.has(m.count),
-        }));
+        const milestones = buildMilestones(claimedSet, referredCount);
         const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'KingdomWarsBot';
         const link = `https://t.me/${botUsername}?start=ref_${user.referralCode}`;
         return {
@@ -58,40 +69,33 @@ let ReferralService = class ReferralService {
             milestones,
         };
     }
-    async claimMilestone(userId, milestoneCount) {
+    async claimMilestone(userId, claimKey) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
-        // Rebuild milestones the same way as getStats
         const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
-        const claimedUsdtRounds = [...claimedSet].filter(n => n % USDT_MILESTONE_INTERVAL === 0 && n > 10);
-        const nextUsdtCount = claimedUsdtRounds.length > 0
-            ? Math.max(...claimedUsdtRounds) + USDT_MILESTONE_INTERVAL
-            : USDT_MILESTONE_INTERVAL;
-        const MILESTONES = [
-            ...STATIC_MILESTONES,
-            { count: nextUsdtCount, gems: 0, label: `${nextUsdtCount} חברים`, usdt: 1 },
-        ];
-        const milestone = MILESTONES.find(m => m.count === milestoneCount);
+
+        const milestones = buildMilestones(claimedSet, referredCount);
+        const milestone = milestones.find(m => m.claimKey === claimKey);
         if (!milestone)
             return { error: 'milestone not found' };
         if (referredCount < milestone.count)
             return { error: 'not reached yet' };
-        const claimed = user.claimedReferralMilestones ?? [];
-        if (claimed.map(Number).includes(milestoneCount))
+        if (claimedSet.has(claimKey))
             return { error: 'already claimed' };
-        user.claimedReferralMilestones = [...claimed.map(Number), milestoneCount];
+
+        user.claimedReferralMilestones = [...claimedSet, claimKey];
         await this.userRepo.save(user);
+
         const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
         if (!kingdom)
             return { error: 'kingdom not found' };
-        if (milestone.gems > 0) {
+        if (milestone.gems > 0)
             kingdom.gems += milestone.gems;
-        }
-        if (milestone.usdt > 0) {
+        if (milestone.usdt > 0)
             kingdom.usdtBalance = (kingdom.usdtBalance || 0) + milestone.usdt;
-        }
         await this.kingdomRepo.save(kingdom);
-        return { claimed: true, gems: milestone.gems, usdt: milestone.usdt, skin: milestone.skin, hero: milestone.hero };
+
+        return { claimed: true, gems: milestone.gems, usdt: milestone.usdt, hero: milestone.hero };
     }
 };
 exports.ReferralService = ReferralService;

@@ -18,12 +18,12 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
-const MILESTONES = [
+const STATIC_MILESTONES = [
     { count: 1,  gems: 100, label: '1 חבר' },
     { count: 5,  gems: 200, label: '5 חברים' },
     { count: 10, gems: 0,   label: '10 חברים', hero: 'ragnar' },
-    { count: 20, gems: 0,   label: '20 חברים', usdt: 1 },
 ];
+const USDT_MILESTONE_INTERVAL = 20;
 let ReferralService = class ReferralService {
     constructor(userRepo, kingdomRepo) {
         this.userRepo = userRepo;
@@ -33,6 +33,17 @@ let ReferralService = class ReferralService {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
         const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
+
+        // Dynamic USDT milestone: next unclaimed multiple of 20
+        const claimedUsdtRounds = [...claimedSet].filter(n => n % USDT_MILESTONE_INTERVAL === 0 && n > 10);
+        const nextUsdtCount = claimedUsdtRounds.length > 0
+            ? Math.max(...claimedUsdtRounds) + USDT_MILESTONE_INTERVAL
+            : USDT_MILESTONE_INTERVAL;
+        const MILESTONES = [
+            ...STATIC_MILESTONES,
+            { count: nextUsdtCount, gems: 0, label: `${nextUsdtCount} חברים`, usdt: 1 },
+        ];
+
         const milestones = MILESTONES.map(m => ({
             ...m,
             reached: referredCount >= m.count && !claimedSet.has(m.count),
@@ -50,6 +61,16 @@ let ReferralService = class ReferralService {
     async claimMilestone(userId, milestoneCount) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
+        // Rebuild milestones the same way as getStats
+        const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
+        const claimedUsdtRounds = [...claimedSet].filter(n => n % USDT_MILESTONE_INTERVAL === 0 && n > 10);
+        const nextUsdtCount = claimedUsdtRounds.length > 0
+            ? Math.max(...claimedUsdtRounds) + USDT_MILESTONE_INTERVAL
+            : USDT_MILESTONE_INTERVAL;
+        const MILESTONES = [
+            ...STATIC_MILESTONES,
+            { count: nextUsdtCount, gems: 0, label: `${nextUsdtCount} חברים`, usdt: 1 },
+        ];
         const milestone = MILESTONES.find(m => m.count === milestoneCount);
         if (!milestone)
             return { error: 'milestone not found' };

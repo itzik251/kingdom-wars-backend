@@ -57,6 +57,8 @@ let CombatService = class CombatService {
         ]);
         const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
         const report = this.simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings, attackerBuildings);
+        report.defenderName = defender.name;
+        report.attackerName = attacker.name;
         await this.applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report);
         return report;
     }

@@ -19,7 +19,7 @@ const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const game_constants_1 = require("../../constants/game.constants");
-const vipStore = new Map();
+// vipStore removed — always read VIP status from DB to survive restarts
 let VipService = class VipService {
     constructor(userRepo, kingdomRepo) {
         this.userRepo = userRepo;
@@ -45,7 +45,6 @@ let VipService = class VipService {
     async activateVipForUser(userId) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + game_constants_1.VIP_DURATION_DAYS);
-        vipStore.set(userId, expiresAt);
         const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
         if (kingdom) {
             kingdom.vipExpiresAt = expiresAt;
@@ -94,7 +93,6 @@ let VipService = class VipService {
     }
     async resetVip(userId) {
         // DEV ONLY: remove VIP for testing
-        vipStore.delete(userId);
         const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
         if (kingdom) { kingdom.vipExpiresAt = null; await this.kingdomRepo.save(kingdom); }
         return { reset: true };
@@ -110,9 +108,9 @@ let VipService = class VipService {
         });
         return res.json();
     }
-    isUserVip(userId) {
-        const expiresAt = vipStore.get(userId);
-        return !!(expiresAt && new Date() < expiresAt);
+    async isUserVip(userId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+        return !!(kingdom?.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt));
     }
 };
 exports.VipService = VipService;

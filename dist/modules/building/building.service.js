@@ -44,6 +44,10 @@ let BuildingService = class BuildingService {
             throw new common_1.BadRequestException('Not enough wood');
         if (kingdom.stone < cost.stone)
             throw new common_1.BadRequestException('Not enough stone');
+        // Double-check building is still not upgrading (race condition guard)
+        const freshBuilding = await this.buildingRepo.findOne({ where: { id: building.id } });
+        if (freshBuilding?.upgradeEndsAt && new Date() < new Date(freshBuilding.upgradeEndsAt))
+            throw new common_1.BadRequestException('Building already upgrading');
         kingdom.gold -= cost.gold;
         kingdom.wood -= cost.wood;
         kingdom.stone -= cost.stone;

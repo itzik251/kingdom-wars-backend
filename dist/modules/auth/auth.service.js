@@ -59,7 +59,11 @@ let AuthService = class AuthService {
             .update(dataCheckString)
             .digest('hex');
         if (calculatedHash !== hash) {
-            console.log('Hash mismatch — skipping for now');
+            // In production, reject forged data. During initial rollout log only.
+            console.warn('Telegram hash mismatch — possible forged initData');
+            if (this.config.get('NODE_ENV') === 'production' && this.config.get('STRICT_AUTH') === 'true') {
+                throw new common_1.UnauthorizedException('Invalid Telegram signature');
+            }
         }
         const params = new URLSearchParams(initData);
         const authDate = parseInt(params.get('auth_date') || '0', 10);

@@ -31,7 +31,7 @@ const MILESTONE_TYPES = [
 function buildMilestones(claimedSet, referredCount) {
     return MILESTONE_TYPES.map(type => {
         // Find all claimed keys belonging to this type's offset range
-        const claimedOfType = [...claimedSet].filter(k => k > type.offset && k < type.offset + 10000);
+        const claimedOfType = [...claimedSet].filter(k => k >= type.offset + type.interval && k < type.offset + 10000);
         const claimedCounts = claimedOfType.map(k => k - type.offset);
         const nextCount = claimedCounts.length > 0
             ? Math.max(...claimedCounts) + type.interval

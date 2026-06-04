@@ -68,8 +68,13 @@ let QuestService = class QuestService {
         const questDef = [...DAILY_QUESTS, ...WEEKLY_QUESTS].find(q => q.key === quest.questKey);
         if (!questDef)
             return null;
-        quest.rewardClaimed = true;
-        await this.questRepo.save(quest);
+        // Atomic update — prevents double-claim race condition
+        const updateResult = await this.questRepo.update(
+            { id: questId, rewardClaimed: false },
+            { rewardClaimed: true }
+        );
+        if (!updateResult.affected || updateResult.affected === 0)
+            return null; // already claimed by another request
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         kingdom.gems += questDef.rewardGems;
         await this.kingdomRepo.save(kingdom);

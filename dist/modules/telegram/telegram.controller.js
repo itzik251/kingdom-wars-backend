@@ -32,6 +32,9 @@ let TelegramController = class TelegramController {
     setCommands() {
         return this.telegramService.setMyCommands();
     }
+    debugInfo() {
+        return this.telegramService.getDebugInfo();
+    }
 };
 exports.TelegramController = TelegramController;
 __decorate([
@@ -60,6 +63,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], TelegramController.prototype, "setCommands", null);
+__decorate([
+    (0, common_1.Get)('debug'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], TelegramController.prototype, "debugInfo", null);
 exports.TelegramController = TelegramController = __decorate([
     (0, common_1.Controller)('telegram'),
     __metadata("design:paramtypes", [telegram_service_1.TelegramService])

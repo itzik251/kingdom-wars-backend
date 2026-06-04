@@ -91,6 +91,12 @@ let TelegramService = class TelegramService {
             });
         }
     }
+    async getDebugInfo() {
+        const rawUrl = this.config.get('MINI_APP_URL') || '(not set)';
+        const menuBtnRes = await fetch(`${this.apiBase}/getChatMenuButton`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }).then(r => r.json()).catch(() => null);
+        const botRes = await fetch(`${this.apiBase}/getMe`).then(r => r.json()).catch(() => null);
+        return { MINI_APP_URL: rawUrl, menuButton: menuBtnRes, bot: botRes };
+    }
     async setMyCommands() {
         const commands = [
             { command: 'start',       description: '🏰 התחל לשחק' },

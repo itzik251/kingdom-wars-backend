@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const ads_service_1 = require("./ads.service");
+const rate_limit_guard_1 = require("../../rate-limit.guard");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
 class RewardDto {
 }
@@ -48,6 +49,8 @@ __decorate([
 ], AdsController.prototype, "getStatus", null);
 __decorate([
     (0, common_1.Post)('reward'),
+    (0, common_1.UseGuards)(rate_limit_guard_1.RateLimitGuard),
+    (0, rate_limit_guard_1.RateLimit)(3, 30),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

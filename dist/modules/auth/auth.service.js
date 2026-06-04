@@ -77,6 +77,13 @@ let AuthService = class AuthService {
         }
         else {
             user.lastLogin = new Date();
+            // If existing user has no referredBy yet and a referral code is provided — apply it now
+            if (referralCode && !user.referredBy) {
+                const referrer = await this.userRepo.findOne({ where: { referralCode } });
+                if (referrer && referrer.id !== user.id) {
+                    user.referredBy = referrer;
+                }
+            }
             await this.userRepo.save(user);
         }
         const token = this.jwtService.sign({ sub: user.id, telegramId: user.telegramId });

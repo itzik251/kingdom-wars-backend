@@ -43,8 +43,16 @@ let CombatController = class CombatController {
             report.attackerWins
                 ? this.questService.incrementQuest(kid, 'win_20_battles', 1)
                 : Promise.resolve(),
+            this.combatService.saveBattleLog(
+                report, kid, dto.defenderKingdomId,
+                myKingdom.kingdom.name, report.defenderName
+            ),
         ]).catch(() => { });
         return report;
+    }
+    async getHistory(req) {
+        const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.combatService.getBattleHistory(myKingdom.kingdom.id);
     }
     async getTargets(req) {
         const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -64,6 +72,13 @@ __decorate([
     __metadata("design:paramtypes", [Object, AttackDto]),
     __metadata("design:returntype", Promise)
 ], CombatController.prototype, "attack", null);
+__decorate([
+    (0, common_1.Get)('history'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CombatController.prototype, "getHistory", null);
 __decorate([
     (0, common_1.Get)('targets'),
     __param(0, (0, common_1.Request)()),

@@ -27,6 +27,37 @@ const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.STONE_QUARRY]: 'stone_quarry',
     [building_entity_1.BuildingType.FARM]: 'farm',
 };
+const BUILDING_NAMES_HE = {
+    town_hall: 'בית עיר', gold_mine: 'מכרה זהב', lumber_mill: 'מסור',
+    stone_quarry: 'מחצבה', farm: 'חווה', barracks: 'כפר',
+    academy: 'אקדמיה', wall: 'חומה', watch_tower: 'מגדל שמירה',
+    hospital: 'בית חולים', arcane_tower: 'מגדל ארקני',
+};
+const UNIT_NAMES_HE = {
+    spearman: 'חניתנים', archer: 'קשתים', swordsman: 'חרבנים',
+    cavalry: 'פרשים', catapult: 'קטפולטות', elite_guard: 'שומרי עלית',
+    paladin: 'פלדינים', dragon_rider: 'רוכבי דרקון',
+};
+// In-memory dedup to avoid double-notifying the same completed item
+const notifiedBuildings = new Set();
+const notifiedUnits = new Set();
+
+async function sendTgMsg(botToken, chatId, text) {
+    try {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: Number(chatId), text, parse_mode: 'HTML',
+                reply_markup: { inline_keyboard: [[{
+                    text: '🏰 פתח את המשחק',
+                    url: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME || 'KingdomWarsBot'}`,
+                }]] },
+            }),
+        });
+    } catch (_) {}
+}
+
 let EconomyService = class EconomyService {
     constructor(kingdomRepo, buildingRepo, unitRepo) {
         this.kingdomRepo = kingdomRepo;
@@ -154,6 +185,54 @@ let EconomyService = class EconomyService {
             }
         }
     }
+    async sendCompletionNotifications() {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (!botToken || botToken === 'dev_token') return;
+        const now = new Date();
+
+        // Buildings that finished upgrading (upgradeEndsAt in past, not yet cleared by tick)
+        const doneBuildings = await this.buildingRepo
+            .createQueryBuilder('b')
+            .innerJoinAndSelect('b.kingdom', 'k')
+            .innerJoinAndSelect('k.user', 'u')
+            .where('b.upgradeEndsAt IS NOT NULL')
+            .andWhere('b.upgradeEndsAt <= :now', { now })
+            .getMany();
+
+        for (const b of doneBuildings) {
+            const key = `${b.id}:${b.upgradeEndsAt?.getTime()}`;
+            if (notifiedBuildings.has(key)) continue;
+            notifiedBuildings.add(key);
+            const tid = b.kingdom?.user?.telegramId;
+            if (!tid) continue;
+            const name = BUILDING_NAMES_HE[b.type] || b.type;
+            await sendTgMsg(botToken, tid, `🏗️ <b>${name}</b> הושלם — רמה ${b.level + 1} מוכנה!`);
+        }
+
+        // Units that finished training
+        const doneUnits = await this.unitRepo
+            .createQueryBuilder('u')
+            .innerJoinAndSelect('u.kingdom', 'k')
+            .innerJoinAndSelect('k.user', 'us')
+            .where('u.trainingEndsAt IS NOT NULL')
+            .andWhere('u.trainingEndsAt <= :now', { now })
+            .andWhere('u.trainingCount > 0')
+            .getMany();
+
+        for (const u of doneUnits) {
+            const key = `${u.id}:${u.trainingEndsAt?.getTime()}`;
+            if (notifiedUnits.has(key)) continue;
+            notifiedUnits.add(key);
+            const tid = u.kingdom?.user?.telegramId;
+            if (!tid) continue;
+            const name = UNIT_NAMES_HE[u.type] || u.type;
+            await sendTgMsg(botToken, tid, `⚔️ האימון הושלם — ${u.trainingCount} <b>${name}</b> מוכנים לקרב!`);
+        }
+
+        // Clean up old dedup keys periodically
+        if (notifiedBuildings.size > 500) notifiedBuildings.clear();
+        if (notifiedUnits.size > 500) notifiedUnits.clear();
+    }
     getProductionRates(buildings, kingdom) {
         const rates = this.calculateProduction(buildings, 1);
         const now = new Date();
@@ -180,6 +259,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], EconomyService.prototype, "tickAllKingdoms", null);
+__decorate([
+    (0, schedule_1.Cron)('* * * * *'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], EconomyService.prototype, "sendCompletionNotifications", null);
 exports.EconomyService = EconomyService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),

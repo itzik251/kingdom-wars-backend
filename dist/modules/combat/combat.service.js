@@ -23,14 +23,16 @@ const user_entity_1 = require("../user/user.entity");
 const economy_service_1 = require("../economy/economy.service");
 const notification_service_1 = require("../notifications/notification.service");
 const game_constants_1 = require("../../constants/game.constants");
+const battle_log_entity_1 = require("./battle-log.entity");
 let CombatService = class CombatService {
-    constructor(kingdomRepo, unitRepo, buildingRepo, userRepo, economyService, notifService) {
+    constructor(kingdomRepo, unitRepo, buildingRepo, userRepo, economyService, notifService, battleLogRepo) {
         this.kingdomRepo = kingdomRepo;
         this.unitRepo = unitRepo;
         this.buildingRepo = buildingRepo;
         this.userRepo = userRepo;
         this.economyService = economyService;
         this.notifService = notifService;
+        this.battleLogRepo = battleLogRepo;
     }
     async attack(attackerKingdomId, defenderKingdomId) {
         if (attackerKingdomId === defenderKingdomId) {
@@ -217,6 +219,31 @@ let CombatService = class CombatService {
             }
         }
     }
+    async saveBattleLog(report, attackerKingdomId, defenderKingdomId, attackerName, defenderName) {
+        try {
+            const log = this.battleLogRepo.create({
+                attackerKingdomId, defenderKingdomId,
+                attackerName, defenderName,
+                attackerWins: report.attackerWins,
+                loot: report.loot,
+                attackerPower: report.attackerPower,
+                defenderPower: report.defenderPower,
+            });
+            await this.battleLogRepo.save(log);
+        } catch (_) {}
+    }
+    async getBattleHistory(kingdomId, limit = 20) {
+        const logs = await this.battleLogRepo.find({
+            where: [{ attackerKingdomId: kingdomId }, { defenderKingdomId: kingdomId }],
+            order: { createdAt: 'DESC' },
+            take: limit,
+        });
+        return logs.map(l => ({
+            ...l,
+            isAttacker: l.attackerKingdomId === kingdomId,
+            won: l.attackerKingdomId === kingdomId ? l.attackerWins : !l.attackerWins,
+        }));
+    }
     random(min, max) {
         return min + Math.random() * (max - min);
     }
@@ -228,11 +255,13 @@ exports.CombatService = CombatService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
     __param(2, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(6, (0, typeorm_1.InjectRepository)(battle_log_entity_1.BattleLog)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         economy_service_1.EconomyService,
-        notification_service_1.NotificationService])
+        notification_service_1.NotificationService,
+        typeorm_2.Repository])
 ], CombatService);
 //# sourceMappingURL=combat.service.js.map

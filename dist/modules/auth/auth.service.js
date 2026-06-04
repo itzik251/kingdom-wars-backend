@@ -76,22 +76,36 @@ let AuthService = class AuthService {
         const data = this.validateTelegramData(initData);
         const tgUser = JSON.parse(data.user);
         let user = await this.userRepo.findOne({ where: { telegramId: String(tgUser.id) } });
+        let dailyBonus = null;
         if (!user) {
             user = await this.createNewUser(tgUser, referralCode);
         }
         else {
+            const today = new Date().toISOString().split('T')[0];
+            const lastDate = user.lastLogin ? new Date(user.lastLogin).toISOString().split('T')[0] : null;
+            // Daily login bonus — only once per calendar day
+            if (lastDate !== today) {
+                const streak = (user.loginStreak || 0);
+                const isConsecutive = lastDate === new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                const newStreak = isConsecutive ? streak + 1 : 1;
+                user.loginStreak = newStreak;
+                // Bonus scales with streak: day1=50, day2=75, day3=100, day4=150, day5=200, day6=300, day7+=500
+                const bonuses = [50, 75, 100, 150, 200, 300, 500];
+                const gems = bonuses[Math.min(newStreak - 1, bonuses.length - 1)];
+                // Apply bonus to kingdom
+                const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+                if (kingdom) { kingdom.gems += gems; await this.kingdomRepo.save(kingdom); }
+                dailyBonus = { gems, streak: newStreak };
+            }
             user.lastLogin = new Date();
-            // If existing user has no referredBy yet and a referral code is provided — apply it now
             if (referralCode && !user.referredBy) {
                 const referrer = await this.userRepo.findOne({ where: { referralCode } });
-                if (referrer && referrer.id !== user.id) {
-                    user.referredBy = referrer;
-                }
+                if (referrer && referrer.id !== user.id) user.referredBy = referrer;
             }
             await this.userRepo.save(user);
         }
         const token = this.jwtService.sign({ sub: user.id, telegramId: user.telegramId });
-        return { token, userId: user.id };
+        return { token, userId: user.id, dailyBonus };
     }
     async createNewUser(tgUser, referralCode) {
         let referredBy = null;

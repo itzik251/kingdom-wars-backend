@@ -19,10 +19,10 @@ const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const MILESTONES = [
-    { count: 1, gems: 100, label: '1 חבר' },
-    { count: 5, gems: 500, label: '5 חברים' },
-    { count: 10, gems: 0, label: '10 חברים', skin: 'rare_skin' },
-    { count: 50, gems: 0, label: '50 חברים', hero: 'ragnar' },
+    { count: 1,  gems: 100, label: '1 חבר' },
+    { count: 5,  gems: 200, label: '5 חברים' },
+    { count: 10, gems: 0,   label: '10 חברים', hero: 'ragnar' },
+    // count: 50 reserved for future crypto feature
 ];
 let ReferralService = class ReferralService {
     constructor(userRepo, kingdomRepo) {

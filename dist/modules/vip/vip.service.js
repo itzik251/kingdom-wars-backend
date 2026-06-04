@@ -34,6 +34,9 @@ let VipService = class VipService {
         if (!tonTxHash || tonTxHash.length < 10) {
             throw new common_1.BadRequestException('Invalid transaction hash');
         }
+        return this.activateVipForUser(userId);
+    }
+    async activateVipForUser(userId) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + game_constants_1.VIP_DURATION_DAYS);
         vipStore.set(userId, expiresAt);
@@ -43,6 +46,52 @@ let VipService = class VipService {
             await this.kingdomRepo.save(kingdom);
         }
         return { success: true, expiresAt, durationDays: game_constants_1.VIP_DURATION_DAYS };
+    }
+    async createVipInvoice(userId) {
+        const token = process.env.CRYPTO_BOT_TOKEN;
+        if (!token) throw new common_1.BadRequestException('CryptoBot not configured');
+        const res = await fetch('https://pay.crypt.bot/api/createInvoice', {
+            method: 'POST',
+            headers: { 'Crypto-Pay-API-Token': token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                asset: 'USDT',
+                amount: '5.00',
+                description: '👑 VIP Kingdom Wars — חודש אחד',
+                payload: JSON.stringify({ type: 'vip', userId }),
+                expires_in: 3600,
+            }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new common_1.BadRequestException('שגיאה ביצירת חשבונית: ' + (data.error?.name || ''));
+        const invoice = data.result;
+        return {
+            invoiceId: invoice.invoice_id,
+            invoiceUrl: invoice.mini_app_invoice_url || invoice.bot_invoice_url,
+            amount: invoice.amount,
+            asset: invoice.asset,
+        };
+    }
+    async processWebhook(body) {
+        if (body.update_type !== 'invoice_paid') return { ok: true };
+        const invoice = body.payload;
+        if (!invoice?.payload) return { ok: true };
+        let payload;
+        try { payload = JSON.parse(invoice.payload); } catch { return { ok: true }; }
+        if (payload.type === 'vip' && payload.userId) {
+            await this.activateVipForUser(payload.userId).catch(() => {});
+        }
+        return { ok: true };
+    }
+    async setupWebhook() {
+        const token = process.env.CRYPTO_BOT_TOKEN;
+        if (!token) return { error: 'no token' };
+        const webhookUrl = 'https://kingdom-wars-backend-production.up.railway.app/api/vip/webhook';
+        const res = await fetch('https://pay.crypt.bot/api/setWebhook', {
+            method: 'POST',
+            headers: { 'Crypto-Pay-API-Token': token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: webhookUrl }),
+        });
+        return res.json();
     }
     isUserVip(userId) {
         const expiresAt = vipStore.get(userId);

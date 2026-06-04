@@ -111,6 +111,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Kingdom.prototype, "maxWorkers", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'usdt_balance', type: 'float', default: 0, nullable: true }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "usdtBalance", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "createdAt", void 0);

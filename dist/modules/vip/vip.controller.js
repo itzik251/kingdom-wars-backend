@@ -33,6 +33,15 @@ let VipController = class VipController {
     activate(req, dto) {
         return this.vipService.activateVip(req.user.userId, dto.tonTxHash);
     }
+    createInvoice(req) {
+        return this.vipService.createVipInvoice(req.user.userId);
+    }
+    webhook(body) {
+        return this.vipService.processWebhook(body);
+    }
+    setupWebhook() {
+        return this.vipService.setupWebhook();
+    }
 };
 exports.VipController = VipController;
 __decorate([
@@ -50,6 +59,26 @@ __decorate([
     __metadata("design:paramtypes", [Object, ActivateDto]),
     __metadata("design:returntype", void 0)
 ], VipController.prototype, "activate", null);
+__decorate([
+    (0, common_1.Get)('invoice'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], VipController.prototype, "createInvoice", null);
+__decorate([
+    (0, common_1.Post)('webhook'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], VipController.prototype, "webhook", null);
+__decorate([
+    (0, common_1.Get)('setup-webhook'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], VipController.prototype, "setupWebhook", null);
 exports.VipController = VipController = __decorate([
     (0, common_1.Controller)('vip'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

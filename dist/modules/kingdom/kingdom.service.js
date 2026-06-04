@@ -121,6 +121,41 @@ let KingdomService = class KingdomService {
         await this.kingdomRepo.save(kingdom);
         return { workers: kingdom.workers, maxWorkers };
     }
+    async getUsdtBalance(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        return { usdtBalance: kingdom.usdtBalance || 0 };
+    }
+    async addUsdtBalance(kingdomId, amount) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        kingdom.usdtBalance = (kingdom.usdtBalance || 0) + amount;
+        await this.kingdomRepo.save(kingdom);
+        return { usdtBalance: kingdom.usdtBalance };
+    }
+    async withdrawUsdt(kingdomId, userId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+        const balance = kingdom.usdtBalance || 0;
+        if (balance < 20) throw new common_1.BadRequestException(`נדרש לפחות $20 USDT (יש לך $${balance.toFixed(2)})`);
+        const token = process.env.CRYPTO_BOT_TOKEN;
+        if (!token) throw new common_1.BadRequestException('CryptoBot לא מוגדר');
+        const telegramId = kingdom.user?.telegramId;
+        if (!telegramId) throw new common_1.BadRequestException('לא נמצא מזהה Telegram');
+        const spendId = `withdrawal_${kingdomId}_${Date.now()}`;
+        const res = await fetch('https://pay.crypt.bot/api/transfer', {
+            method: 'POST',
+            headers: { 'Crypto-Pay-API-Token': token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: Number(telegramId),
+                asset: 'USDT',
+                amount: balance.toFixed(2),
+                spend_id: spendId,
+            }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new common_1.BadRequestException('משיכה נכשלה: ' + (data.error?.name || 'שגיאה'));
+        kingdom.usdtBalance = 0;
+        await this.kingdomRepo.save(kingdom);
+        return { success: true, amount: balance };
+    }
     async fireWorker(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         if (!kingdom.workers || kingdom.workers <= 0)

@@ -92,6 +92,13 @@ let VipService = class VipService {
         // DEV ONLY: simulate a successful payment and activate VIP
         return this.activateVipForUser(userId);
     }
+    async resetVip(userId) {
+        // DEV ONLY: remove VIP for testing
+        vipStore.delete(userId);
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+        if (kingdom) { kingdom.vipExpiresAt = null; await this.kingdomRepo.save(kingdom); }
+        return { reset: true };
+    }
     async setupWebhook() {
         const token = process.env.CRYPTO_BOT_TOKEN;
         if (!token) return { error: 'no token' };

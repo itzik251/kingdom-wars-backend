@@ -22,7 +22,7 @@ const MILESTONES = [
     { count: 1,  gems: 100, label: '1 חבר' },
     { count: 5,  gems: 200, label: '5 חברים' },
     { count: 10, gems: 0,   label: '10 חברים', hero: 'ragnar' },
-    { count: 50, gems: 0,   label: '50 חברים', usdt: 1 },
+    { count: 20, gems: 0,   label: '20 חברים', usdt: 1 },
 ];
 let ReferralService = class ReferralService {
     constructor(userRepo, kingdomRepo) {
@@ -65,9 +65,12 @@ let ReferralService = class ReferralService {
             return { error: 'kingdom not found' };
         if (milestone.gems > 0) {
             kingdom.gems += milestone.gems;
-            await this.kingdomRepo.save(kingdom);
         }
-        return { claimed: true, gems: milestone.gems, skin: milestone.skin, hero: milestone.hero };
+        if (milestone.usdt > 0) {
+            kingdom.usdtBalance = (kingdom.usdtBalance || 0) + milestone.usdt;
+        }
+        await this.kingdomRepo.save(kingdom);
+        return { claimed: true, gems: milestone.gems, usdt: milestone.usdt, skin: milestone.skin, hero: milestone.hero };
     }
 };
 exports.ReferralService = ReferralService;

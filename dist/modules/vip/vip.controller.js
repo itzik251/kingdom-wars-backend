@@ -81,7 +81,11 @@ __decorate([
 ], VipController.prototype, "setupWebhook", null);
 exports.VipController = VipController = __decorate([
     (0, common_1.Controller)('vip'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [vip_service_1.VipService])
 ], VipController);
+// Apply auth guard only to protected methods
+__decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard)], VipController.prototype, "getStatus", null);
+__decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard)], VipController.prototype, "activate", null);
+__decorate([(0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard)], VipController.prototype, "createInvoice", null);
+// webhook and setupWebhook are intentionally public
 //# sourceMappingURL=vip.controller.js.map

@@ -1,6 +1,6 @@
 {
   "name": "kingdom-wars-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "scripts": {
     "build": "echo build skipped - dist pre-compiled",
     "start": "node dist/main.js",

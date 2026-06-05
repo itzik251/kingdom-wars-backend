@@ -44,8 +44,11 @@ export class NotificationService {
     const telegramId = payload.telegramId;
     if (!telegramId) return;
 
+    const attackedMsg = payload.won
+      ? `⚔️ הממלכה שלך הותקפה ונשדדה!\n👤 ${payload.attackerName}\n💰 ${payload.gold || 0} זהב | 🪵 ${payload.wood || 0} עץ | 🪨 ${payload.stone || 0} אבן${payload.buildingDamaged ? `\n💥 ${payload.buildingDamaged} נפגע!` : ''}`
+      : `🛡️ תקיפה נהדפה!\n👤 ${payload.attackerName} ניסה לתקוף אותך ונכשל`;
     const messages: Record<string, string> = {
-      attacked:       `⚔️ הממלכה שלך הותקפה! ${payload.attackerName} בזז ${payload.gold} זהב`,
+      attacked:       attackedMsg,
       shield_expired: '🛡️ המגן שלך פג! עכשיו אתה חשוף לתקיפות',
       build_done:     `🏗️ ${payload.building} הושלם — רמה ${payload.level}`,
       training_done:  `⚔️ אימון הושלם — ${payload.count} ${payload.unit} מוכנים`,

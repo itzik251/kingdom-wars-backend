@@ -220,7 +220,8 @@ export class CombatService {
     defender.stone = Math.max(0, defender.stone - report.loot.stone);
 
     if (report.attackerWins) {
-      attacker.score += 10 + Math.floor(report.loot.gold / 100);
+      const defenderScoreBonus = Math.floor(defender.score / 10); // bonus based on defender's strength
+      attacker.score += 50 + Math.floor(report.loot.gold / 20) + defenderScoreBonus;
 
       // Victory streak — up to 50% bonus loot
       attacker.winStreak = (attacker.winStreak || 0) + 1;
@@ -245,7 +246,9 @@ export class CombatService {
         attackerName: attacker.name,
         gold: report.loot.gold,
         wood: report.loot.wood,
+        stone: report.loot.stone,
         won: report.attackerWins,
+        buildingDamaged: report.buildingDamaged?.type,
         telegramId: defenderKingdomFull.user.telegramId,
       }).catch(() => {});
     }
@@ -267,8 +270,8 @@ export class CombatService {
     }
     await this.unitRepo.save([...attackerUnits, ...defenderUnits]);
 
-    // Building damage on decisive wins (attack power more than double defense)
-    if (report.attackerWins && report.attackerPower > report.defenderPower * 2) {
+    // Building damage on any win (50% chance)
+    if (report.attackerWins && Math.random() < 0.5) {
       const defenderBuildings = await this.buildingRepo.find({ where: { kingdom: { id: defender.id } } });
       const candidates = defenderBuildings.filter(
         b => b.type !== BuildingType.TOWN_HALL && b.level > 1,

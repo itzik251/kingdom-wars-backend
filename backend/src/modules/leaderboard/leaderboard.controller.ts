@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LeaderboardService } from './leaderboard.service';
 
@@ -10,5 +10,10 @@ export class LeaderboardController {
   @Get()
   getTop(@Query('all') all?: string) {
     return this.leaderboardService.getTop(50, all === 'true');
+  }
+
+  @Post('reset-scores')
+  resetScores() {
+    return this.leaderboardService.resetAllScores();
   }
 }

@@ -21,7 +21,6 @@ export class LeaderboardService {
     if (!includeAll) qb.where('k.score > 0');
 
     const rows = await qb.getMany();
-
     const now = new Date();
     // Shape to what the frontend (LeaderboardScreen / WorldMapScreen) expects
     return rows.map((k, i) => ({
@@ -33,5 +32,10 @@ export class LeaderboardService {
       score: k.score,
       isShielded: !!(k.shieldUntil && now < new Date(k.shieldUntil)),
     }));
+  }
+
+  async resetAllScores() {
+    await this.kingdomRepo.query('UPDATE kingdoms SET score = 0, win_streak = 0');
+    return { message: 'All scores reset to 0' };
   }
 }

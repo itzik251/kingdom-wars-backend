@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LeaderboardService } from './leaderboard.service';
 
@@ -8,7 +8,7 @@ export class LeaderboardController {
   constructor(private leaderboardService: LeaderboardService) {}
 
   @Get()
-  getTop() {
-    return this.leaderboardService.getTop();
+  getTop(@Query('all') all?: string) {
+    return this.leaderboardService.getTop(50, all === 'true');
   }
 }

@@ -48,9 +48,9 @@ export class AdsService {
     } else {
       const resourceBonuses: Record<string, { amount: number; apply: (k: Kingdom, v: number) => void }> = {
         gold_bonus:  { amount: 500, apply: (k, v) => { k.gold  = Math.min(k.maxGold,  k.gold  + v); } },
-        wood_bonus:  { amount: 400, apply: (k, v) => { k.wood  = Math.min(k.maxWood,  k.wood  + v); } },
-        stone_bonus: { amount: 300, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
-        food_bonus:  { amount: 200, apply: (k, v) => { k.food  = Math.min(k.maxFood,  k.food  + v); } },
+        wood_bonus:  { amount: 500, apply: (k, v) => { k.wood  = Math.min(k.maxWood,  k.wood  + v); } },
+        stone_bonus: { amount: 500, apply: (k, v) => { k.stone = Math.min(k.maxStone, k.stone + v); } },
+        food_bonus:  { amount: 500, apply: (k, v) => { k.food  = Math.min(k.maxFood,  k.food  + v); } },
       };
       const bonus = resourceBonuses[rewardType];
       if (!bonus) throw new BadRequestException('Invalid reward type');

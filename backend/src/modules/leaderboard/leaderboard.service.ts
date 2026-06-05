@@ -7,8 +7,8 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 export class LeaderboardService {
   constructor(@InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>) {}
 
-  async getTop(limit = 50) {
-    const rows = await this.kingdomRepo
+  async getTop(limit = 50, includeAll = false) {
+    const qb = this.kingdomRepo
       .createQueryBuilder('k')
       .leftJoinAndSelect('k.user', 'u')
       .select([
@@ -16,8 +16,11 @@ export class LeaderboardService {
         'u.username', 'u.firstName', 'u.avatarUrl',
       ])
       .orderBy('k.score', 'DESC')
-      .limit(limit)
-      .getMany();
+      .limit(includeAll ? 500 : limit);
+
+    if (!includeAll) qb.where('k.score > 0');
+
+    const rows = await qb.getMany();
 
     const now = new Date();
     // Shape to what the frontend (LeaderboardScreen / WorldMapScreen) expects

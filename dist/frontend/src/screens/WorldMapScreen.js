@@ -186,20 +186,38 @@ function WorldMapScreen() {
                 const hue = (i * 53 + 120) % 360;
                 const h = 20 + Math.round((k.score / maxScore) * 55);
                 const tw = 36;
+                const IW = W * 2.2, IH = H * 2.2;
                 return (<div key={k.id || i}>
                   
                   <div style={{
-                        position: 'absolute', left: px - W, top: py,
-                        width: W * 2, height: H,
+                        position: 'absolute', left: px - IW * 0.55, top: py - IH * 0.1,
+                        width: IW * 1.1, height: IH * 0.7,
+                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
+                        background: 'radial-gradient(ellipse,#0a1e2e 0%,#050d1a 100%)',
+                        zIndex: gx + gy - 1,
+                    }}/>
+
+                  
+                  <div style={{
+                        position: 'absolute', left: px - IW / 2, top: py - IH * 0.15,
+                        width: IW, height: IH * 0.6,
                         clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
                         background: isMe
-                            ? 'linear-gradient(135deg,#2a4a1a,#1a3010)'
-                            : 'linear-gradient(135deg,#0d2a3a,#071520)',
+                            ? 'linear-gradient(135deg,#3a6020,#2a4a18,#1e3610)'
+                            : `linear-gradient(135deg,hsl(${(hue + 30) % 360},40%,18%),hsl(${hue},35%,12%),hsl(${(hue + 15) % 360},30%,8%))`,
+                        boxShadow: isMe ? '0 0 12px rgba(39,174,96,0.3)' : `0 0 8px hsla(${hue},50%,20%,0.2)`,
                         zIndex: gx + gy,
                     }}/>
                   
-                  <div style={{ position: 'absolute', left: px - W, top: py + H / 2, width: W, height: 8, background: isMe ? '#162a0a' : '#051018', transform: 'skewY(26.6deg)', transformOrigin: 'top left', zIndex: gx + gy }}/>
-                  <div style={{ position: 'absolute', left: px, top: py + H / 2, width: W, height: 8, background: isMe ? '#0e1e06' : '#030c12', transform: 'skewY(-26.6deg)', transformOrigin: 'top right', zIndex: gx + gy }}/>
+                  <div style={{ position: 'absolute', left: px - IW / 2, top: py - IH * 0.15 + IH * 0.3, width: IW / 2, height: 10, background: isMe ? '#1a3008' : `hsl(${hue},30%,6%)`, transform: 'skewY(26.6deg)', transformOrigin: 'top left', zIndex: gx + gy }}/>
+                  <div style={{ position: 'absolute', left: px, top: py - IH * 0.15 + IH * 0.3, width: IW / 2, height: 10, background: isMe ? '#122206' : `hsl(${hue},25%,4%)`, transform: 'skewY(-26.6deg)', transformOrigin: 'top right', zIndex: gx + gy }}/>
+
+                  
+                  {[{ dx: -IW * 0.25, dy: IH * 0.05 }, { dx: IW * 0.25, dy: IH * 0.05 }].map((pos, ti) => (<div key={ti} style={{
+                            position: 'absolute', left: px + pos.dx - 5, top: py - IH * 0.15 + pos.dy - 8,
+                            width: 10, height: 10, fontSize: 8, textAlign: 'center',
+                            zIndex: gx + gy + 1, pointerEvents: 'none',
+                        }}>🌿</div>))}
 
                   
                   <div data-kingdom="true" onClick={() => { if (!isDragging.current)

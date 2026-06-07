@@ -5,11 +5,10 @@ import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 
 const MILESTONES = [
-  { count: 1,  gems: 100, label: '1 חבר'   },
-  { count: 5,  gems: 500, label: '5 חברים'  },
-  { count: 10, gems: 0,   label: '10 חברים', hero: 'referral_hero' },
-  { count: 20, gems: 0,   label: '20 חברים', vipDays: 30          },
-  { count: 50, gems: 0,   label: '50 חברים', hero: 'ragnar'       },
+  { count: 1,  gems: 100, label: '1 חבר'  },
+  { count: 5,  gems: 200, label: '5 חברים' },
+  { count: 10, gems: 0,   label: '10 חברים', hero: 'ragnar' },
+  { count: 20, gems: 0,   label: '20 חברים', vipDays: 30    },
 ];
 
 @Injectable()

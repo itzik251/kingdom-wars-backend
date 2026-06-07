@@ -44,10 +44,9 @@ function ReferralCard() {
     const mkLabel = (n) => `${n} ${n === 1 ? t('friend') : t('friends')}`;
     const MILESTONES = [
         { count: 1, gems: 100, label: mkLabel(1) },
-        { count: 5, gems: 500, label: mkLabel(5) },
-        { count: 10, gems: 0, label: mkLabel(10), extra: `🦸 ${t('referral_hero')}` },
+        { count: 5, gems: 200, label: mkLabel(5) },
+        { count: 10, gems: 0, label: mkLabel(10), extra: `🦸 ${t('ragnar_name')}` },
         { count: 20, gems: 0, label: mkLabel(20), extra: `👑 VIP 30 ${t('days_free')}` },
-        { count: 50, gems: 0, label: mkLabel(50), extra: `🦸 ${t('ragnar_name')}` },
     ];
     return (<div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.1),rgba(26,138,64,0.05))', border: '1px solid rgba(39,174,96,0.3)', borderRadius: 14, padding: 14 }}>
       
@@ -63,6 +62,11 @@ function ReferralCard() {
             {copied ? t('copied') : t('ref_copy_link')}
           </button>
         </>) : (<div style={{ textAlign: 'center', fontSize: 12, color: '#a0845a', padding: '10px 0' }}>{t('loading')}</div>)}
+
+      
+      <div style={{ fontSize: 10, color: '#666', background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '6px 10px', marginBottom: 8, lineHeight: 1.5 }}>
+        ⚠️ {t('ref_anticheat_note')}
+      </div>
 
       
       <div style={{ fontSize: 11, fontWeight: 700, color: '#a0845a', marginBottom: 6 }}>{t('milestones_lbl')}</div>
@@ -151,7 +155,6 @@ function UsdtBalanceSection() {
         {msg && <div style={{ fontSize: 12, marginTop: 6, color: msg.startsWith('✅') ? '#27ae60' : '#e74c3c', textAlign: 'center' }}>{msg}</div>}
 
         <div style={{ fontSize: 10, color: '#666', marginTop: 6, lineHeight: 1.5 }}>
-          {t('usdt_info')}<br />
           {t('withdraw_info')}
         </div>
       </div>
@@ -320,8 +323,8 @@ function ShopScreen() {
             { icon: '🔮', label: t('b_arcane_tower') },
             { icon: '🏆', label: t('vip_badge_feat') },
             { icon: '💎', label: t('vip_gems_x') },
-            { icon: '🚀', label: t('vip_prod_bonus') },
-            { icon: '💵', label: t('vip_usdt_earn') },
+            { icon: '🚀', label: t('vip_prod_x15') },
+            { icon: '⚔️', label: t('vip_usdt_raid') },
         ].map(f => (<div key={f.label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 background: isVip ? 'rgba(244,208,63,0.08)' : 'rgba(0,0,0,0.3)',

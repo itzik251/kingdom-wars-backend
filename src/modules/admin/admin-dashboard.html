@@ -6,45 +6,58 @@
 <title>Kingdom Wars — Admin</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a14; color: #e0e0e0; min-height: 100vh; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a14; color: #e0e0e0; min-height: 100vh; font-size: 13px; }
   .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
   .login-box { background: #111827; border: 1px solid #2d3748; border-radius: 16px; padding: 40px; width: 100%; max-width: 360px; text-align: center; }
   .login-box h1 { font-size: 24px; color: #f4d03f; margin-bottom: 8px; }
   .login-box p { color: #666; font-size: 13px; margin-bottom: 24px; }
-  input { width: 100%; padding: 12px 16px; background: #1a2236; border: 1px solid #2d3748; border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 12px; outline: none; }
+  input[type=password], input[type=text], input[type=number] {
+    width: 100%; padding: 10px 14px; background: #1a2236; border: 1px solid #2d3748;
+    border-radius: 10px; color: #fff; font-size: 13px; margin-bottom: 10px; outline: none;
+  }
   input:focus { border-color: #f4d03f; }
-  .btn { width: 100%; padding: 13px; background: linear-gradient(135deg,#f39c12,#f4d03f); border: none; border-radius: 10px; color: #000; font-size: 15px; font-weight: 800; cursor: pointer; }
+  select { padding: 8px 12px; background: #1a2236; border: 1px solid #2d3748; border-radius: 8px; color: #fff; font-size: 12px; outline: none; cursor: pointer; }
+  select:focus { border-color: #f4d03f; }
+  .btn { padding: 13px 20px; background: linear-gradient(135deg,#f39c12,#f4d03f); border: none; border-radius: 10px; color: #000; font-size: 15px; font-weight: 800; cursor: pointer; }
   .btn:hover { opacity: 0.9; }
-  .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 7px; border: none; cursor: pointer; font-weight: 700; white-space: nowrap; }
   .btn-danger { background: #e74c3c; color: #fff; }
   .btn-success { background: #27ae60; color: #fff; }
   .btn-info { background: #3498db; color: #fff; }
-  .dashboard { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
-  .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: #111827; border-bottom: 1px solid #1e2a3a; margin: -20px -20px 24px; }
-  .header h1 { font-size: 20px; color: #f4d03f; }
-  .logout { background: none; border: 1px solid #444; color: #888; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
-  .stat-card { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; padding: 18px; text-align: center; }
-  .stat-card .val { font-size: 32px; font-weight: 900; color: #f4d03f; }
-  .stat-card .lbl { font-size: 12px; color: #666; margin-top: 4px; }
-  .section { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
-  .section-header { padding: 14px 18px; border-bottom: 1px solid #1e2a3a; font-weight: 700; font-size: 14px; color: #a0aec0; display: flex; justify-content: space-between; align-items: center; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { padding: 10px 14px; text-align: right; color: #666; font-weight: 600; border-bottom: 1px solid #1e2a3a; }
-  td { padding: 10px 14px; border-bottom: 1px solid #0d1520; }
+  .btn-gold { background: linear-gradient(135deg,#b8860b,#f4d03f); color: #000; }
+  .btn-purple { background: #9b59b6; color: #fff; }
+  .dashboard { display: none; padding: 16px; max-width: 1300px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #111827; border-bottom: 1px solid #1e2a3a; margin: -16px -16px 20px; }
+  .header h1 { font-size: 18px; color: #f4d03f; }
+  .logout { background: none; border: 1px solid #444; color: #888; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; padding: 14px; text-align: center; }
+  .stat-card .val { font-size: 26px; font-weight: 900; color: #f4d03f; }
+  .stat-card .lbl { font-size: 11px; color: #666; margin-top: 4px; }
+  .section { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
+  .section-header { padding: 12px 16px; border-bottom: 1px solid #1e2a3a; font-weight: 700; font-size: 13px; color: #a0aec0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+  th { padding: 8px 10px; text-align: right; color: #666; font-weight: 600; border-bottom: 1px solid #1e2a3a; white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #0d1520; vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(244,208,63,0.03); }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  tr:hover td { background: rgba(244,208,63,0.02); }
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
   .badge-green { background: rgba(39,174,96,0.2); color: #27ae60; }
   .badge-red { background: rgba(231,76,60,0.2); color: #e74c3c; }
   .badge-blue { background: rgba(52,152,219,0.2); color: #3498db; }
-  .actions { display: flex; gap: 6px; }
+  .badge-gold { background: rgba(244,208,63,0.15); color: #f4d03f; }
+  .badge-purple { background: rgba(155,89,182,0.2); color: #9b59b6; }
+  .actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .give-form { display: flex; gap: 4px; align-items: center; }
+  .give-form input[type=number] { width: 65px; margin: 0; padding: 5px 8px; font-size: 11px; }
+  .give-form select { font-size: 11px; padding: 5px 8px; }
   .error { color: #e74c3c; text-align: center; padding: 12px; }
-  .loading { text-align: center; color: #666; padding: 40px; }
-  .give-gems-form { display: flex; gap: 8px; align-items: center; }
-  .give-gems-form input { width: 80px; margin: 0; padding: 6px 10px; font-size: 12px; }
-  .refresh-btn { background: none; border: 1px solid #2d3748; color: #888; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+  .loading { text-align: center; color: #666; padding: 30px; }
+  .refresh-btn { background: none; border: 1px solid #2d3748; color: #888; padding: 5px 10px; border-radius: 7px; cursor: pointer; font-size: 11px; }
   .refresh-btn:hover { border-color: #f4d03f; color: #f4d03f; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: #fff; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 13px; z-index: 9999; animation: fadeIn 0.3s; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -55,7 +68,7 @@
     <h1>⚔️ Admin Panel</h1>
     <p>Kingdom Wars Management</p>
     <input type="password" id="secretInput" placeholder="Admin Secret..." onkeydown="if(event.key==='Enter')doLogin()"/>
-    <button class="btn" onclick="doLogin()">🔐 כניסה</button>
+    <button class="btn" style="width:100%" onclick="doLogin()">🔐 כניסה</button>
     <p id="loginError" style="color:#e74c3c;margin-top:12px;font-size:12px;"></p>
   </div>
 </div>
@@ -63,9 +76,9 @@
 <!-- Dashboard -->
 <div class="dashboard" id="dashboard">
   <div class="header">
-    <h1>⚔️ Kingdom Wars — Admin Dashboard</h1>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <span id="lastRefresh" style="color:#555;font-size:12px;"></span>
+    <h1>⚔️ Kingdom Wars — Admin</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="lastRefresh" style="color:#555;font-size:11px;"></span>
       <button class="refresh-btn" onclick="loadAll()">🔄 רענן</button>
       <button class="logout" onclick="logout()">יציאה</button>
     </div>
@@ -76,51 +89,68 @@
     <div class="loading">טוען...</div>
   </div>
 
+  <!-- Search -->
+  <div style="margin-bottom:12px;display:flex;gap:8px;">
+    <input type="text" id="searchInput" placeholder="🔍 חפש שם / telegram ID / ממלכה..." style="margin:0;flex:1;" oninput="filterUsers()"/>
+  </div>
+
   <!-- Users table -->
   <div class="section">
     <div class="section-header">
-      👥 משתמשים (50 אחרונים)
+      👥 משתמשים
       <button class="refresh-btn" onclick="loadUsers()">🔄</button>
     </div>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>שם</th>
+          <th>שם / יוזר</th>
           <th>Telegram ID</th>
+          <th>ממלכה</th>
           <th>שפה</th>
           <th>ניקוד</th>
-          <th>Gems</th>
-          <th>תנאים</th>
+          <th>💎</th>
+          <th>💰</th>
+          <th>🪵</th>
+          <th>🪨</th>
+          <th>🌾</th>
+          <th>💵 USDT</th>
+          <th>VIP</th>
+          <th>הפניות (פעיל/סה"כ)</th>
           <th>כניסה אחרונה</th>
           <th>פעולות</th>
         </tr>
       </thead>
-      <tbody id="usersTable"><tr><td colspan="8" class="loading">טוען...</td></tr></tbody>
+      <tbody id="usersTable"><tr><td colspan="15" class="loading">טוען...</td></tr></tbody>
     </table>
+    </div>
   </div>
 
   <!-- Top kingdoms -->
   <div class="section">
     <div class="section-header">🏆 טופ ממלכות</div>
+    <div class="table-wrap">
     <table>
       <thead>
-        <tr><th>מקום</th><th>ממלכה</th><th>שחקן</th><th>ניקוד</th><th>Gems</th><th>זהב</th></tr>
+        <tr><th>מקום</th><th>ממלכה</th><th>שחקן</th><th>ניקוד</th><th>💎</th><th>💰</th><th>💵 USDT</th></tr>
       </thead>
-      <tbody id="topTable"><tr><td colspan="6" class="loading">טוען...</td></tr></tbody>
+      <tbody id="topTable"><tr><td colspan="7" class="loading">טוען...</td></tr></tbody>
     </table>
+    </div>
   </div>
 </div>
 
 <script>
 let SECRET = '';
-const API = 'https://kingdomwars.cloud/api/admin';
+let ALL_USERS = [];
+const API = window.location.origin + '/api/admin';
 
-function headers() { return { 'x-admin-secret': SECRET, 'Content-Type': 'application/json' }; }
+function h() { return { 'x-admin-secret': SECRET, 'Content-Type': 'application/json' }; }
 
 async function doLogin() {
   SECRET = document.getElementById('secretInput').value;
   try {
-    const r = await fetch(API + '/stats', { headers: headers() });
+    const r = await fetch(API + '/stats', { headers: h() });
     if (r.status === 401) { document.getElementById('loginError').textContent = '❌ סיסמה שגויה'; return; }
     const data = await r.json();
     document.getElementById('loginScreen').style.display = 'none';
@@ -131,7 +161,7 @@ async function doLogin() {
 }
 
 async function loadAll() {
-  const r = await fetch(API + '/stats', { headers: headers() });
+  const r = await fetch(API + '/stats', { headers: h() });
   const data = await r.json();
   renderStats(data);
   loadUsers();
@@ -143,69 +173,135 @@ function renderStats(data) {
     <div class="stat-card"><div class="val">${data.totalUsers}</div><div class="lbl">סה"כ משתמשים</div></div>
     <div class="stat-card"><div class="val">${data.activeUsers7d}</div><div class="lbl">פעילים 7 ימים</div></div>
     <div class="stat-card"><div class="val" style="color:#27ae60">${data.newUsersToday}</div><div class="lbl">חדשים היום</div></div>
-    <div class="stat-card"><div class="val" style="color:#9b59b6">${data.totalGemsInGame}</div><div class="lbl">Gems בשוק</div></div>
-    <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות פעילות</div></div>
+    <div class="stat-card"><div class="val" style="color:#9b59b6">${data.totalGemsInGame?.toLocaleString()}</div><div class="lbl">💎 Gems בשוק</div></div>
+    <div class="stat-card"><div class="val" style="color:#27ae60">$${data.totalUsdtInGame}</div><div class="lbl">💵 USDT בשוק</div></div>
+    <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות</div></div>
   `;
-
   document.getElementById('topTable').innerHTML = data.topKingdoms.map((k, i) => `
     <tr>
       <td><strong style="color:#f4d03f">#${i+1}</strong></td>
       <td>${k.name}</td>
       <td style="color:#888">@${k.username || '?'}</td>
-      <td><strong>${k.score.toLocaleString()}</strong></td>
+      <td><strong>${k.score?.toLocaleString()}</strong></td>
       <td style="color:#9b59b6">💎 ${k.gems}</td>
-      <td style="color:#f4d03f">💰 ${k.gold.toLocaleString()}</td>
+      <td style="color:#f4d03f">💰 ${k.gold?.toLocaleString()}</td>
+      <td style="color:#27ae60">$${k.usdtBalance}</td>
     </tr>
   `).join('');
 }
 
 async function loadUsers() {
-  const r = await fetch(API + '/users', { headers: headers() });
-  const users = await r.json();
-  document.getElementById('usersTable').innerHTML = users.map(u => `
-    <tr>
-      <td><strong>${u.name || '?'}</strong></td>
-      <td style="color:#666;font-size:11px">${u.telegramId}</td>
-      <td>${u.language || 'en'}</td>
-      <td>${u.score > 0 ? '<strong style="color:#f4d03f">' + u.score + '</strong>' : '<span style="color:#444">0</span>'}</td>
-      <td style="color:#9b59b6">💎 ${u.gems}</td>
-      <td>${u.termsAccepted ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-red">✗</span>'}</td>
-      <td style="color:#555;font-size:11px">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('he') : 'אף פעם'}</td>
-      <td>
-        <div class="actions">
-          <div class="give-gems-form">
-            <input type="number" id="gems_${u.telegramId}" value="100" min="1" max="9999"/>
-            <button class="btn-sm btn-success" onclick="giveGems('${u.telegramId}')">💎 תן</button>
-          </div>
-          <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name}')">🚫 חסום</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  document.getElementById('usersTable').innerHTML = '<tr><td colspan="15" class="loading">טוען...</td></tr>';
+  const r = await fetch(API + '/users', { headers: h() });
+  ALL_USERS = await r.json();
+  renderUsers(ALL_USERS);
 }
 
-async function giveGems(telegramId) {
-  const gems = parseInt(document.getElementById('gems_' + telegramId).value);
-  if (!gems || gems < 1) return;
-  if (!confirm('לתת ' + gems + ' Gems ל-' + telegramId + '?')) return;
-  const r = await fetch(API + '/give-gems/' + telegramId, {
-    method: 'POST', headers: headers(),
-    body: JSON.stringify({ gems })
+function filterUsers() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  if (!q) { renderUsers(ALL_USERS); return; }
+  renderUsers(ALL_USERS.filter(u =>
+    (u.name||'').toLowerCase().includes(q) ||
+    (u.username||'').toLowerCase().includes(q) ||
+    (u.telegramId||'').includes(q) ||
+    (u.kingdomName||'').toLowerCase().includes(q)
+  ));
+}
+
+function renderUsers(users) {
+  document.getElementById('usersTable').innerHTML = users.map(u => {
+    const vipBadge = u.isVip
+      ? `<span class="badge badge-gold">👑 VIP${u.vipUntil ? '<br><small style="color:#888">' + new Date(u.vipUntil).toLocaleDateString('he') + '</small>' : ''}</span>`
+      : `<span class="badge badge-red">—</span>`;
+    return `<tr>
+      <td>
+        <strong>${u.name || '?'}</strong>
+        ${u.username ? '<br><span style="color:#555;font-size:10px">@' + u.username + '</span>' : ''}
+      </td>
+      <td style="color:#555;font-size:10px">${u.telegramId}</td>
+      <td style="color:#a0845a">${u.kingdomName || '—'}</td>
+      <td><span class="badge badge-blue">${u.language || 'en'}</span></td>
+      <td>${u.score > 0 ? '<strong style="color:#f4d03f">' + u.score.toLocaleString() + '</strong>' : '<span style="color:#444">0</span>'}</td>
+      <td style="color:#9b59b6">${u.gems}</td>
+      <td style="color:#f4d03f">${u.gold?.toLocaleString()}</td>
+      <td style="color:#8fbc8f">${u.wood?.toLocaleString()}</td>
+      <td style="color:#aaa">${u.stone?.toLocaleString()}</td>
+      <td style="color:#90ee90">${u.food?.toLocaleString()}</td>
+      <td style="color:${parseFloat(u.usdtBalance) > 0 ? '#27ae60' : '#555'}">$${u.usdtBalance}</td>
+      <td>${vipBadge}</td>
+      <td>
+        <span style="color:#27ae60">${u.referralsActive}</span>/<span style="color:#666">${u.referralsTotal}</span>
+      </td>
+      <td style="color:#555;font-size:10px">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('he') : '—'}</td>
+      <td>
+        <div class="actions">
+          <div class="give-form">
+            <select id="type_${u.telegramId}">
+              <option value="gems">💎 Gems</option>
+              <option value="gold">💰 זהב</option>
+              <option value="wood">🪵 עץ</option>
+              <option value="stone">🪨 אבן</option>
+              <option value="food">🌾 אוכל</option>
+              <option value="usdt">💵 USDT</option>
+            </select>
+            <input type="number" id="amt_${u.telegramId}" value="100" min="1" style="width:60px;"/>
+            <button class="btn-sm btn-success" onclick="giveResource('${u.telegramId}','${u.name||'?'}')">➕ תן</button>
+          </div>
+          <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 VIP</button>
+          <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+async function giveResource(telegramId, name) {
+  const type = document.getElementById('type_' + telegramId).value;
+  const amount = parseFloat(document.getElementById('amt_' + telegramId).value);
+  if (!amount || amount <= 0) return;
+  const labels = { gems:'💎 Gems', gold:'💰 זהב', wood:'🪵 עץ', stone:'🪨 אבן', food:'🌾 אוכל', usdt:'💵 USDT' };
+  if (!confirm('לתת ' + amount + ' ' + (labels[type]||type) + ' ל-' + name + '?')) return;
+  const r = await fetch(API + '/give-resource/' + telegramId, {
+    method: 'POST', headers: h(),
+    body: JSON.stringify({ type, amount })
   });
   const d = await r.json();
-  if (d.success) alert('✅ ניתן! יתרה חדשה: ' + d.newGems + ' Gems');
-  else alert('❌ שגיאה: ' + JSON.stringify(d));
+  if (d.success) { showToast('✅ ניתן! ' + amount + ' ' + (labels[type]||type) + ' → ' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+}
+
+async function giveVip(telegramId, name) {
+  if (!confirm('לתת VIP חודש חינם ל-' + name + '?')) return;
+  const r = await fetch(API + '/give-vip/' + telegramId, {
+    method: 'POST', headers: h(),
+    body: JSON.stringify({ days: 30 })
+  });
+  const d = await r.json();
+  if (d.success) { showToast('✅ VIP הופעל עד ' + new Date(d.vipUntil).toLocaleDateString('he') + ' → ' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
 }
 
 async function banUser(telegramId, name) {
   if (!confirm('לחסום את ' + name + ' (' + telegramId + ')?\n⚠️ פעולה זו לא ניתנת לביטול!')) return;
-  const r = await fetch(API + '/ban/' + telegramId, { method: 'POST', headers: headers() });
+  const r = await fetch(API + '/ban/' + telegramId, { method: 'POST', headers: h() });
   const d = await r.json();
-  if (d.banned) { alert('✅ משתמש חסום'); loadUsers(); }
-  else alert('❌ שגיאה');
+  if (d.banned) { showToast('🚫 משתמש חסום: ' + name); loadUsers(); }
+  else showToast('❌ שגיאה');
 }
 
-function logout() { SECRET = ''; document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('dashboard').style.display = 'none'; }
+function logout() {
+  SECRET = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+}
 
 // Auto-refresh every 60 seconds
 setInterval(() => { if (SECRET) loadAll(); }, 60000);

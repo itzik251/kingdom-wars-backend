@@ -20,11 +20,14 @@ const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const config_1 = require("@nestjs/config");
+const notification_service_1 = require("../notifications/notification.service");
+const game_constants_1 = require("../../constants/game.constants");
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config) {
+    constructor(userRepo, kingdomRepo, config, notifService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
+        this.notifService = notifService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -60,17 +63,23 @@ let AdminController = class AdminController {
             .createQueryBuilder('k')
             .select('SUM(k.gems)', 'total')
             .getRawOne();
+        const usdtResult = await this.kingdomRepo
+            .createQueryBuilder('k')
+            .select('SUM(k.usdt_balance)', 'total')
+            .getRawOne();
         return {
             totalUsers,
             totalKingdoms,
             activeUsers7d: activeUsers,
             newUsersToday: newToday,
             totalGemsInGame: parseInt(gemsResult?.total || '0'),
+            totalUsdtInGame: parseFloat(usdtResult?.total || '0').toFixed(4),
             topKingdoms: topKingdoms.map(k => ({
                 name: k.name,
                 score: k.score,
                 gems: k.gems,
                 gold: k.gold,
+                usdtBalance: (k.usdtBalance ?? 0).toFixed(4),
                 username: k.user?.username || k.user?.firstName,
             })),
         };
@@ -85,35 +94,97 @@ let AdminController = class AdminController {
     }
     async giveGems(headers, telegramId, body) {
         this.guard(headers);
+        return this.giveResource(telegramId, 'gems', body.gems);
+    }
+    async giveResource(telegramId, type, amount, headers) {
+        if (headers)
+            this.guard(headers);
         const user = await this.userRepo.findOne({ where: { telegramId } });
         if (!user)
             return { error: 'User not found' };
         const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
         if (!kingdom)
             return { error: 'Kingdom not found' };
-        kingdom.gems += body.gems;
+        const resourceLabels = {
+            gems: '💎 Gems', gold: '💰 זהב', wood: '🪵 עץ',
+            stone: '🪨 אבן', food: '🌾 אוכל', usdt: '💵 USDT', vip: '👑 VIP',
+        };
+        if (type === 'vip') {
+            const days = amount || game_constants_1.VIP_DURATION_DAYS;
+            const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + days * 86_400_000);
+            kingdom.vipExpiresAt = expiresAt;
+            await this.kingdomRepo.save(kingdom);
+            await this.notifService.create(user.id, 'admin_gift', {
+                type: 'vip', amount: days, label: `👑 VIP ל-${days} ימים`,
+                language: user.language,
+            }).catch(() => { });
+            return { success: true, type: 'vip', vipUntil: expiresAt };
+        }
+        if (type === 'gems') {
+            kingdom.gems = Math.max(0, (kingdom.gems || 0) + amount);
+        }
+        else if (type === 'gold') {
+            kingdom.gold = Math.min(kingdom.maxGold, Math.max(0, (kingdom.gold || 0) + amount));
+        }
+        else if (type === 'wood') {
+            kingdom.wood = Math.min(kingdom.maxWood, Math.max(0, (kingdom.wood || 0) + amount));
+        }
+        else if (type === 'stone') {
+            kingdom.stone = Math.min(kingdom.maxStone, Math.max(0, (kingdom.stone || 0) + amount));
+        }
+        else if (type === 'food') {
+            kingdom.food = Math.min(kingdom.maxFood, Math.max(0, (kingdom.food || 0) + amount));
+        }
+        else if (type === 'usdt') {
+            kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) + amount).toFixed(6));
+        }
         await this.kingdomRepo.save(kingdom);
-        return { success: true, newGems: kingdom.gems };
+        await this.notifService.create(user.id, 'admin_gift', {
+            type, amount, label: `${resourceLabels[type] || type} ×${amount}`,
+            language: user.language,
+        }).catch(() => { });
+        return { success: true, type, amount };
+    }
+    async giveVip(headers, telegramId, body) {
+        this.guard(headers);
+        return this.giveResource(telegramId, 'vip', body.days || game_constants_1.VIP_DURATION_DAYS);
     }
     async listUsers(headers) {
         this.guard(headers);
         const users = await this.userRepo.find({
             order: { createdAt: 'DESC' },
-            take: 50,
-            relations: [],
+            take: 100,
         });
         const result = [];
         for (const u of users) {
             const k = await this.kingdomRepo.findOne({ where: { user: { id: u.id } } });
+            const referredUsers = await this.userRepo.find({ where: { referredBy: { id: u.id } } });
+            let activeReferrals = 0;
+            for (const ru of referredUsers) {
+                const rk = await this.kingdomRepo.findOne({ where: { user: { id: ru.id } } });
+                if (rk && rk.score > 0)
+                    activeReferrals++;
+            }
             result.push({
                 telegramId: u.telegramId,
                 name: u.firstName || u.username,
+                username: u.username || '',
                 language: u.language,
                 joined: u.createdAt,
                 lastLogin: u.lastLogin,
                 termsAccepted: !!u.termsAcceptedAt,
+                kingdomName: k?.name ?? '—',
                 score: k?.score ?? 0,
                 gems: k?.gems ?? 0,
+                gold: k?.gold ?? 0,
+                wood: k?.wood ?? 0,
+                stone: k?.stone ?? 0,
+                food: k?.food ?? 0,
+                usdtBalance: (k?.usdtBalance ?? 0).toFixed(4),
+                isVip: !!(k?.vipExpiresAt && new Date() < new Date(k.vipExpiresAt)),
+                vipUntil: k?.vipExpiresAt ?? null,
+                referralsTotal: referredUsers.length,
+                referralsActive: activeReferrals,
             });
         }
         return result;
@@ -152,6 +223,25 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "giveGems", null);
 __decorate([
+    (0, common_1.Post)('give-resource/:telegramId'),
+    __param(0, (0, common_1.Param)('telegramId')),
+    __param(1, (0, common_1.Body)('type')),
+    __param(2, (0, common_1.Body)('amount')),
+    __param(3, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Number, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "giveResource", null);
+__decorate([
+    (0, common_1.Post)('give-vip/:telegramId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "giveVip", null);
+__decorate([
     (0, common_1.Get)('users'),
     __param(0, (0, common_1.Headers)()),
     __metadata("design:type", Function),
@@ -164,6 +254,7 @@ exports.AdminController = AdminController = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        notification_service_1.NotificationService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

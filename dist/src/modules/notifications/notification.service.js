@@ -89,6 +89,16 @@ const MESSAGES = {
         pt: '⚔️ Treinamento concluído — {count} {unit} prontos para batalha',
         ar: '⚔️ اكتمل التدريب — {count} {unit} جاهزون للقتال',
     },
+    admin_gift: {
+        en: '🎁 You received a gift from the admin: {label}!',
+        he: '🎁 קיבלת מתנה מהאדמין: {label}!',
+        es: '🎁 ¡Recibiste un regalo del admin: {label}!',
+        fr: '🎁 Vous avez reçu un cadeau de l\'admin: {label}!',
+        de: '🎁 Du hast ein Geschenk vom Admin erhalten: {label}!',
+        ru: '🎁 Вы получили подарок от администратора: {label}!',
+        pt: '🎁 Você recebeu um presente do admin: {label}!',
+        ar: '🎁 تلقيت هدية من الإدارة: {label}!',
+    },
 };
 const OPEN_GAME = {
     en: '🏰 Open Kingdom Wars',

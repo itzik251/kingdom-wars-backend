@@ -6,6 +6,7 @@ const client_1 = require("../api/client");
 const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("./Countdown");
+const gameStore_1 = require("../store/gameStore");
 const sheetWrap = {
     position: 'fixed', inset: 0, zIndex: 50,
     background: 'rgba(0,0,0,0.75)',
@@ -25,6 +26,7 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [error, setError] = (0, react_1.useState)(false);
     const t = (0, useT_1.useT)();
+    const myScore = (0, gameStore_1.useGameStore)(s => s.kingdom?.score ?? 0);
     (0, react_1.useEffect)(() => {
         let alive = true;
         setLoading(true);
@@ -49,6 +51,7 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
         </div>
       </div>);
     }
+    const toWeakToAttack = myScore > 0 && (profile.score ?? 0) > 0 && myScore > (profile.score ?? 0) * 10;
     const wcColor = profile.winChance >= 60 ? '#27ae60' : profile.winChance >= 40 ? '#f39c12' : '#e74c3c';
     const wcBar = profile.winChance >= 60
         ? 'linear-gradient(90deg,#27ae60,#2ecc71)'
@@ -111,23 +114,28 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             </div>))}
         </div>
 
-        <button onClick={() => !profile.isShielded && !attacking && onAttack(profile)} disabled={profile.isShielded || attacking} style={{
+        <button onClick={() => !profile.isShielded && !attacking && !toWeakToAttack && onAttack(profile)} disabled={profile.isShielded || attacking || toWeakToAttack} style={{
             width: '100%', padding: '14px',
-            background: profile.isShielded ? '#333' : 'linear-gradient(135deg,#c0392b,#e74c3c)',
+            background: (profile.isShielded || toWeakToAttack) ? '#333' : 'linear-gradient(135deg,#c0392b,#e74c3c)',
             border: 'none', borderRadius: 12, color: 'white',
             fontSize: 16, fontWeight: 800,
-            cursor: profile.isShielded || attacking ? 'not-allowed' : 'pointer',
-            boxShadow: profile.isShielded ? 'none' : '0 4px 20px rgba(231,76,60,0.5)',
+            cursor: (profile.isShielded || attacking || toWeakToAttack) ? 'not-allowed' : 'pointer',
+            boxShadow: (profile.isShielded || toWeakToAttack) ? 'none' : '0 4px 20px rgba(231,76,60,0.5)',
             letterSpacing: '0.5px', opacity: attacking ? 0.7 : 1,
         }}>
           {profile.isShielded
             ? t('protected_btn')
-            : attacking && marchCountdown > 0
-                ? `⚔️ ${t('marching')} ${marchCountdown}s...`
-                : attacking
-                    ? t('attacking_label')
-                    : t('attack_btn_time', { n: profile.marchSeconds })}
+            : toWeakToAttack
+                ? `⛔ ${t('too_weak_to_attack')}`
+                : attacking && marchCountdown > 0
+                    ? `⚔️ ${t('marching')} ${marchCountdown}s...`
+                    : attacking
+                        ? t('attacking_label')
+                        : t('attack_btn_time', { n: profile.marchSeconds })}
         </button>
+        {toWeakToAttack && (<div style={{ fontSize: 11, color: '#e67e22', textAlign: 'center', marginTop: 8, background: 'rgba(230,126,34,0.1)', borderRadius: 8, padding: '6px 10px' }}>
+            ⚠️ {t('too_weak_attack_note')}
+          </div>)}
       </div>
     </div>);
 }

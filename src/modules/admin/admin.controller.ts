@@ -8,6 +8,7 @@ import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
+import { TronService } from './tron.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 
 const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
@@ -21,6 +22,7 @@ export class AdminController {
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     private config: ConfigService,
     private notifService: NotificationService,
+    private tronService: TronService,
   ) {}
 
   @Get()
@@ -182,6 +184,18 @@ export class AdminController {
     return { success: true, ...cfg };
   }
 
+  @Get('wallet/balance')
+  async getWalletBalance(@Headers() headers: any) {
+    this.guard(headers);
+    const cfg = this.getWalletConfig();
+    if (!cfg.address) return { error: 'לא הוגדרה כתובת ארנק' };
+    const [usdtBalance, trxBalance] = await Promise.all([
+      this.tronService.getUsdtBalance(cfg.address),
+      this.tronService.getTrxBalance(cfg.address),
+    ]);
+    return { address: cfg.address, usdtBalance, trxBalance };
+  }
+
   @Get('withdrawals')
   async getPendingWithdrawals(@Headers() headers: any) {
     this.guard(headers);
@@ -211,6 +225,14 @@ export class AdminController {
 
     const amount = kingdom.withdrawalPending;
     const wallet = kingdom.withdrawalWallet;
+
+    // Execute actual blockchain transfer
+    const txResult = await this.tronService.sendUsdt(wallet, amount);
+    if (txResult.error) {
+      return { error: txResult.error, hint: 'ודא שמפתח GAME_WALLET_PRIVATE_KEY מוגדר ושיש מספיק TRX לעמלות' };
+    }
+
+    // Update DB only after successful transfer
     kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
     kingdom.withdrawalPending = 0;
     kingdom.withdrawalStatus = 'approved';
@@ -220,12 +242,12 @@ export class AdminController {
     if (kingdom.user) {
       await this.notifService.create(kingdom.user.id, 'admin_gift', {
         type: 'usdt_withdrawal',
-        label: `💸 משיכת ${amount.toFixed(4)} USDT אושרה → ${wallet}`,
+        label: `💸 ${amount.toFixed(4)} USDT נשלח לארנקך ✅`,
         language: kingdom.user.language,
       }).catch(() => {});
     }
 
-    return { success: true, amount, wallet };
+    return { success: true, amount, wallet, txId: txResult.txId };
   }
 
   @Post('withdrawals/:kingdomId/reject')

@@ -22,14 +22,16 @@ const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const config_1 = require("@nestjs/config");
 const notification_service_1 = require("../notifications/notification.service");
+const tron_service_1 = require("./tron.service");
 const game_constants_1 = require("../../constants/game.constants");
 const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config, notifService) {
+    constructor(userRepo, kingdomRepo, config, notifService, tronService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
         this.notifService = notifService;
+        this.tronService = tronService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -177,6 +179,17 @@ let AdminController = class AdminController {
         catch { }
         return { success: true, ...cfg };
     }
+    async getWalletBalance(headers) {
+        this.guard(headers);
+        const cfg = this.getWalletConfig();
+        if (!cfg.address)
+            return { error: 'לא הוגדרה כתובת ארנק' };
+        const [usdtBalance, trxBalance] = await Promise.all([
+            this.tronService.getUsdtBalance(cfg.address),
+            this.tronService.getTrxBalance(cfg.address),
+        ]);
+        return { address: cfg.address, usdtBalance, trxBalance };
+    }
     async getPendingWithdrawals(headers) {
         this.guard(headers);
         const kingdoms = await this.kingdomRepo
@@ -203,6 +216,10 @@ let AdminController = class AdminController {
             return { error: 'Not pending' };
         const amount = kingdom.withdrawalPending;
         const wallet = kingdom.withdrawalWallet;
+        const txResult = await this.tronService.sendUsdt(wallet, amount);
+        if (txResult.error) {
+            return { error: txResult.error, hint: 'ודא שמפתח GAME_WALLET_PRIVATE_KEY מוגדר ושיש מספיק TRX לעמלות' };
+        }
         kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
         kingdom.withdrawalPending = 0;
         kingdom.withdrawalStatus = 'approved';
@@ -211,11 +228,11 @@ let AdminController = class AdminController {
         if (kingdom.user) {
             await this.notifService.create(kingdom.user.id, 'admin_gift', {
                 type: 'usdt_withdrawal',
-                label: `💸 משיכת ${amount.toFixed(4)} USDT אושרה → ${wallet}`,
+                label: `💸 ${amount.toFixed(4)} USDT נשלח לארנקך ✅`,
                 language: kingdom.user.language,
             }).catch(() => { });
         }
-        return { success: true, amount, wallet };
+        return { success: true, amount, wallet, txId: txResult.txId };
     }
     async rejectWithdrawal(headers, kingdomId, body) {
         this.guard(headers);
@@ -338,6 +355,13 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "updateWallet", null);
 __decorate([
+    (0, common_1.Get)('wallet/balance'),
+    __param(0, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getWalletBalance", null);
+__decorate([
     (0, common_1.Get)('withdrawals'),
     __param(0, (0, common_1.Headers)()),
     __metadata("design:type", Function),
@@ -384,6 +408,7 @@ exports.AdminController = AdminController = __decorate([
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         config_1.ConfigService,
-        notification_service_1.NotificationService])
+        notification_service_1.NotificationService,
+        tron_service_1.TronService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

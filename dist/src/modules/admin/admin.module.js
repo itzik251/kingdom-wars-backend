@@ -10,6 +10,7 @@ exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const admin_controller_1 = require("./admin.controller");
+const tron_service_1 = require("./tron.service");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const notification_module_1 = require("../notifications/notification.module");
@@ -23,6 +24,7 @@ exports.AdminModule = AdminModule = __decorate([
             notification_module_1.NotificationModule,
         ],
         controllers: [admin_controller_1.AdminController],
+        providers: [tron_service_1.TronService],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map

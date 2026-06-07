@@ -99,7 +99,7 @@
         <button class="btn-sm btn-success" onclick="saveWallet()">💾 שמור כתובת</button>
         <button class="btn-sm btn-info" onclick="checkWalletBalance()">🔍 בדוק יתרה</button>
       </div>
-      <div id="walletBalanceResult" style="font-size:12px;color:#27ae60;display:none;"></div>
+      <div id="walletBalanceResult" style="font-size:13px;font-weight:700;margin-top:8px;display:none;"></div>
     </div>
   </div>
 
@@ -221,11 +221,17 @@ async function loadWithdrawals() {
 }
 
 async function approveWithdrawal(kingdomId, name, amount) {
-  if (!confirm(`לאשר משיכה של $${amount.toFixed(4)} USDT ל-${name}?\n\n⚠️ ודא שביצעת את ההעברה בפועל לפני האישור!`)) return;
+  if (!confirm(`לשלוח $${amount.toFixed(4)} USDT ל-${name}?\n\nהמערכת תבצע העברה בלוקצ'יין אוטומטית.\n⚠️ ודא שיש TRX לעמלות בארנק המשחק!`)) return;
+  showToast('⏳ שולח USDT בבלוקצ\'יין...');
   const r = await fetch(API + '/withdrawals/' + kingdomId + '/approve', { method: 'POST', headers: h() });
   const d = await r.json();
-  if (d.success) { showToast('✅ משיכה אושרה — יתרת השחקן עודכנה'); loadWithdrawals(); }
-  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+  if (d.success) {
+    showToast(`✅ ${amount.toFixed(4)} USDT נשלח!\nTx: ${d.txId?.substring(0,16)}...`);
+    loadWithdrawals();
+    loadAll();
+  } else {
+    showToast('❌ שגיאה: ' + (d.error || JSON.stringify(d)));
+  }
 }
 
 async function rejectWithdrawal(kingdomId, name) {
@@ -389,26 +395,27 @@ async function saveWallet() {
 }
 
 async function checkWalletBalance() {
-  const address = document.getElementById('walletAddr').value.trim();
-  if (!address) return showToast('❌ הכנס כתובת ארנק');
   const el = document.getElementById('walletBalanceResult');
   el.style.display = 'block';
-  el.textContent = 'בודק...';
+  el.style.color = '#888';
+  el.textContent = '⏳ בודק יתרה...';
   try {
-    // Query TronGrid for TRC20 USDT balance
-    const r = await fetch(`https://apilist.tronscanapi.com/api/account/tokens?address=${address}&token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=1`);
+    const r = await fetch(API + '/wallet/balance', { headers: h() });
     const d = await r.json();
-    const token = d?.data?.[0];
-    if (token) {
-      const bal = (parseFloat(token.quantity || '0') / 1e6).toFixed(2);
-      el.textContent = `💵 יתרת USDT בארנק: $${bal}`;
-      el.style.color = '#27ae60';
-    } else {
-      el.textContent = '💵 יתרה: $0.00 (ארנק ריק או לא נמצא)';
-      el.style.color = '#888';
+    if (d.error) {
+      el.textContent = '❌ ' + d.error;
+      el.style.color = '#e74c3c';
+      return;
     }
+    el.innerHTML = `
+      <span style="color:#27ae60">💵 USDT: $${(d.usdtBalance ?? 0).toFixed(4)}</span>
+      &nbsp;&nbsp;
+      <span style="color:#f4d03f">⚡ TRX: ${(d.trxBalance ?? 0).toFixed(2)}</span>
+      <span style="font-size:10px;color:#555;margin-right:8px">(TRX נחוץ לעמלות)</span>
+    `;
+    el.style.color = '#fff';
   } catch(e) {
-    el.textContent = '❌ לא ניתן לבדוק — נסה ב-TronScan ישירות';
+    el.textContent = '❌ שגיאת חיבור';
     el.style.color = '#e74c3c';
   }
 }

@@ -42,6 +42,7 @@ export declare class CombatService {
         score: number;
         isShielded: boolean;
         shieldUntil: Date;
+        usdtBalance: number;
         resources: {
             gold: number;
             wood: number;

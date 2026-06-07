@@ -5,6 +5,7 @@ export interface KingdomProfile {
     score: number;
     isShielded: boolean;
     shieldUntil?: string | null;
+    usdtBalance?: number;
     resources: {
         gold: number;
         wood: number;

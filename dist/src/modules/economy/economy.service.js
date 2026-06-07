@@ -59,9 +59,10 @@ let EconomyService = class EconomyService {
         const weakBonus = isWeak ? game_constants_1.WEAK_PLAYER_RESOURCE_BONUS : 0;
         const boostActive = kingdom.productionBoostUntil && now < new Date(kingdom.productionBoostUntil);
         const boostBonus = boostActive ? 1 : 0;
+        const vipBonus = kingdom.isVip ? 0.5 : 0;
         const workerCount = kingdom.workers || 0;
         const workerProductionBonus = 1 + workerCount * 0.04;
-        const bonus = (1 + weakBonus + boostBonus) * workerProductionBonus;
+        const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
         const workerSalary = workerCount * 5 * hoursElapsed;
         const newFood = kingdom.food + production.food * bonus - upkeep;
         const foodShortfall = Math.max(0, -newFood);
@@ -69,11 +70,6 @@ let EconomyService = class EconomyService {
         kingdom.wood = Math.min(kingdom.maxWood, Math.floor(kingdom.wood + production.wood * bonus));
         kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
         kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(newFood)));
-        if (kingdom.isVip) {
-            const totalProduction = production.gold + production.wood + production.stone + production.food;
-            const gameEarned = totalProduction * 0.000001 * game_constants_1.VIP_GAME_PRODUCTION_MULTIPLIER;
-            kingdom.gameBalance = parseFloat(((kingdom.gameBalance ?? 0) + gameEarned).toFixed(6));
-        }
         kingdom.lastResourceTick = now;
         if (foodShortfall > 0) {
             const desertionRate = Math.min(0.05, foodShortfall * 0.005);

@@ -119,8 +119,8 @@ declare const he: {
     vip_heroes_label: string;
     vip_buildings_label: string;
     vip_pay_msg: string;
+    vip_prod_bonus: string;
     vip_usdt_earn: string;
-    vip_game_earn: string;
     vip_pay_usdt_balance: string;
     vip_pay_wallet: string;
     vip_wallet_send: string;
@@ -503,8 +503,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -886,8 +886,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -1269,8 +1269,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -1652,8 +1652,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -2035,8 +2035,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -2418,8 +2418,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -2801,8 +2801,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;
@@ -3184,8 +3184,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_prod_bonus: string;
         vip_usdt_earn: string;
-        vip_game_earn: string;
         vip_pay_usdt_balance: string;
         vip_pay_wallet: string;
         vip_wallet_send: string;

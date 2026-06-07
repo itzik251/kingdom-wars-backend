@@ -8,9 +8,10 @@ const gameStore_1 = require("../store/gameStore");
 const KingdomProfileSheet_1 = require("../components/KingdomProfileSheet");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("../components/Countdown");
-const W = 64, H = 32;
+const W = 56, H = 28;
+const SPACING = 3.2;
 function iso(gx, gy) {
-    return { x: (gx - gy) * W, y: (gx + gy) * H };
+    return { x: (gx - gy) * W * SPACING, y: (gx + gy) * H * SPACING };
 }
 function shade(h, s, l, delta) {
     return `hsl(${h},${s}%,${Math.max(5, Math.min(90, l + delta))}%)`;
@@ -24,6 +25,7 @@ function WorldMapScreen() {
     const [attacking, setAttacking] = (0, react_1.useState)(false);
     const [battle, setBattle] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
+    const [attackError, setAttackError] = (0, react_1.useState)('');
     const [pan, setPan] = (0, react_1.useState)({ x: 0, y: 0 });
     const [zoom, setZoom] = (0, react_1.useState)(1);
     const dragRef = (0, react_1.useRef)(null);
@@ -98,6 +100,7 @@ function WorldMapScreen() {
     }, []);
     async function doAttack(profile) {
         setAttacking(true);
+        setAttackError('');
         try {
             const result = await client_1.api.post('/combat/attack', { defenderKingdomId: profile.id });
             setProfileId(null);
@@ -106,7 +109,10 @@ function WorldMapScreen() {
             await refresh();
         }
         catch (e) {
-            alert(e.response?.data?.message || t('attack_error'));
+            const msg = e.response?.data?.message || t('attack_error');
+            setAttackError(msg);
+            setProfileId(null);
+            setTimeout(() => setAttackError(''), 5000);
         }
         finally {
             setAttacking(false);
@@ -119,8 +125,13 @@ function WorldMapScreen() {
     const minX = Math.min(...allCorners.map(c => c.x)) - W;
     const maxX = Math.max(...allCorners.map(c => c.x)) + W;
     const sceneW = maxX - minX;
-    const sceneH = (COLS + totalRows) * H + H + 140;
+    const sceneH = (COLS + totalRows) * H * SPACING + H * SPACING + 140;
     return (<div style={{ background: '#050d1a', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', userSelect: 'none' }}>
+
+      
+      {attackError && (<div style={{ position: 'absolute', top: 60, left: 12, right: 12, zIndex: 600, background: 'rgba(231,76,60,0.95)', border: '1px solid #e74c3c', borderRadius: 10, padding: '12px 16px', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.6)' }}>
+          ⛔ {attackError}
+        </div>)}
 
       
       <div style={{ padding: '10px 16px', background: 'rgba(0,0,0,0.6)', borderBottom: '1px solid rgba(52,152,219,0.25)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

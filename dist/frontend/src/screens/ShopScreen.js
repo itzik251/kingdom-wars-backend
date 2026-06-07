@@ -93,15 +93,11 @@ function ReferralCard() {
 }
 function UsdtBalanceSection() {
     const [balance, setBalance] = (0, react_1.useState)(null);
-    const [gameBalance, setGameBalance] = (0, react_1.useState)(0);
     const [withdrawing, setWithdrawing] = (0, react_1.useState)(false);
     const [msg, setMsg] = (0, react_1.useState)('');
     const t = (0, useT_1.useT)();
     (0, react_1.useEffect)(() => {
-        client_1.api.get('/kingdom/usdt-balance').then(r => {
-            setBalance(r.usdtBalance || 0);
-            setGameBalance(r.gameBalance || 0);
-        }).catch(() => setBalance(0));
+        client_1.api.get('/kingdom/usdt-balance').then(r => setBalance(r.usdtBalance || 0)).catch(() => setBalance(0));
     }, []);
     async function withdraw() {
         setWithdrawing(true);
@@ -126,22 +122,10 @@ function UsdtBalanceSection() {
       <div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.12),rgba(26,138,64,0.06))', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: 16 }}>
 
         
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '8px 12px' }}>
-            <div style={{ fontSize: 10, color: '#a0845a' }}>💵 USDT</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>${bal.toFixed(4)}</div>
-          </div>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '8px 12px' }}>
-            <div style={{ fontSize: 10, color: '#a0845a' }}>🎮 GAME</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: gameBalance > 0 ? '#9b59b6' : '#666' }}>{gameBalance.toFixed(4)}</div>
-          </div>
-        </div>
-
-        
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 11, color: '#a0845a' }}>{t('available_balance')}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>
               ${bal.toFixed(4)} USDT
             </div>
           </div>
@@ -336,8 +320,8 @@ function ShopScreen() {
             { icon: '🔮', label: t('b_arcane_tower') },
             { icon: '🏆', label: t('vip_badge_feat') },
             { icon: '💎', label: t('vip_gems_x') },
+            { icon: '🚀', label: t('vip_prod_bonus') },
             { icon: '💵', label: t('vip_usdt_earn') },
-            { icon: '🎮', label: t('vip_game_earn') },
         ].map(f => (<div key={f.label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 background: isVip ? 'rgba(244,208,63,0.08)' : 'rgba(0,0,0,0.3)',

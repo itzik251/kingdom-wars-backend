@@ -11,7 +11,6 @@ import {
   PRODUCTION_MULTIPLIER,
   UNIT_STATS,
   WEAK_PLAYER_RESOURCE_BONUS,
-  VIP_GAME_PRODUCTION_MULTIPLIER,
 } from '../../constants/game.constants';
 
 const PRODUCER_BUILDINGS: Partial<Record<BuildingType, keyof typeof BASE_PRODUCTION>> = {
@@ -62,9 +61,10 @@ export class EconomyService {
     const weakBonus = isWeak ? WEAK_PLAYER_RESOURCE_BONUS : 0;
     const boostActive = kingdom.productionBoostUntil && now < new Date(kingdom.productionBoostUntil);
     const boostBonus = boostActive ? 1 : 0; // double_production = +100%
+    const vipBonus = kingdom.isVip ? 0.5 : 0; // VIP = +50% production
     const workerCount = kingdom.workers || 0;
     const workerProductionBonus = 1 + workerCount * 0.04; // +4% per worker
-    const bonus = (1 + weakBonus + boostBonus) * workerProductionBonus;
+    const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
 
     // Worker salary: 5 gold/hour per worker
     const workerSalary = workerCount * 5 * hoursElapsed;
@@ -77,14 +77,6 @@ export class EconomyService {
     kingdom.wood  = Math.min(kingdom.maxWood,  Math.floor(kingdom.wood  + production.wood  * bonus));
     kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
     kingdom.food  = Math.min(kingdom.maxFood,  Math.max(0, Math.floor(newFood)));
-
-    // VIP players earn GAME tokens passively (1.5x multiplier)
-    if (kingdom.isVip) {
-      const totalProduction = production.gold + production.wood + production.stone + production.food;
-      const gameEarned = totalProduction * 0.000001 * VIP_GAME_PRODUCTION_MULTIPLIER;
-      kingdom.gameBalance = parseFloat(((kingdom.gameBalance ?? 0) + gameEarned).toFixed(6));
-    }
-
     kingdom.lastResourceTick = now;
 
     // Food shortage: soldiers desert (lose 0.5% per food unit short, max 5% per tick)

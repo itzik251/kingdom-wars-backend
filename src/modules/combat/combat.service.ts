@@ -144,6 +144,7 @@ export class CombatService {
       score: target.score,
       isShielded: target.isShielded,
       shieldUntil: target.shieldUntil,
+      usdtBalance: target.usdtBalance ?? 0,
       resources: { gold: target.gold, wood: target.wood, stone: target.stone },
       lootable,
       defPower,

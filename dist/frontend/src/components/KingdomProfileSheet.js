@@ -5,6 +5,7 @@ const react_1 = require("react");
 const client_1 = require("../api/client");
 const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
+const Countdown_1 = require("./Countdown");
 const sheetWrap = {
     position: 'fixed', inset: 0, zIndex: 50,
     background: 'rgba(0,0,0,0.75)',
@@ -65,7 +66,7 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
         </div>
 
         {profile.isShielded && (<div style={{ background: 'rgba(52,152,219,0.15)', border: '1px solid #3498db', borderRadius: 10, padding: '10px 14px', marginBottom: 14, color: '#3498db', fontSize: 13, textAlign: 'center' }}>
-            {t('kingdom_protected')}
+            🛡️ {t('kingdom_protected')} — <Countdown_1.default endsAt={profile.shieldUntil}/>
           </div>)}
 
         <div style={{ marginBottom: 16 }}>
@@ -83,11 +84,19 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
 
         <div style={{ background: 'rgba(244,208,63,0.08)', border: '1px solid rgba(244,208,63,0.2)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
           <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 8 }}>{t('potential_loot')}</div>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>💰</div><div style={{ fontSize: 14, fontWeight: 700, color: '#f4d03f' }}>{(0, format_1.fmt)(profile.lootable.gold)}</div></div>
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪵</div><div style={{ fontSize: 14, fontWeight: 700, color: '#a0682a' }}>{(0, format_1.fmt)(profile.lootable.wood)}</div></div>
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪨</div><div style={{ fontSize: 14, fontWeight: 700, color: '#aaa' }}>{(0, format_1.fmt)(profile.lootable.stone)}</div></div>
+            {(profile.usdtBalance ?? 0) > 0 && (<div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>💵</div><div style={{ fontSize: 14, fontWeight: 700, color: '#27ae60' }}>${((profile.usdtBalance ?? 0) * 0.05).toFixed(4)}</div><div style={{ fontSize: 9, color: '#a0845a' }}>USDT (VIP)</div></div>)}
           </div>
+        </div>
+
+        
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🏆 {(0, format_1.fmt)(profile.score)} {t('score')}</div>
+          {(profile.usdtBalance ?? 0) > 0 && <div style={{ background: 'rgba(39,174,96,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#27ae60' }}>💵 {(profile.usdtBalance ?? 0).toFixed(4)} USDT</div>}
+          {profile.isShielded && profile.shieldUntil && <div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🛡️ <Countdown_1.default endsAt={profile.shieldUntil}/></div>}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>

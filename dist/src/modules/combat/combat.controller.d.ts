@@ -18,6 +18,7 @@ export declare class CombatController {
         score: number;
         isShielded: boolean;
         shieldUntil: Date;
+        usdtBalance: number;
         resources: {
             gold: number;
             wood: number;

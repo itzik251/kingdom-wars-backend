@@ -338,7 +338,8 @@ function renderUsers(users) {
             <button class="btn-sm btn-success" onclick="giveResource('${u.telegramId}','${u.name||'?'}')">➕ תן</button>
           </div>
           <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 VIP</button>
-          <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫</button>
+          <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫 חסום</button>
+          <button class="btn-sm" style="background:#1a0a0a;color:#e74c3c;border:1px solid #e74c3c" onclick="deleteUser('${u.telegramId}','${u.name||'?'}')">🗑️ מחק</button>
         </div>
       </td>
     </tr>`;
@@ -376,6 +377,14 @@ async function giveVip(telegramId, name) {
   });
   const d = await r.json();
   if (d.success) { showToast('✅ VIP הופעל עד ' + new Date(d.vipUntil).toLocaleDateString('he') + ' → ' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+}
+
+async function deleteUser(telegramId, name) {
+  if (!confirm(`למחוק לצמיתות את ${name} (${telegramId})?\n⚠️ ימחק את המשתמש + הממלכה שלו לחלוטין!`)) return;
+  const r = await fetch(API + '/delete/' + telegramId, { method: 'POST', headers: h() });
+  const d = await r.json();
+  if (d.deleted) { showToast('🗑️ משתמש נמחק: ' + name); loadUsers(); }
   else showToast('❌ שגיאה: ' + JSON.stringify(d));
 }
 

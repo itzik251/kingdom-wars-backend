@@ -108,6 +108,17 @@ export class AdminController {
     };
   }
 
+  @Post('delete/:telegramId')
+  async deleteUser(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+    if (kingdom) await this.kingdomRepo.remove(kingdom);
+    await this.userRepo.remove(user);
+    return { deleted: true, telegramId };
+  }
+
   @Post('ban/:telegramId')
   async banUser(@Headers() headers: any, @Param('telegramId') telegramId: string) {
     this.guard(headers);
@@ -240,9 +251,8 @@ export class AdminController {
     await this.kingdomRepo.save(kingdom);
 
     if (kingdom.user) {
-      await this.notifService.create(kingdom.user.id, 'admin_gift', {
-        type: 'usdt_withdrawal',
-        label: `💸 ${amount.toFixed(4)} USDT נשלח לארנקך ✅`,
+      await this.notifService.create(kingdom.user.id, 'withdrawal_approved', {
+        amount: amount.toFixed(4),
         language: kingdom.user.language,
       }).catch(() => {});
     }
@@ -262,9 +272,8 @@ export class AdminController {
     await this.kingdomRepo.save(kingdom);
 
     if (kingdom.user) {
-      await this.notifService.create(kingdom.user.id, 'admin_gift', {
-        type: 'usdt_withdrawal_rejected',
-        label: `❌ בקשת משיכה נדחתה${body.reason ? ': ' + body.reason : ''}`,
+      await this.notifService.create(kingdom.user.id, 'withdrawal_rejected', {
+        reason: body.reason ? ': ' + body.reason : '',
         language: kingdom.user.language,
       }).catch(() => {});
     }

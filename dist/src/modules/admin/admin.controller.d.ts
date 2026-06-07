@@ -34,6 +34,15 @@ export declare class AdminController {
             username: string;
         }[];
     }>;
+    deleteUser(headers: any, telegramId: string): Promise<{
+        error: string;
+        deleted?: undefined;
+        telegramId?: undefined;
+    } | {
+        deleted: boolean;
+        telegramId: string;
+        error?: undefined;
+    }>;
     banUser(headers: any, telegramId: string): Promise<{
         error: string;
         banned?: undefined;

@@ -363,10 +363,13 @@ function WorldMapScreen() {
             </div>)}
           {battle.attackerWins && (<div style={{ background: 'rgba(244,208,63,0.1)', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 12, padding: '10px 20px' }}>
               <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 6 }}>{t('loot_label')}</div>
-              <div style={{ display: 'flex', gap: 18, fontSize: 16, fontWeight: 700 }}>
+              <div style={{ display: 'flex', gap: 18, fontSize: 16, fontWeight: 700, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <span>💰 {(0, format_1.fmt)(battle.loot?.gold)}</span>
                 <span>🪵 {(0, format_1.fmt)(battle.loot?.wood)}</span>
                 <span>🪨 {(0, format_1.fmt)(battle.loot?.stone)}</span>
+                {battle.loot?.usdt !== undefined && (<span style={{ color: battle.loot.usdt > 0 ? '#27ae60' : '#888' }}>
+                    💵 ${(battle.loot.usdt).toFixed(4)} USDT
+                  </span>)}
               </div>
             </div>)}
           {battle.buildingDamaged && (<div style={{ fontSize: 12, color: '#e67e22' }}>

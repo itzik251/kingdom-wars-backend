@@ -178,17 +178,11 @@ let CombatService = class CombatService {
         defender.wood = Math.max(0, defender.wood - report.loot.wood);
         defender.stone = Math.max(0, defender.stone - report.loot.stone);
         if (report.attackerWins && attacker.isVip) {
-            const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.05).toFixed(6));
-            const gameLoot = parseFloat(((defender.gameBalance ?? 0) * 0.05).toFixed(6));
+            const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.20).toFixed(6));
+            report.loot.usdt = usdtLoot;
             if (usdtLoot > 0) {
                 attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));
                 defender.usdtBalance = parseFloat(Math.max(0, (defender.usdtBalance ?? 0) - usdtLoot).toFixed(6));
-                report.loot.usdt = usdtLoot;
-            }
-            if (gameLoot > 0) {
-                attacker.gameBalance = parseFloat(((attacker.gameBalance ?? 0) + gameLoot).toFixed(6));
-                defender.gameBalance = parseFloat(Math.max(0, (defender.gameBalance ?? 0) - gameLoot).toFixed(6));
-                report.loot.game = gameLoot;
             }
         }
         if (report.attackerWins) {

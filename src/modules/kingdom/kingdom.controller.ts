@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { KingdomService } from './kingdom.service';
 
@@ -55,7 +55,7 @@ export class KingdomController {
   }
 
   @Post('withdraw-usdt')
-  async withdrawUsdt(@Request() req) {
-    throw new (await import('@nestjs/common').then(m => m.BadRequestException))('השתמש ב-request-withdrawal');
+  withdrawUsdt() {
+    throw new BadRequestException('נא להשתמש בטופס המשיכה החדש עם כתובת ארנק');
   }
 }

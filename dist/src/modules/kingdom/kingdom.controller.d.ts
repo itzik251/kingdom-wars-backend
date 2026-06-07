@@ -46,5 +46,5 @@ export declare class KingdomController {
         wallet: string;
         status: string;
     }>;
-    withdrawUsdt(req: any): Promise<void>;
+    withdrawUsdt(): void;
 }

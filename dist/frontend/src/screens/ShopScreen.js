@@ -46,7 +46,7 @@ function ReferralCard() {
         { count: 1, gems: 100, label: mkLabel(1) },
         { count: 5, gems: 200, label: mkLabel(5) },
         { count: 10, gems: 0, label: mkLabel(10), extra: `🦸 ${t('ragnar_name')}` },
-        { count: 20, gems: 0, label: mkLabel(20), extra: `👑 VIP 30 ${t('days_free')}` },
+        { count: 20, gems: 0, label: mkLabel(20), extra: `👑 ${t('vip_monthly_free')}` },
     ];
     return (<div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.1),rgba(26,138,64,0.05))', border: '1px solid rgba(39,174,96,0.3)', borderRadius: 14, padding: 14 }}>
       

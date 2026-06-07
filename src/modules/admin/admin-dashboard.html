@@ -89,6 +89,20 @@
     <div class="loading">טוען...</div>
   </div>
 
+  <!-- Wallet Section -->
+  <div class="section" style="margin-bottom:18px;">
+    <div class="section-header">💳 ארנק המשחק (USDT TRC20)</div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:11px;color:#666;">כתובת הארנק — לכאן מגיעים תשלומי VIP ומכאן מבוצעות משיכות.</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="walletAddr" placeholder="T..." style="flex:1;min-width:200px;margin:0;font-family:monospace;font-size:12px;"/>
+        <button class="btn-sm btn-success" onclick="saveWallet()">💾 שמור כתובת</button>
+        <button class="btn-sm btn-info" onclick="checkWalletBalance()">🔍 בדוק יתרה</button>
+      </div>
+      <div id="walletBalanceResult" style="font-size:12px;color:#27ae60;display:none;"></div>
+    </div>
+  </div>
+
   <!-- Search -->
   <div style="margin-bottom:12px;display:flex;gap:8px;">
     <input type="text" id="searchInput" placeholder="🔍 חפש שם / telegram ID / ממלכה..." style="margin:0;flex:1;" oninput="filterUsers()"/>
@@ -175,8 +189,13 @@ function renderStats(data) {
     <div class="stat-card"><div class="val" style="color:#27ae60">${data.newUsersToday}</div><div class="lbl">חדשים היום</div></div>
     <div class="stat-card"><div class="val" style="color:#9b59b6">${data.totalGemsInGame?.toLocaleString()}</div><div class="lbl">💎 Gems בשוק</div></div>
     <div class="stat-card"><div class="val" style="color:#27ae60">$${data.totalUsdtInGame}</div><div class="lbl">💵 USDT בשוק</div></div>
+    <div class="stat-card"><div class="val" style="color:#f4d03f">${data.vipCount || 0}</div><div class="lbl">👑 VIP פעילים</div></div>
     <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות</div></div>
   `;
+  // Update wallet display
+  if (data.gameWalletAddress !== undefined) {
+    document.getElementById('walletAddr').value = data.gameWalletAddress || '';
+  }
   document.getElementById('topTable').innerHTML = data.topKingdoms.map((k, i) => `
     <tr>
       <td><strong style="color:#f4d03f">#${i+1}</strong></td>
@@ -295,6 +314,40 @@ async function banUser(telegramId, name) {
   const d = await r.json();
   if (d.banned) { showToast('🚫 משתמש חסום: ' + name); loadUsers(); }
   else showToast('❌ שגיאה');
+}
+
+async function saveWallet() {
+  const address = document.getElementById('walletAddr').value.trim();
+  if (!address) return showToast('❌ הכנס כתובת ארנק');
+  const r = await fetch(API + '/wallet', { method: 'POST', headers: h(), body: JSON.stringify({ address }) });
+  const d = await r.json();
+  if (d.success) showToast('✅ כתובת ארנק עודכנה');
+  else showToast('❌ שגיאה');
+}
+
+async function checkWalletBalance() {
+  const address = document.getElementById('walletAddr').value.trim();
+  if (!address) return showToast('❌ הכנס כתובת ארנק');
+  const el = document.getElementById('walletBalanceResult');
+  el.style.display = 'block';
+  el.textContent = 'בודק...';
+  try {
+    // Query TronGrid for TRC20 USDT balance
+    const r = await fetch(`https://apilist.tronscanapi.com/api/account/tokens?address=${address}&token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=1`);
+    const d = await r.json();
+    const token = d?.data?.[0];
+    if (token) {
+      const bal = (parseFloat(token.quantity || '0') / 1e6).toFixed(2);
+      el.textContent = `💵 יתרת USDT בארנק: $${bal}`;
+      el.style.color = '#27ae60';
+    } else {
+      el.textContent = '💵 יתרה: $0.00 (ארנק ריק או לא נמצא)';
+      el.style.color = '#888';
+    }
+  } catch(e) {
+    el.textContent = '❌ לא ניתן לבדוק — נסה ב-TronScan ישירות';
+    el.style.color = '#e74c3c';
+  }
 }
 
 function logout() {

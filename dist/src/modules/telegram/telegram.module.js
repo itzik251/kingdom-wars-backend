@@ -12,12 +12,13 @@ const typeorm_1 = require("@nestjs/typeorm");
 const telegram_controller_1 = require("./telegram.controller");
 const telegram_service_1 = require("./telegram.service");
 const user_entity_1 = require("../user/user.entity");
+const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 let TelegramModule = class TelegramModule {
 };
 exports.TelegramModule = TelegramModule;
 exports.TelegramModule = TelegramModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, kingdom_entity_1.Kingdom])],
         controllers: [telegram_controller_1.TelegramController],
         providers: [telegram_service_1.TelegramService],
         exports: [telegram_service_1.TelegramService],

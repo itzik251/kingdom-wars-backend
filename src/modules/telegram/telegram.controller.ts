@@ -23,4 +23,10 @@ export class TelegramController {
   deleteWebhook() {
     return this.telegramService.deleteWebhook();
   }
+
+  // Register bot commands in the menu
+  @Get('set-commands')
+  setCommands() {
+    return this.telegramService.setMyCommands();
+  }
 }

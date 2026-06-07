@@ -12,6 +12,7 @@ export declare class AdminController {
     private notifService;
     constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService);
     dashboard(res: Response): void;
+    private getWalletConfig;
     private guard;
     stats(headers: any): Promise<{
         totalUsers: number;
@@ -20,6 +21,8 @@ export declare class AdminController {
         newUsersToday: number;
         totalGemsInGame: number;
         totalUsdtInGame: string;
+        vipCount: number;
+        gameWalletAddress: string;
         topKingdoms: {
             name: string;
             score: number;
@@ -78,6 +81,15 @@ export declare class AdminController {
         error?: undefined;
         vipUntil?: undefined;
     }>;
+    getWallet(headers: any): {
+        address: string;
+    };
+    updateWallet(headers: any, body: {
+        address: string;
+    }): {
+        address: string;
+        success: boolean;
+    };
     giveVip(headers: any, telegramId: string, body: {
         days?: number;
     }): Promise<{

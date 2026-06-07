@@ -90,14 +90,14 @@ const MESSAGES = {
         ar: '⚔️ اكتمل التدريب — {count} {unit} جاهزون للقتال',
     },
     admin_gift: {
-        en: '🎁 You received a gift from the admin: {label}!',
-        he: '🎁 קיבלת מתנה מהאדמין: {label}!',
-        es: '🎁 ¡Recibiste un regalo del admin: {label}!',
-        fr: '🎁 Vous avez reçu un cadeau de l\'admin: {label}!',
-        de: '🎁 Du hast ein Geschenk vom Admin erhalten: {label}!',
-        ru: '🎁 Вы получили подарок от администратора: {label}!',
-        pt: '🎁 Você recebeu um presente do admin: {label}!',
-        ar: '🎁 تلقيت هدية من الإدارة: {label}!',
+        en: '🎁 You received a gift: {label}!',
+        he: '🎁 קיבלת מתנה: {label}!',
+        es: '🎁 ¡Recibiste un regalo: {label}!',
+        fr: '🎁 Vous avez reçu un cadeau: {label}!',
+        de: '🎁 Du hast ein Geschenk erhalten: {label}!',
+        ru: '🎁 Вы получили подарок: {label}!',
+        pt: '🎁 Você recebeu um presente: {label}!',
+        ar: '🎁 تلقيت هدية: {label}!',
     },
 };
 const OPEN_GAME = {

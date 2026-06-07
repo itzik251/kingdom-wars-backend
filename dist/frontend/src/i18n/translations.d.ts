@@ -119,6 +119,8 @@ declare const he: {
     vip_heroes_label: string;
     vip_buildings_label: string;
     vip_pay_msg: string;
+    vip_monthly_free: string;
+    vip_usdt_raid_note: string;
     vip_prod_x15: string;
     vip_usdt_raid: string;
     too_weak_to_attack: string;
@@ -506,6 +508,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -892,6 +896,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -1278,6 +1284,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -1664,6 +1672,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -2050,6 +2060,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -2436,6 +2448,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -2822,6 +2836,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -3208,6 +3224,8 @@ export declare const TRANSLATIONS: {
         vip_heroes_label: string;
         vip_buildings_label: string;
         vip_pay_msg: string;
+        vip_monthly_free: string;
+        vip_usdt_raid_note: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;

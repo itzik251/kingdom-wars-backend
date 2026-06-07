@@ -27,6 +27,7 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
     const [error, setError] = (0, react_1.useState)(false);
     const t = (0, useT_1.useT)();
     const myScore = (0, gameStore_1.useGameStore)(s => s.kingdom?.score ?? 0);
+    const isVip = (0, gameStore_1.useGameStore)(s => !!s.kingdom?.isVip);
     (0, react_1.useEffect)(() => {
         let alive = true;
         setLoading(true);
@@ -91,15 +92,25 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>💰</div><div style={{ fontSize: 14, fontWeight: 700, color: '#f4d03f' }}>{(0, format_1.fmt)(profile.lootable.gold)}</div></div>
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪵</div><div style={{ fontSize: 14, fontWeight: 700, color: '#a0682a' }}>{(0, format_1.fmt)(profile.lootable.wood)}</div></div>
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪨</div><div style={{ fontSize: 14, fontWeight: 700, color: '#aaa' }}>{(0, format_1.fmt)(profile.lootable.stone)}</div></div>
-            {(profile.usdtBalance ?? 0) > 0 && (<div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>💵</div><div style={{ fontSize: 14, fontWeight: 700, color: '#27ae60' }}>${((profile.usdtBalance ?? 0) * 0.05).toFixed(4)}</div><div style={{ fontSize: 9, color: '#a0845a' }}>USDT (VIP)</div></div>)}
+            
+            <div style={{ textAlign: 'center', position: 'relative', opacity: isVip ? 1 : 0.6 }}>
+              <div style={{ fontSize: 18 }}>💵</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: isVip ? '#27ae60' : '#666' }}>
+                {isVip ? `$${((profile.usdtBalance ?? 0) * 0.05).toFixed(4)}` : '🔒'}
+              </div>
+              <div style={{ fontSize: 9, color: '#a0845a' }}>USDT{!isVip && ' VIP'}</div>
+            </div>
           </div>
+          {!isVip && (<div style={{ fontSize: 10, color: '#9b59b6', textAlign: 'center', marginTop: 8 }}>
+              👑 {t('vip_usdt_raid_note')}
+            </div>)}
         </div>
 
         
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
           <div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🏆 {(0, format_1.fmt)(profile.score)} {t('score')}</div>
-          {(profile.usdtBalance ?? 0) > 0 && <div style={{ background: 'rgba(39,174,96,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#27ae60' }}>💵 {(profile.usdtBalance ?? 0).toFixed(4)} USDT</div>}
-          {profile.isShielded && profile.shieldUntil && <div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🛡️ <Countdown_1.default endsAt={profile.shieldUntil}/></div>}
+          <div style={{ background: 'rgba(39,174,96,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#27ae60' }}>💵 {(profile.usdtBalance ?? 0).toFixed(4)} USDT</div>
+          {profile.isShielded && profile.shieldUntil && (<div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🛡️ <Countdown_1.default endsAt={profile.shieldUntil}/></div>)}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>

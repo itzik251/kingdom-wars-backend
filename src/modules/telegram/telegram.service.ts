@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
+import { Kingdom } from '../kingdom/kingdom.entity';
 
 type Lang = 'en' | 'he' | 'es' | 'fr' | 'de' | 'ru' | 'pt' | 'ar';
 const VALID_LANGS: Lang[] = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];
@@ -119,6 +120,28 @@ const BOT_MESSAGES: Record<string, Record<Lang, string>> = {
     fr: '🔗 Inviter des amis', de: '🔗 Freunde einladen',
     ru: '🔗 Пригласить друзей', pt: '🔗 Convidar Amigos', ar: '🔗 دعوة الأصدقاء',
   },
+  help_msg: {
+    en: '⚔️ <b>Kingdom Wars — Commands</b>\n\n/start — Start the game\n/kingdom — View your kingdom\n/status — Your kingdom stats\n/referral — Invite friends\n/leaderboard — Global rankings\n/help — This help message',
+    he: '⚔️ <b>Kingdom Wars — פקודות</b>\n\n/start — הפעל את המשחק\n/kingdom — ממלכה שלך\n/status — סטטוס הממלכה\n/referral — הזמן חברים\n/leaderboard — דירוג עולמי\n/help — עזרה',
+    es: '⚔️ <b>Kingdom Wars — Comandos</b>\n\n/start — Iniciar el juego\n/kingdom — Tu reino\n/status — Estado del reino\n/referral — Invitar amigos\n/leaderboard — Rankings\n/help — Ayuda',
+    fr: '⚔️ <b>Kingdom Wars — Commandes</b>\n\n/start — Démarrer le jeu\n/kingdom — Votre royaume\n/status — Statut du royaume\n/referral — Inviter des amis\n/leaderboard — Classement\n/help — Aide',
+    de: '⚔️ <b>Kingdom Wars — Befehle</b>\n\n/start — Spiel starten\n/kingdom — Dein Königreich\n/status — Königreich-Status\n/referral — Freunde einladen\n/leaderboard — Rangliste\n/help — Hilfe',
+    ru: '⚔️ <b>Kingdom Wars — Команды</b>\n\n/start — Запустить игру\n/kingdom — Ваше королевство\n/status — Статус королевства\n/referral — Пригласить друзей\n/leaderboard — Рейтинг\n/help — Помощь',
+    pt: '⚔️ <b>Kingdom Wars — Comandos</b>\n\n/start — Iniciar o jogo\n/kingdom — Seu reino\n/status — Status do reino\n/referral — Convidar amigos\n/leaderboard — Rankings\n/help — Ajuda',
+    ar: '⚔️ <b>Kingdom Wars — الأوامر</b>\n\n/start — بدء اللعبة\n/kingdom — مملكتك\n/status — حالة المملكة\n/referral — دعوة الأصدقاء\n/leaderboard — التصنيف\n/help — المساعدة',
+  },
+  status_msg: {
+    en: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gems: {gems}\n💰 Gold: {gold}\n🛡️ Shield: {shield}',
+    he: '🏰 <b>{name}</b>\n⚔️ ניקוד: {score}\n💎 Gems: {gems}\n💰 זהב: {gold}\n🛡️ מגן: {shield}',
+    es: '🏰 <b>{name}</b>\n⚔️ Puntos: {score}\n💎 Gemas: {gems}\n💰 Oro: {gold}\n🛡️ Escudo: {shield}',
+    fr: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gemmes: {gems}\n💰 Or: {gold}\n🛡️ Bouclier: {shield}',
+    de: '🏰 <b>{name}</b>\n⚔️ Punkte: {score}\n💎 Edelsteine: {gems}\n💰 Gold: {gold}\n🛡️ Schild: {shield}',
+    ru: '🏰 <b>{name}</b>\n⚔️ Очки: {score}\n💎 Самоцветы: {gems}\n💰 Золото: {gold}\n🛡️ Щит: {shield}',
+    pt: '🏰 <b>{name}</b>\n⚔️ Pontos: {score}\n💎 Gemas: {gems}\n💰 Ouro: {gold}\n🛡️ Escudo: {shield}',
+    ar: '🏰 <b>{name}</b>\n⚔️ النقاط: {score}\n💎 الجواهر: {gems}\n💰 الذهب: {gold}\n🛡️ الدرع: {shield}',
+  },
+  shield_active: { en: '✅ Active', he: '✅ פעיל', es: '✅ Activo', fr: '✅ Actif', de: '✅ Aktiv', ru: '✅ Активен', pt: '✅ Ativo', ar: '✅ نشط' },
+  shield_none:   { en: '❌ No shield', he: '❌ אין מגן', es: '❌ Sin escudo', fr: '❌ Pas de bouclier', de: '❌ Kein Schild', ru: '❌ Нет щита', pt: '❌ Sem escudo', ar: '❌ لا درع' },
 };
 
 @Injectable()
@@ -129,6 +152,7 @@ export class TelegramService {
   constructor(
     private config: ConfigService,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
   ) {
     this.token = config.get('TELEGRAM_BOT_TOKEN');
     this.apiBase = `https://api.telegram.org/bot${this.token}`;
@@ -193,13 +217,64 @@ export class TelegramService {
       });
     }
 
-    if (text === '/referral') {
+    if (text === '/referral' || text.startsWith('/referral ')) {
       await this.sendMessage(chatId, BOT_MESSAGES.referral_msg[lang], {
         reply_markup: {
           inline_keyboard: [[{ text: BOT_MESSAGES.referral_btn[lang], web_app: { url: miniAppUrl } }]],
         },
       });
+      return;
     }
+
+    if (text === '/help' || text === '/start@KingdomWarsBot') {
+      await this.sendMessage(chatId, BOT_MESSAGES.help_msg[lang], {
+        reply_markup: {
+          inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]],
+        },
+      });
+      return;
+    }
+
+    if (text === '/status') {
+      const kingdom = user
+        ? await this.kingdomRepo.findOne({ where: { user: { id: user.id } } }).catch(() => null)
+        : null;
+      if (!kingdom) {
+        await this.sendMessage(chatId, BOT_MESSAGES.welcome[lang], {
+          reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_game[lang], web_app: { url: miniAppUrl } }]] },
+        });
+        return;
+      }
+      const shieldStr = kingdom.isShielded ? BOT_MESSAGES.shield_active[lang] : BOT_MESSAGES.shield_none[lang];
+      const statusText = BOT_MESSAGES.status_msg[lang]
+        .replace('{name}', kingdom.name)
+        .replace('{score}', String(kingdom.score))
+        .replace('{gems}', String(kingdom.gems))
+        .replace('{gold}', String(Math.floor(kingdom.gold)))
+        .replace('{shield}', shieldStr);
+      await this.sendMessage(chatId, statusText, {
+        reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]] },
+      });
+      return;
+    }
+  }
+
+  async setMyCommands() {
+    if (!this.token || this.token === 'dev_token') return { ok: false, reason: 'no token' };
+    const commands = [
+      { command: 'start',       description: '🏰 Start / Open game' },
+      { command: 'status',      description: '📊 Your kingdom status' },
+      { command: 'kingdom',     description: '🏰 View your kingdom' },
+      { command: 'referral',    description: '🔗 Invite friends & earn rewards' },
+      { command: 'leaderboard', description: '🏆 Global rankings' },
+      { command: 'help',        description: '❓ All commands' },
+    ];
+    const res = await fetch(`${this.apiBase}/setMyCommands`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commands }),
+    });
+    return res.json();
   }
 
   async setWebhook(webhookUrl: string) {

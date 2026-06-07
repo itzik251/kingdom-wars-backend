@@ -7,4 +7,5 @@ export declare class TelegramController {
     };
     setWebhook(url: string): Promise<any>;
     deleteWebhook(): Promise<any>;
+    setCommands(): Promise<any>;
 }

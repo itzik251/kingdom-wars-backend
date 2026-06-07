@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminController = void 0;
 const common_1 = require("@nestjs/common");
 const path_1 = require("path");
+const fs_1 = require("fs");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
@@ -22,6 +23,7 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const config_1 = require("@nestjs/config");
 const notification_service_1 = require("../notifications/notification.service");
 const game_constants_1 = require("../../constants/game.constants");
+const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
     constructor(userRepo, kingdomRepo, config, notifService) {
         this.userRepo = userRepo;
@@ -31,6 +33,15 @@ let AdminController = class AdminController {
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
+    }
+    getWalletConfig() {
+        try {
+            if ((0, fs_1.existsSync)(WALLET_CFG_PATH)) {
+                return JSON.parse((0, fs_1.readFileSync)(WALLET_CFG_PATH, 'utf-8'));
+            }
+        }
+        catch { }
+        return { address: this.config.get('GAME_WALLET_ADDRESS') || '' };
     }
     guard(headers) {
         const secret = this.config.get('ADMIN_SECRET') || 'kw_admin_2026';
@@ -67,6 +78,12 @@ let AdminController = class AdminController {
             .createQueryBuilder('k')
             .select('SUM(k.usdt_balance)', 'total')
             .getRawOne();
+        const now = new Date();
+        const vipCount = await this.kingdomRepo
+            .createQueryBuilder('k')
+            .where('k.vip_expires_at > :now', { now })
+            .getCount();
+        const walletCfg = this.getWalletConfig();
         return {
             totalUsers,
             totalKingdoms,
@@ -74,6 +91,8 @@ let AdminController = class AdminController {
             newUsersToday: newToday,
             totalGemsInGame: parseInt(gemsResult?.total || '0'),
             totalUsdtInGame: parseFloat(usdtResult?.total || '0').toFixed(4),
+            vipCount,
+            gameWalletAddress: walletCfg.address,
             topKingdoms: topKingdoms.map(k => ({
                 name: k.name,
                 score: k.score,
@@ -144,6 +163,19 @@ let AdminController = class AdminController {
             language: user.language,
         }).catch(() => { });
         return { success: true, type, amount };
+    }
+    getWallet(headers) {
+        this.guard(headers);
+        return this.getWalletConfig();
+    }
+    updateWallet(headers, body) {
+        this.guard(headers);
+        const cfg = { address: body.address?.trim() || '' };
+        try {
+            (0, fs_1.writeFileSync)(WALLET_CFG_PATH, JSON.stringify(cfg, null, 2), 'utf-8');
+        }
+        catch { }
+        return { success: true, ...cfg };
     }
     async giveVip(headers, telegramId, body) {
         this.guard(headers);
@@ -232,6 +264,21 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Number, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "giveResource", null);
+__decorate([
+    (0, common_1.Get)('wallet'),
+    __param(0, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AdminController.prototype, "getWallet", null);
+__decorate([
+    (0, common_1.Post)('wallet'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], AdminController.prototype, "updateWallet", null);
 __decorate([
     (0, common_1.Post)('give-vip/:telegramId'),
     __param(0, (0, common_1.Headers)()),

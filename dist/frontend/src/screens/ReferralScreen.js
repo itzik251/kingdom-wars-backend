@@ -88,19 +88,32 @@ function ReferralScreen() {
             }}>{msg}</div>)}
 
       
+      <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+        ⚠️ {t('ref_anticheat_note')}
+      </div>
+
+      
       <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 15 }}>{t('prizes_label')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {stats.milestones.map(m => (<div key={m.count} className="card" style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderColor: m.reached ? '#27ae60' : 'var(--border)',
-                opacity: stats.referredCount >= m.count ? 1 : 0.6,
-            }}>
+        {stats.milestones.map(m => {
+            const rewardText = m.gems > 0
+                ? `💎 ${(0, format_1.fmt)(m.gems)} Gems`
+                : m.hero === 'ragnar'
+                    ? `🦸 ${t('ragnar_name')}`
+                    : m.vipDays
+                        ? `👑 ${t('vip_monthly_free')}`
+                        : m.hero
+                            ? `🦸 ${m.hero}`
+                            : '';
+            return (<div key={m.count} className="card" style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    borderColor: m.reached ? '#27ae60' : 'var(--border)',
+                    opacity: stats.referredCount >= m.count ? 1 : 0.6,
+                }}>
             <div>
               <div style={{ fontWeight: 700 }}>{m.label}</div>
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-                {m.gems > 0 && `💎 ${(0, format_1.fmt)(m.gems)} Gems`}
-                {m.skin && `🎨 ${t('rare_skin')}`}
-                {m.hero && `👑 ${t('rare_hero')}`}
+                {rewardText}
               </div>
             </div>
             {m.reached ? (<button className="btn btn-green" onClick={() => claim(m.count)} disabled={claiming === m.count} style={{ fontSize: 12 }}>
@@ -108,7 +121,8 @@ function ReferralScreen() {
               </button>) : (<span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                 {stats.referredCount}/{m.count}
               </span>)}
-          </div>))}
+          </div>);
+        })}
       </div>
     </div>);
 }

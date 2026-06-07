@@ -177,6 +177,57 @@ function WorldMapScreen() {
             <div style={{ fontSize: 40 }}>🏜️</div>
             <div style={{ fontSize: 14 }}>{t('no_kingdoms_yet')}</div>
           </div>) : (<div style={{ position: 'absolute', left: pan.x, top: pan.y, width: sceneW, height: sceneH, willChange: 'transform', transform: `scale(${zoom})`, transformOrigin: '0 0' }}>
+            
+            {(() => {
+                const cX = sceneW / 2;
+                const cY = sceneH * 0.42;
+                const cW = sceneW * 1.1;
+                const cH = sceneH * 0.85;
+                return (<>
+                  
+                  <div style={{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH, background: 'radial-gradient(ellipse at 50% 45%,#0a1e35 0%,#050d1a 80%)', zIndex: 0 }}/>
+                  
+                  <div style={{
+                        position: 'absolute',
+                        left: cX - cW / 2, top: cY - cH / 2,
+                        width: cW, height: cH,
+                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
+                        background: 'radial-gradient(ellipse at 50% 40%,#1e3d18 0%,#142d10 40%,#0d2008 70%,#081508 100%)',
+                        zIndex: 1,
+                    }}/>
+                  
+                  <div style={{
+                        position: 'absolute',
+                        left: cX - cW * 0.52, top: cY - cH * 0.52,
+                        width: cW * 1.04, height: cH * 1.04,
+                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
+                        background: 'transparent',
+                        border: '2px solid rgba(56,140,56,0.25)',
+                        zIndex: 1,
+                    }}/>
+                  
+                  {[
+                        { dx: -0.15, dy: -0.1, r: 0.2, c: 'rgba(10,24,8,0.5)' },
+                        { dx: 0.12, dy: 0.08, r: 0.18, c: 'rgba(10,24,8,0.4)' },
+                        { dx: -0.08, dy: 0.15, r: 0.15, c: 'rgba(8,18,6,0.45)' },
+                        { dx: 0.18, dy: -0.12, r: 0.14, c: 'rgba(12,28,10,0.35)' },
+                    ].map((p, pi) => (<div key={pi} style={{
+                            position: 'absolute',
+                            left: cX + cW * p.dx - cW * p.r / 2,
+                            top: cY + cH * p.dy - cH * p.r / 2,
+                            width: cW * p.r, height: cH * p.r,
+                            borderRadius: '50%',
+                            background: p.c,
+                            zIndex: 2, pointerEvents: 'none',
+                        }}/>))}
+                  
+                  <svg style={{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH, zIndex: 2, pointerEvents: 'none', opacity: 0.2 }}>
+                    <line x1={cX} y1={cY - cH * 0.3} x2={cX} y2={cY + cH * 0.3} stroke="#6a8a30" strokeWidth="2" strokeDasharray="6,8"/>
+                    <line x1={cX - cW * 0.28} y1={cY} x2={cX + cW * 0.28} y2={cY} stroke="#6a8a30" strokeWidth="2" strokeDasharray="6,8"/>
+                  </svg>
+                </>);
+            })()}
+
             {kingdoms.map((k, i) => {
                 const gx = i % COLS, gy = Math.floor(i / COLS);
                 const { x, y } = iso(gx, gy);

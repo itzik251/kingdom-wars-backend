@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Param, Body, Headers, UnauthorizedException, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { join } from 'path';
+import { join, resolve } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
@@ -8,6 +9,8 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
+
+const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
 
 type ResourceType = 'gems' | 'gold' | 'wood' | 'stone' | 'food' | 'usdt' | 'vip';
 
@@ -23,6 +26,15 @@ export class AdminController {
   @Get()
   dashboard(@Res() res: Response) {
     res.sendFile(join(__dirname, 'admin-dashboard.html'));
+  }
+
+  private getWalletConfig(): { address: string } {
+    try {
+      if (existsSync(WALLET_CFG_PATH)) {
+        return JSON.parse(readFileSync(WALLET_CFG_PATH, 'utf-8'));
+      }
+    } catch {}
+    return { address: this.config.get('GAME_WALLET_ADDRESS') || '' };
   }
 
   private guard(headers: any) {
@@ -66,6 +78,14 @@ export class AdminController {
       .select('SUM(k.usdt_balance)', 'total')
       .getRawOne();
 
+    const now = new Date();
+    const vipCount = await this.kingdomRepo
+      .createQueryBuilder('k')
+      .where('k.vip_expires_at > :now', { now })
+      .getCount();
+
+    const walletCfg = this.getWalletConfig();
+
     return {
       totalUsers,
       totalKingdoms,
@@ -73,6 +93,8 @@ export class AdminController {
       newUsersToday: newToday,
       totalGemsInGame: parseInt(gemsResult?.total || '0'),
       totalUsdtInGame: parseFloat(usdtResult?.total || '0').toFixed(4),
+      vipCount,
+      gameWalletAddress: walletCfg.address,
       topKingdoms: topKingdoms.map(k => ({
         name: k.name,
         score: k.score,
@@ -144,6 +166,20 @@ export class AdminController {
     }).catch(() => {});
 
     return { success: true, type, amount };
+  }
+
+  @Get('wallet')
+  getWallet(@Headers() headers: any) {
+    this.guard(headers);
+    return this.getWalletConfig();
+  }
+
+  @Post('wallet')
+  updateWallet(@Headers() headers: any, @Body() body: { address: string }) {
+    this.guard(headers);
+    const cfg = { address: body.address?.trim() || '' };
+    try { writeFileSync(WALLET_CFG_PATH, JSON.stringify(cfg, null, 2), 'utf-8'); } catch {}
+    return { success: true, ...cfg };
   }
 
   @Post('give-vip/:telegramId')

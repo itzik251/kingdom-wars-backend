@@ -103,6 +103,15 @@
     </div>
   </div>
 
+  <!-- Pending Withdrawals -->
+  <div class="section" id="withdrawalsSection" style="margin-bottom:18px;">
+    <div class="section-header" style="background:rgba(231,76,60,0.08);">
+      💸 בקשות משיכה ממתינות
+      <button class="refresh-btn" onclick="loadWithdrawals()">🔄</button>
+    </div>
+    <div id="withdrawalsContent" style="padding:12px 16px;color:#666;font-size:12px;">טוען...</div>
+  </div>
+
   <!-- Search -->
   <div style="margin-bottom:12px;display:flex;gap:8px;">
     <input type="text" id="searchInput" placeholder="🔍 חפש שם / telegram ID / ממלכה..." style="margin:0;flex:1;" oninput="filterUsers()"/>
@@ -171,7 +180,60 @@ async function doLogin() {
     document.getElementById('dashboard').style.display = 'block';
     renderStats(data);
     loadUsers();
+    loadWithdrawals();
   } catch(e) { document.getElementById('loginError').textContent = '❌ שגיאת חיבור'; }
+}
+
+async function loadWithdrawals() {
+  const el = document.getElementById('withdrawalsContent');
+  el.innerHTML = 'טוען...';
+  try {
+    const r = await fetch(API + '/withdrawals', { headers: h() });
+    const list = await r.json();
+    if (!list.length) {
+      el.innerHTML = '<p style="color:#666;text-align:center;padding:12px">✅ אין בקשות ממתינות</p>';
+      return;
+    }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr>
+        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">שחקן</th>
+        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">סכום</th>
+        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">כתובת ארנק</th>
+        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">פעולות</th>
+      </tr></thead>
+      <tbody>${list.map(w => `
+        <tr>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520"><strong>${w.username || '?'}</strong><br><span style="color:#555;font-size:10px">${w.telegramId}</span></td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;color:#27ae60;font-weight:700">$${w.amount.toFixed(4)} USDT</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;font-family:monospace;font-size:10px;color:#a0845a;word-break:break-all">${w.wallet}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520">
+            <div style="display:flex;gap:6px">
+              <button class="btn-sm btn-success" onclick="approveWithdrawal('${w.kingdomId}','${w.username}',${w.amount})">✅ אשר</button>
+              <button class="btn-sm btn-danger" onclick="rejectWithdrawal('${w.kingdomId}','${w.username}')">❌ דחה</button>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#e74c3c">שגיאה בטעינה</p>';
+  }
+}
+
+async function approveWithdrawal(kingdomId, name, amount) {
+  if (!confirm(`לאשר משיכה של $${amount.toFixed(4)} USDT ל-${name}?\n\n⚠️ ודא שביצעת את ההעברה בפועל לפני האישור!`)) return;
+  const r = await fetch(API + '/withdrawals/' + kingdomId + '/approve', { method: 'POST', headers: h() });
+  const d = await r.json();
+  if (d.success) { showToast('✅ משיכה אושרה — יתרת השחקן עודכנה'); loadWithdrawals(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+}
+
+async function rejectWithdrawal(kingdomId, name) {
+  const reason = prompt('סיבת דחייה (אופציונלי):') || '';
+  const r = await fetch(API + '/withdrawals/' + kingdomId + '/reject', { method: 'POST', headers: h(), body: JSON.stringify({ reason }) });
+  const d = await r.json();
+  if (d.success) { showToast('🚫 משיכה נדחתה — השחקן קיבל הודעה'); loadWithdrawals(); }
+  else showToast('❌ שגיאה');
 }
 
 async function loadAll() {
@@ -179,6 +241,7 @@ async function loadAll() {
   const data = await r.json();
   renderStats(data);
   loadUsers();
+  loadWithdrawals();
   document.getElementById('lastRefresh').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he');
 }
 

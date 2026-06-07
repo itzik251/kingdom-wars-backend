@@ -88,6 +88,15 @@ export class Kingdom {
   @Column({ name: 'attack_speed_boost_until', nullable: true })
   attackSpeedBoostUntil: Date;
 
+  @Column({ name: 'withdrawal_wallet', nullable: true })
+  withdrawalWallet: string;
+
+  @Column({ name: 'withdrawal_pending', type: 'float', default: 0 })
+  withdrawalPending: number;
+
+  @Column({ name: 'withdrawal_status', default: 'none' }) // 'none' | 'pending' | 'approved' | 'rejected'
+  withdrawalStatus: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

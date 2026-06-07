@@ -108,16 +108,35 @@ let KingdomService = class KingdomService {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         return { usdtBalance: kingdom?.usdtBalance ?? 0, gameBalance: kingdom?.gameBalance ?? 0 };
     }
-    async withdrawUsdt(kingdomId) {
+    async requestWithdrawal(kingdomId, walletAddress) {
+        if (!walletAddress || walletAddress.trim().length < 10) {
+            throw new common_1.BadRequestException('כתובת ארנק לא תקינה');
+        }
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         const MIN_WITHDRAW = 20;
         if ((kingdom?.usdtBalance ?? 0) < MIN_WITHDRAW) {
             throw new common_1.BadRequestException(`מינימום ${MIN_WITHDRAW} USDT למשיכה`);
         }
-        const amount = kingdom.usdtBalance;
-        kingdom.usdtBalance = 0;
+        if (kingdom.withdrawalStatus === 'pending') {
+            throw new common_1.BadRequestException('יש כבר בקשת משיכה פעילה — המתן לאישור');
+        }
+        kingdom.withdrawalWallet = walletAddress.trim();
+        kingdom.withdrawalPending = kingdom.usdtBalance;
+        kingdom.withdrawalStatus = 'pending';
         await this.kingdomRepo.save(kingdom);
-        return { success: true, amount };
+        return { success: true, amount: kingdom.withdrawalPending, wallet: kingdom.withdrawalWallet, status: 'pending' };
+    }
+    async getWithdrawalStatus(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        return {
+            usdtBalance: kingdom?.usdtBalance ?? 0,
+            withdrawalPending: kingdom?.withdrawalPending ?? 0,
+            withdrawalStatus: kingdom?.withdrawalStatus ?? 'none',
+            withdrawalWallet: kingdom?.withdrawalWallet ?? '',
+        };
+    }
+    async withdrawUsdt(kingdomId) {
+        throw new common_1.BadRequestException('השתמש ב-request-withdrawal עם כתובת ארנק');
     }
     async buyShield(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });

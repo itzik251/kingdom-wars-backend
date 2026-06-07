@@ -45,12 +45,17 @@ export class KingdomController {
   @Get('usdt-balance')
   async getUsdtBalance(@Request() req) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-    return this.kingdomService.getUsdtBalance(kingdom.id);
+    return this.kingdomService.getWithdrawalStatus(kingdom.id);
+  }
+
+  @Post('request-withdrawal')
+  async requestWithdrawal(@Request() req, @Body() body: { walletAddress: string }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
   }
 
   @Post('withdraw-usdt')
   async withdrawUsdt(@Request() req) {
-    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-    return this.kingdomService.withdrawUsdt(kingdom.id);
+    throw new (await import('@nestjs/common').then(m => m.BadRequestException))('השתמש ב-request-withdrawal');
   }
 }

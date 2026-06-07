@@ -177,6 +177,64 @@ let AdminController = class AdminController {
         catch { }
         return { success: true, ...cfg };
     }
+    async getPendingWithdrawals(headers) {
+        this.guard(headers);
+        const kingdoms = await this.kingdomRepo
+            .createQueryBuilder('k')
+            .leftJoinAndSelect('k.user', 'u')
+            .where('k.withdrawal_status = :s', { s: 'pending' })
+            .orderBy('k.created_at', 'DESC')
+            .getMany();
+        return kingdoms.map(k => ({
+            kingdomId: k.id,
+            kingdomName: k.name,
+            telegramId: k.user?.telegramId,
+            username: k.user?.username || k.user?.firstName,
+            amount: k.withdrawalPending,
+            wallet: k.withdrawalWallet,
+        }));
+    }
+    async approveWithdrawal(headers, kingdomId) {
+        this.guard(headers);
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+        if (!kingdom)
+            return { error: 'Not found' };
+        if (kingdom.withdrawalStatus !== 'pending')
+            return { error: 'Not pending' };
+        const amount = kingdom.withdrawalPending;
+        const wallet = kingdom.withdrawalWallet;
+        kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
+        kingdom.withdrawalPending = 0;
+        kingdom.withdrawalStatus = 'approved';
+        kingdom.withdrawalWallet = null;
+        await this.kingdomRepo.save(kingdom);
+        if (kingdom.user) {
+            await this.notifService.create(kingdom.user.id, 'admin_gift', {
+                type: 'usdt_withdrawal',
+                label: `💸 משיכת ${amount.toFixed(4)} USDT אושרה → ${wallet}`,
+                language: kingdom.user.language,
+            }).catch(() => { });
+        }
+        return { success: true, amount, wallet };
+    }
+    async rejectWithdrawal(headers, kingdomId, body) {
+        this.guard(headers);
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+        if (!kingdom)
+            return { error: 'Not found' };
+        kingdom.withdrawalPending = 0;
+        kingdom.withdrawalStatus = 'rejected';
+        kingdom.withdrawalWallet = null;
+        await this.kingdomRepo.save(kingdom);
+        if (kingdom.user) {
+            await this.notifService.create(kingdom.user.id, 'admin_gift', {
+                type: 'usdt_withdrawal_rejected',
+                label: `❌ בקשת משיכה נדחתה${body.reason ? ': ' + body.reason : ''}`,
+                language: kingdom.user.language,
+            }).catch(() => { });
+        }
+        return { success: true };
+    }
     async giveVip(headers, telegramId, body) {
         this.guard(headers);
         return this.giveResource(telegramId, 'vip', body.days || game_constants_1.VIP_DURATION_DAYS);
@@ -279,6 +337,30 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], AdminController.prototype, "updateWallet", null);
+__decorate([
+    (0, common_1.Get)('withdrawals'),
+    __param(0, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getPendingWithdrawals", null);
+__decorate([
+    (0, common_1.Post)('withdrawals/:kingdomId/approve'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('kingdomId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "approveWithdrawal", null);
+__decorate([
+    (0, common_1.Post)('withdrawals/:kingdomId/reject'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('kingdomId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "rejectWithdrawal", null);
 __decorate([
     (0, common_1.Post)('give-vip/:telegramId'),
     __param(0, (0, common_1.Headers)()),

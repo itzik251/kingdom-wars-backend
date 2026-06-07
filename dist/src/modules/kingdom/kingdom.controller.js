@@ -45,11 +45,14 @@ let KingdomController = class KingdomController {
     }
     async getUsdtBalance(req) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.kingdomService.getUsdtBalance(kingdom.id);
+        return this.kingdomService.getWithdrawalStatus(kingdom.id);
+    }
+    async requestWithdrawal(req, body) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
     }
     async withdrawUsdt(req) {
-        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.kingdomService.withdrawUsdt(kingdom.id);
+        throw new (await Promise.resolve().then(() => require('@nestjs/common')).then(m => m.BadRequestException))('השתמש ב-request-withdrawal');
     }
 };
 exports.KingdomController = KingdomController;
@@ -103,6 +106,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], KingdomController.prototype, "getUsdtBalance", null);
+__decorate([
+    (0, common_1.Post)('request-withdrawal'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "requestWithdrawal", null);
 __decorate([
     (0, common_1.Post)('withdraw-usdt'),
     __param(0, (0, common_1.Request)()),

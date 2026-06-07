@@ -111,7 +111,7 @@ function formatMessage(template: string, vars: Record<string, string | number>):
     template,
   );
   // Remove "×1" when there's only one item — looks cleaner
-  result = result.replace(' ×1', '');
+  result = result.replace(/ ×1(?!\d)/g, ''); // remove "×1" only when not followed by another digit
   return result;
 }
 

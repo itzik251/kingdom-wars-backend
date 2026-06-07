@@ -112,7 +112,7 @@ const OPEN_GAME = {
 };
 function formatMessage(template, vars) {
     let result = Object.entries(vars).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), template);
-    result = result.replace(' ×1', '');
+    result = result.replace(/ ×1(?!\d)/g, '');
     return result;
 }
 let NotificationService = class NotificationService {

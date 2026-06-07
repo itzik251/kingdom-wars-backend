@@ -182,6 +182,74 @@ export class AdminController {
     return { success: true, ...cfg };
   }
 
+  @Get('withdrawals')
+  async getPendingWithdrawals(@Headers() headers: any) {
+    this.guard(headers);
+    const kingdoms = await this.kingdomRepo
+      .createQueryBuilder('k')
+      .leftJoinAndSelect('k.user', 'u')
+      .where('k.withdrawal_status = :s', { s: 'pending' })
+      .orderBy('k.created_at', 'DESC')
+      .getMany();
+
+    return kingdoms.map(k => ({
+      kingdomId: k.id,
+      kingdomName: k.name,
+      telegramId: k.user?.telegramId,
+      username: k.user?.username || k.user?.firstName,
+      amount: k.withdrawalPending,
+      wallet: k.withdrawalWallet,
+    }));
+  }
+
+  @Post('withdrawals/:kingdomId/approve')
+  async approveWithdrawal(@Headers() headers: any, @Param('kingdomId') kingdomId: string) {
+    this.guard(headers);
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+    if (!kingdom) return { error: 'Not found' };
+    if (kingdom.withdrawalStatus !== 'pending') return { error: 'Not pending' };
+
+    const amount = kingdom.withdrawalPending;
+    const wallet = kingdom.withdrawalWallet;
+    kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
+    kingdom.withdrawalPending = 0;
+    kingdom.withdrawalStatus = 'approved';
+    kingdom.withdrawalWallet = null;
+    await this.kingdomRepo.save(kingdom);
+
+    if (kingdom.user) {
+      await this.notifService.create(kingdom.user.id, 'admin_gift', {
+        type: 'usdt_withdrawal',
+        label: `💸 משיכת ${amount.toFixed(4)} USDT אושרה → ${wallet}`,
+        language: kingdom.user.language,
+      }).catch(() => {});
+    }
+
+    return { success: true, amount, wallet };
+  }
+
+  @Post('withdrawals/:kingdomId/reject')
+  async rejectWithdrawal(@Headers() headers: any, @Param('kingdomId') kingdomId: string, @Body() body: { reason?: string }) {
+    this.guard(headers);
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+    if (!kingdom) return { error: 'Not found' };
+
+    kingdom.withdrawalPending = 0;
+    kingdom.withdrawalStatus = 'rejected';
+    kingdom.withdrawalWallet = null;
+    await this.kingdomRepo.save(kingdom);
+
+    if (kingdom.user) {
+      await this.notifService.create(kingdom.user.id, 'admin_gift', {
+        type: 'usdt_withdrawal_rejected',
+        label: `❌ בקשת משיכה נדחתה${body.reason ? ': ' + body.reason : ''}`,
+        language: kingdom.user.language,
+      }).catch(() => {});
+    }
+
+    return { success: true };
+  }
+
   @Post('give-vip/:telegramId')
   async giveVip(@Headers() headers: any, @Param('telegramId') telegramId: string, @Body() body: { days?: number }) {
     this.guard(headers);

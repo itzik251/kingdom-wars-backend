@@ -27,6 +27,9 @@ export declare class Kingdom {
     usdtBalance: number;
     gameBalance: number;
     attackSpeedBoostUntil: Date;
+    withdrawalWallet: string;
+    withdrawalPending: number;
+    withdrawalStatus: string;
     createdAt: Date;
     get isShielded(): boolean;
     get isVip(): boolean;

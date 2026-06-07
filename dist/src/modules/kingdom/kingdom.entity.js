@@ -131,6 +131,18 @@ __decorate([
     __metadata("design:type", Date)
 ], Kingdom.prototype, "attackSpeedBoostUntil", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'withdrawal_wallet', nullable: true }),
+    __metadata("design:type", String)
+], Kingdom.prototype, "withdrawalWallet", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'withdrawal_pending', type: 'float', default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "withdrawalPending", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'withdrawal_status', default: 'none' }),
+    __metadata("design:type", String)
+], Kingdom.prototype, "withdrawalStatus", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "createdAt", void 0);

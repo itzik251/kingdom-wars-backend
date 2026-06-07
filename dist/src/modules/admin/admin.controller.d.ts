@@ -90,6 +90,34 @@ export declare class AdminController {
         address: string;
         success: boolean;
     };
+    getPendingWithdrawals(headers: any): Promise<{
+        kingdomId: string;
+        kingdomName: string;
+        telegramId: string;
+        username: string;
+        amount: number;
+        wallet: string;
+    }[]>;
+    approveWithdrawal(headers: any, kingdomId: string): Promise<{
+        error: string;
+        success?: undefined;
+        amount?: undefined;
+        wallet?: undefined;
+    } | {
+        success: boolean;
+        amount: number;
+        wallet: string;
+        error?: undefined;
+    }>;
+    rejectWithdrawal(headers: any, kingdomId: string, body: {
+        reason?: string;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+    } | {
+        success: boolean;
+        error?: undefined;
+    }>;
     giveVip(headers: any, telegramId: string, body: {
         days?: number;
     }): Promise<{

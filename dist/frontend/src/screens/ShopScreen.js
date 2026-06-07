@@ -97,28 +97,50 @@ function ReferralCard() {
 }
 function UsdtBalanceSection() {
     const [balance, setBalance] = (0, react_1.useState)(null);
-    const [withdrawing, setWithdrawing] = (0, react_1.useState)(false);
+    const [withdrawalStatus, setWithdrawalStatus] = (0, react_1.useState)('none');
+    const [withdrawalPending, setWithdrawalPending] = (0, react_1.useState)(0);
+    const [withdrawalWallet, setWithdrawalWallet] = (0, react_1.useState)('');
+    const [walletInput, setWalletInput] = (0, react_1.useState)('');
+    const [showWalletForm, setShowWalletForm] = (0, react_1.useState)(false);
+    const [submitting, setSubmitting] = (0, react_1.useState)(false);
     const [msg, setMsg] = (0, react_1.useState)('');
     const t = (0, useT_1.useT)();
-    (0, react_1.useEffect)(() => {
-        client_1.api.get('/kingdom/usdt-balance').then(r => setBalance(r.usdtBalance || 0)).catch(() => setBalance(0));
-    }, []);
-    async function withdraw() {
-        setWithdrawing(true);
+    async function load() {
         try {
-            const r = await client_1.api.post('/kingdom/withdraw-usdt');
-            setMsg(`✅ ${r.amount.toFixed(2)} USDT → Telegram ✓`);
+            const r = await client_1.api.get('/kingdom/usdt-balance');
+            setBalance(r.usdtBalance ?? 0);
+            setWithdrawalStatus(r.withdrawalStatus ?? 'none');
+            setWithdrawalPending(r.withdrawalPending ?? 0);
+            setWithdrawalWallet(r.withdrawalWallet ?? '');
+        }
+        catch {
             setBalance(0);
+        }
+    }
+    (0, react_1.useEffect)(() => { load(); }, []);
+    async function submitWithdrawal() {
+        if (!walletInput.trim() || walletInput.trim().length < 10) {
+            setMsg('❌ ' + t('invalid_wallet'));
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const r = await client_1.api.post('/kingdom/request-withdrawal', { walletAddress: walletInput.trim() });
+            setMsg('✅ ' + t('withdrawal_submitted'));
+            setShowWalletForm(false);
+            await load();
         }
         catch (e) {
             setMsg('❌ ' + (e.response?.data?.message || t('error')));
         }
         finally {
-            setWithdrawing(false);
-            setTimeout(() => setMsg(''), 5000);
+            setSubmitting(false);
+            setTimeout(() => setMsg(''), 6000);
         }
     }
     const bal = balance ?? 0;
+    const isPending = withdrawalStatus === 'pending';
+    const isApproved = withdrawalStatus === 'approved';
     return (<div style={{ marginBottom: 20 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: '#a0845a', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         {t('usdt_section')}
@@ -133,24 +155,46 @@ function UsdtBalanceSection() {
               ${bal.toFixed(4)} USDT
             </div>
           </div>
-          {bal >= 20 ? (<button onClick={withdraw} disabled={withdrawing} style={{ padding: '12px 18px', borderRadius: 12, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-              {withdrawing ? '...' : t('withdraw_btn')}
+          {isPending ? (<div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: '#f4d03f', fontWeight: 700 }}>⏳ {t('withdrawal_pending')}</div>
+              <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>${withdrawalPending.toFixed(4)} USDT</div>
+            </div>) : bal >= 20 ? (<button onClick={() => setShowWalletForm(v => !v)} style={{ padding: '11px 16px', borderRadius: 12, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+              {t('withdraw_btn')}
             </button>) : (<div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, color: '#a0845a' }}>{t('to_withdraw')}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#f4d03f' }}>{t('withdraw_min')}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#f4d03f' }}>{t('withdraw_min')}</div>
             </div>)}
         </div>
 
         
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a0845a', marginBottom: 4 }}>
-            <span>{bal >= 20 ? t('can_withdraw') : t('until_withdraw', { n: (20 - bal).toFixed(2) })}</span>
-            <span>${bal.toFixed(2)} / $20.00</span>
-          </div>
-          <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.min(100, (bal / 20) * 100)}%`, background: bal >= 20 ? '#27ae60' : 'linear-gradient(90deg,#b8860b,#f4d03f)', borderRadius: 3, transition: 'width 0.4s' }}/>
-          </div>
-        </div>
+        {isPending && (<div style={{ background: 'rgba(244,208,63,0.1)', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12 }}>
+            <div style={{ fontWeight: 700, color: '#f4d03f', marginBottom: 4 }}>⏳ {t('withdrawal_processing')}</div>
+            <div style={{ color: '#a0845a' }}>💳 {t('wallet_label')}: <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: 10 }}>{withdrawalWallet}</span></div>
+            <div style={{ color: '#a0845a', marginTop: 4 }}>💵 {t('amount_label')}: <strong style={{ color: '#f4d03f' }}>${withdrawalPending.toFixed(4)} USDT</strong></div>
+          </div>)}
+
+        
+        {showWalletForm && !isPending && (<div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 6 }}>
+              📋 {t('enter_wallet_address')} (TRC20 USDT)
+            </div>
+            <input type="text" value={walletInput} onChange={e => setWalletInput(e.target.value)} placeholder="T... (Tron TRC20)" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontFamily: 'monospace', marginBottom: 8, outline: 'none' }}/>
+            <button onClick={submitWithdrawal} disabled={submitting} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+              {submitting ? '...' : `💸 ${t('confirm_withdrawal')} $${bal.toFixed(4)}`}
+            </button>
+            <div style={{ fontSize: 10, color: '#666', marginTop: 6 }}>⚠️ {t('withdrawal_note')}</div>
+          </div>)}
+
+        
+        {!isPending && (<div style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a0845a', marginBottom: 4 }}>
+              <span>{bal >= 20 ? t('can_withdraw') : t('until_withdraw', { n: (20 - bal).toFixed(2) })}</span>
+              <span>${bal.toFixed(2)} / $20.00</span>
+            </div>
+            <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, (bal / 20) * 100)}%`, background: bal >= 20 ? '#27ae60' : 'linear-gradient(90deg,#b8860b,#f4d03f)', borderRadius: 3, transition: 'width 0.4s' }}/>
+            </div>
+          </div>)}
 
         {msg && <div style={{ fontSize: 12, marginTop: 6, color: msg.startsWith('✅') ? '#27ae60' : '#e74c3c', textAlign: 'center' }}>{msg}</div>}
 

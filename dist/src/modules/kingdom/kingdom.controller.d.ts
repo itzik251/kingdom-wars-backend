@@ -34,10 +34,17 @@ export declare class KingdomController {
     }>;
     getUsdtBalance(req: any): Promise<{
         usdtBalance: number;
-        gameBalance: number;
+        withdrawalPending: number;
+        withdrawalStatus: string;
+        withdrawalWallet: string;
     }>;
-    withdrawUsdt(req: any): Promise<{
+    requestWithdrawal(req: any, body: {
+        walletAddress: string;
+    }): Promise<{
         success: boolean;
         amount: number;
+        wallet: string;
+        status: string;
     }>;
+    withdrawUsdt(req: any): Promise<void>;
 }

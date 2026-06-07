@@ -31,10 +31,19 @@ export declare class KingdomService {
         usdtBalance: number;
         gameBalance: number;
     }>;
-    withdrawUsdt(kingdomId: string): Promise<{
+    requestWithdrawal(kingdomId: string, walletAddress: string): Promise<{
         success: boolean;
         amount: number;
+        wallet: string;
+        status: string;
     }>;
+    getWithdrawalStatus(kingdomId: string): Promise<{
+        usdtBalance: number;
+        withdrawalPending: number;
+        withdrawalStatus: string;
+        withdrawalWallet: string;
+    }>;
+    withdrawUsdt(kingdomId: string): Promise<void>;
     buyShield(kingdomId: string): Promise<{
         shieldUntil: Date;
     }>;

@@ -97,9 +97,7 @@
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <input type="text" id="walletAddr" placeholder="T..." style="flex:1;min-width:200px;margin:0;font-family:monospace;font-size:12px;"/>
         <button class="btn-sm btn-success" onclick="saveWallet()">💾 שמור כתובת</button>
-        <button class="btn-sm btn-info" onclick="checkWalletBalance()">🔍 בדוק יתרה</button>
       </div>
-      <div id="walletBalanceResult" style="font-size:13px;font-weight:700;margin-top:8px;display:none;"></div>
     </div>
   </div>
 
@@ -181,6 +179,7 @@ async function doLogin() {
     renderStats(data);
     loadUsers();
     loadWithdrawals();
+    loadWalletBalance();
   } catch(e) { document.getElementById('loginError').textContent = '❌ שגיאת חיבור'; }
 }
 
@@ -248,6 +247,7 @@ async function loadAll() {
   renderStats(data);
   loadUsers();
   loadWithdrawals();
+  loadWalletBalance();
   document.getElementById('lastRefresh').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he');
 }
 
@@ -257,9 +257,11 @@ function renderStats(data) {
     <div class="stat-card"><div class="val">${data.activeUsers7d}</div><div class="lbl">פעילים 7 ימים</div></div>
     <div class="stat-card"><div class="val" style="color:#27ae60">${data.newUsersToday}</div><div class="lbl">חדשים היום</div></div>
     <div class="stat-card"><div class="val" style="color:#9b59b6">${data.totalGemsInGame?.toLocaleString()}</div><div class="lbl">💎 Gems בשוק</div></div>
-    <div class="stat-card"><div class="val" style="color:#27ae60">$${data.totalUsdtInGame}</div><div class="lbl">💵 USDT בשוק</div></div>
+    <div class="stat-card"><div class="val" style="color:#27ae60">$${data.totalUsdtInGame}</div><div class="lbl">💵 USDT בשחקנים</div></div>
     <div class="stat-card"><div class="val" style="color:#f4d03f">${data.vipCount || 0}</div><div class="lbl">👑 VIP פעילים</div></div>
     <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות</div></div>
+    <div class="stat-card" id="walletBalanceCard"><div class="val" style="color:#3498db" id="walletUsdtVal">...</div><div class="lbl">💳 ארנק USDT</div></div>
+    <div class="stat-card" id="walletTrxCard"><div class="val" style="color:#e67e22" id="walletTrxVal">...</div><div class="lbl">⚡ ארנק TRX</div></div>
   `;
   // Update wallet display
   if (data.gameWalletAddress !== undefined) {
@@ -394,30 +396,26 @@ async function saveWallet() {
   else showToast('❌ שגיאה');
 }
 
-async function checkWalletBalance() {
-  const el = document.getElementById('walletBalanceResult');
-  el.style.display = 'block';
-  el.style.color = '#888';
-  el.textContent = '⏳ בודק יתרה...';
+async function loadWalletBalance() {
   try {
     const r = await fetch(API + '/wallet/balance', { headers: h() });
     const d = await r.json();
+    const usdtEl = document.getElementById('walletUsdtVal');
+    const trxEl  = document.getElementById('walletTrxVal');
+    if (!usdtEl) return;
     if (d.error) {
-      el.textContent = '❌ ' + d.error;
-      el.style.color = '#e74c3c';
+      usdtEl.textContent = '—';
+      trxEl.textContent = '—';
       return;
     }
-    el.innerHTML = `
-      <span style="color:#27ae60">💵 USDT: $${(d.usdtBalance ?? 0).toFixed(4)}</span>
-      &nbsp;&nbsp;
-      <span style="color:#f4d03f">⚡ TRX: ${(d.trxBalance ?? 0).toFixed(2)}</span>
-      <span style="font-size:10px;color:#555;margin-right:8px">(TRX נחוץ לעמלות)</span>
-    `;
-    el.style.color = '#fff';
-  } catch(e) {
-    el.textContent = '❌ שגיאת חיבור';
-    el.style.color = '#e74c3c';
-  }
+    usdtEl.textContent = '$' + (d.usdtBalance ?? 0).toFixed(2);
+    trxEl.textContent  = (d.trxBalance ?? 0).toFixed(2);
+    // Warn if TRX is low
+    if ((d.trxBalance ?? 0) < 5) {
+      trxEl.style.color = '#e74c3c';
+      trxEl.title = '⚠️ TRX נמוך מדי לעמלות — העבר לפחות 10 TRX';
+    }
+  } catch {}
 }
 
 function logout() {

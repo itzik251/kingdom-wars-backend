@@ -31,6 +31,7 @@ interface Props {
     onClose: () => void;
     onAttack: (profile: KingdomProfile) => void;
     attacking?: boolean;
+    marchCountdown?: number;
 }
-export default function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking }: Props): import("react").JSX.Element;
+export default function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown }: Props): import("react").JSX.Element;
 export {};

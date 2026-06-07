@@ -11,6 +11,9 @@ export declare class LeaderboardService {
         avatarUrl: string;
         score: number;
         isShielded: boolean;
+        shieldUntil: Date;
+        usdtBalance: number;
+        gameBalance: number;
     }[]>;
     resetAllScores(): Promise<{
         message: string;

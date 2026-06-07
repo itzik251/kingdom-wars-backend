@@ -15,5 +15,22 @@ export declare class VipController {
         expiresAt: Date;
         durationDays: number;
     }>;
+    purchaseWithUsdt(req: any): Promise<{
+        success: boolean;
+        expiresAt: Date;
+        durationDays: number;
+    }>;
+    getPaymentInfo(): {
+        walletAddress: string;
+        amount: number;
+        currency: string;
+        note: string;
+    };
+    getInvoice(): {
+        walletAddress: string;
+        amount: number;
+        currency: string;
+        note: string;
+    };
 }
 export {};

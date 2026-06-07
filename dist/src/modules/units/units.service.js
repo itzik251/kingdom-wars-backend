@@ -36,11 +36,11 @@ let UnitsService = class UnitsService {
             throw new common_1.BadRequestException('No Barracks');
         const stats = game_constants_1.UNIT_STATS[unitType];
         if (barracks.level < stats.requiredBarracksLevel) {
-            throw new common_1.BadRequestException(`נדרש בסיס צבאי ברמה ${stats.requiredBarracksLevel}`);
+            throw new common_1.BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
         }
         const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
         if (stats.requiresVip && !isVip) {
-            throw new common_1.BadRequestException('נדרש VIP פעיל');
+            throw new common_1.BadRequestException('VIP_REQUIRED');
         }
         let unitRow = unit;
         if (!unitRow) {

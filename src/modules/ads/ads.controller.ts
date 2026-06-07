@@ -5,8 +5,8 @@ import { AdsService } from './ads.service';
 import { KingdomService } from '../kingdom/kingdom.service';
 
 class RewardDto {
-  @IsEnum(['double_production', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus'])
-  type: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus';
+  @IsEnum(['double_production', 'double_attack_speed', 'usdt_bonus', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus'])
+  type: 'double_production' | 'double_attack_speed' | 'usdt_bonus' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus';
 
   // AdsGram passes a token to verify the ad was actually watched
   @IsString()

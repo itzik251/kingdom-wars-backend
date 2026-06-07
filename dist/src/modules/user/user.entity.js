@@ -56,6 +56,10 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "language", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'terms_accepted_at', nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "termsAcceptedAt", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'claimed_referral_milestones', type: 'simple-array', default: '' }),
     __metadata("design:type", Array)
 ], User.prototype, "claimedReferralMilestones", void 0);

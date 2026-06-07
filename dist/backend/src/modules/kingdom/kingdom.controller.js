@@ -31,6 +31,14 @@ let KingdomController = class KingdomController {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.kingdomService.expandStorage(kingdom.id);
     }
+    async getUsdtBalance(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.getUsdtBalance(kingdom.id);
+    }
+    async withdrawUsdt(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.withdrawUsdt(kingdom.id);
+    }
 };
 exports.KingdomController = KingdomController;
 __decorate([
@@ -54,6 +62,20 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], KingdomController.prototype, "expandStorage", null);
+__decorate([
+    (0, common_1.Get)('usdt-balance'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "getUsdtBalance", null);
+__decorate([
+    (0, common_1.Post)('withdraw-usdt'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "withdrawUsdt", null);
 exports.KingdomController = KingdomController = __decorate([
     (0, common_1.Controller)('kingdom'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

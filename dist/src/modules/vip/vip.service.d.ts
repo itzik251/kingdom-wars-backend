@@ -15,5 +15,16 @@ export declare class VipService {
         expiresAt: Date;
         durationDays: number;
     }>;
+    purchaseWithUsdt(userId: string): Promise<{
+        success: boolean;
+        expiresAt: Date;
+        durationDays: number;
+    }>;
+    getPaymentInfo(): {
+        walletAddress: string;
+        amount: number;
+        currency: string;
+        note: string;
+    };
     isUserVip(userId: string): boolean;
 }

@@ -59,7 +59,7 @@ let AuthService = class AuthService {
             .update(dataCheckString)
             .digest('hex');
         if (calculatedHash !== hash) {
-            console.log('Hash mismatch — skipping for now');
+            throw new common_1.UnauthorizedException('Invalid Telegram data signature');
         }
         const params = new URLSearchParams(initData);
         const authDate = parseInt(params.get('auth_date') || '0', 10);
@@ -71,18 +71,29 @@ let AuthService = class AuthService {
     async loginOrRegister(initData, referralCode) {
         const data = this.validateTelegramData(initData);
         const tgUser = JSON.parse(data.user);
-        let user = await this.userRepo.findOne({ where: { telegramId: String(tgUser.id) } });
+        let user = await this.userRepo.findOne({
+            where: { telegramId: String(tgUser.id) },
+            relations: ['referredBy'],
+        });
+        let isNewUser = false;
         if (!user) {
             user = await this.createNewUser(tgUser, referralCode);
+            isNewUser = true;
         }
         else {
             user.lastLogin = new Date();
             if (tgUser.language_code)
                 user.language = tgUser.language_code.slice(0, 2);
+            if (!user.referredBy && referralCode) {
+                const referrer = await this.userRepo.findOne({ where: { referralCode } });
+                if (referrer && referrer.id !== user.id) {
+                    user.referredBy = referrer;
+                }
+            }
             await this.userRepo.save(user);
         }
         const token = this.jwtService.sign({ sub: user.id, telegramId: user.telegramId });
-        return { token, userId: user.id };
+        return { token, userId: user.id, termsAccepted: !!user.termsAcceptedAt, isNewUser };
     }
     async createNewUser(tgUser, referralCode) {
         let referredBy = null;
@@ -107,6 +118,10 @@ let AuthService = class AuthService {
         await this.buildingRepo.save(game_constants_1.INITIAL_BUILDINGS.map((type) => this.buildingRepo.create({ kingdom, type, level: 1 })));
         await this.unitRepo.save(game_constants_1.INITIAL_UNITS.map((type) => this.unitRepo.create({ kingdom, type, count: 0 })));
         return user;
+    }
+    async acceptTerms(userId) {
+        await this.userRepo.update({ id: userId }, { termsAcceptedAt: new Date() });
+        return { accepted: true };
     }
     async setLanguage(userId, language) {
         const VALID_LANGS = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];

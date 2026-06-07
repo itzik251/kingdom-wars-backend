@@ -21,7 +21,7 @@ const kingdom_service_1 = require("../kingdom/kingdom.service");
 class RewardDto {
 }
 __decorate([
-    (0, class_validator_1.IsEnum)(['double_production', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus']),
+    (0, class_validator_1.IsEnum)(['double_production', 'double_attack_speed', 'usdt_bonus', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus']),
     __metadata("design:type", String)
 ], RewardDto.prototype, "type", void 0);
 let AdsController = class AdsController {

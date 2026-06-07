@@ -25,8 +25,16 @@ export declare class KingdomService {
         maxWorkers: number;
     }>;
     private getUserPayload;
-    private sendBuildDoneNotifs;
+    private sendBuildDoneNotifsRaw;
     private sendTrainingDoneNotifsRaw;
+    getUsdtBalance(kingdomId: string): Promise<{
+        usdtBalance: number;
+        gameBalance: number;
+    }>;
+    withdrawUsdt(kingdomId: string): Promise<{
+        success: boolean;
+        amount: number;
+    }>;
     buyShield(kingdomId: string): Promise<{
         shieldUntil: Date;
     }>;
@@ -36,6 +44,9 @@ export declare class KingdomService {
     }>;
     fireWorker(kingdomId: string): Promise<{
         workers: number;
+    }>;
+    renameKingdom(kingdomId: string, name: string): Promise<{
+        name: string;
     }>;
     expandStorage(kingdomId: string): Promise<{
         maxGold: number;

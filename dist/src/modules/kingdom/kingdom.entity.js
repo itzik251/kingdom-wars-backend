@@ -75,6 +75,10 @@ __decorate([
     __metadata("design:type", Date)
 ], Kingdom.prototype, "shieldUntil", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'shield_expired_notified_at', nullable: true }),
+    __metadata("design:type", Date)
+], Kingdom.prototype, "shieldExpiredNotifiedAt", void 0);
+__decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)
 ], Kingdom.prototype, "score", void 0);
@@ -86,6 +90,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'last_resource_tick', nullable: true }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "lastResourceTick", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'last_attack_at', nullable: true }),
+    __metadata("design:type", Date)
+], Kingdom.prototype, "lastAttackAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'production_boost_until', nullable: true }),
     __metadata("design:type", Date)
@@ -110,6 +118,18 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'max_workers', default: 5 }),
     __metadata("design:type", Number)
 ], Kingdom.prototype, "maxWorkers", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'usdt_balance', type: 'float', default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "usdtBalance", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'game_balance', type: 'float', default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "gameBalance", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'attack_speed_boost_until', nullable: true }),
+    __metadata("design:type", Date)
+], Kingdom.prototype, "attackSpeedBoostUntil", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)

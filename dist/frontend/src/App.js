@@ -16,6 +16,9 @@ const ShopScreen_1 = require("./screens/ShopScreen");
 const LeaderboardScreen_1 = require("./screens/LeaderboardScreen");
 const QuestScreen_1 = require("./screens/QuestScreen");
 const WorldMapScreen_1 = require("./screens/WorldMapScreen");
+const TermsModal_1 = require("./components/TermsModal");
+const OnboardingModal_1 = require("./components/OnboardingModal");
+const TutorialOverlay_1 = require("./components/TutorialOverlay");
 const NavBar_1 = require("./components/NavBar");
 const ResourceBar_1 = require("./components/ResourceBar");
 function ErrorFallback() {
@@ -79,6 +82,10 @@ function AppInner() {
     const { token, setToken, loadKingdom, activeScreen, kingdom } = (0, gameStore_1.useGameStore)();
     const [authError, setAuthError] = (0, react_1.useState)('');
     const [dailyBonus, setDailyBonus] = (0, react_1.useState)(null);
+    const [needsTerms, setNeedsTerms] = (0, react_1.useState)(false);
+    const [showOnboarding, setShowOnboarding] = (0, react_1.useState)(false);
+    const [showTutorial, setShowTutorial] = (0, react_1.useState)(false);
+    const [tgFirstName, setTgFirstName] = (0, react_1.useState)('');
     const lastInterstitialRef = (0, react_1.useRef)(0);
     const prevScreenRef = (0, react_1.useRef)('');
     const t = (0, useT_1.useT)();
@@ -100,12 +107,24 @@ function AppInner() {
             tg.expand();
             tg.BackButton?.hide?.();
             const startParam = tg.initDataUnsafe?.start_param || '';
-            const urlStartapp = new URLSearchParams(window.location.search).get('startapp') || '';
+            const params = new URLSearchParams(window.location.search);
+            const urlStartapp = params.get('startapp') || params.get('ref') || '';
             const rawRef = startParam || urlStartapp;
             const ref = rawRef.startsWith('ref_') ? rawRef.slice(4) : (rawRef || undefined);
             client_1.api.post('/auth/login', { initData: tg.initData, referralCode: ref })
-                .then(({ token, dailyBonus }) => { setToken(token); if (dailyBonus)
-                setDailyBonus(dailyBonus); })
+                .then(({ token, dailyBonus, termsAccepted, isNewUser }) => {
+                setToken(token);
+                if (dailyBonus)
+                    setDailyBonus(dailyBonus);
+                if (!termsAccepted) {
+                    setNeedsTerms(true);
+                }
+                else if (isNewUser) {
+                    const firstName = tg.initDataUnsafe?.user?.first_name || '';
+                    setTgFirstName(firstName);
+                    setShowOnboarding(true);
+                }
+            })
                 .catch((e) => {
                 const msg = e?.response?.data?.message || e?.message || 'unknown';
                 console.error('Auth failed:', msg, e?.response?.status);
@@ -178,7 +197,10 @@ function AppInner() {
       </div>);
     }
     return (<div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {dailyBonus && <DailyBonusPopup bonus={dailyBonus} onClose={() => { setDailyBonus(null); }}/>}
+      {needsTerms && <TermsModal_1.default onAccepted={() => { setNeedsTerms(false); setShowOnboarding(true); }}/>}
+      {!needsTerms && showOnboarding && <OnboardingModal_1.default defaultName={tgFirstName} onDone={() => { setShowOnboarding(false); setShowTutorial(true); loadKingdom(); }}/>}
+      {!needsTerms && !showOnboarding && showTutorial && <TutorialOverlay_1.default onDone={() => setShowTutorial(false)}/>}
+      {dailyBonus && !needsTerms && <DailyBonusPopup bonus={dailyBonus} onClose={() => { setDailyBonus(null); }}/>}
       <ResourceBar_1.default />
       
       <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: activeScreen === 'home' || activeScreen === 'worldmap' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column' }}>

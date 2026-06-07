@@ -67,7 +67,15 @@ function ArmyScreen() {
         catch (e) {
             const raw = e.response?.data?.message || '';
             const lvlMatch = raw.match(/Requires Barracks level (\d+)/);
-            setMsg('❌ ' + (lvlMatch ? t('barracks_level_req', { n: lvlMatch[1] }) : raw || t('error')));
+            if (lvlMatch) {
+                setMsg('❌ ' + t('barracks_level_req', { n: lvlMatch[1] }));
+            }
+            else if (raw === 'VIP_REQUIRED') {
+                setMsg('❌ ' + t('vip_required_army'));
+            }
+            else {
+                setMsg('❌ ' + (raw || t('error')));
+            }
         }
         finally {
             setLoading(null);

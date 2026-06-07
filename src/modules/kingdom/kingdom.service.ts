@@ -110,6 +110,23 @@ export class KingdomService {
   }
 
 
+  async getUsdtBalance(kingdomId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    return { usdtBalance: kingdom?.usdtBalance ?? 0, gameBalance: kingdom?.gameBalance ?? 0 };
+  }
+
+  async withdrawUsdt(kingdomId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    const MIN_WITHDRAW = 20;
+    if ((kingdom?.usdtBalance ?? 0) < MIN_WITHDRAW) {
+      throw new BadRequestException(`מינימום ${MIN_WITHDRAW} USDT למשיכה`);
+    }
+    const amount = kingdom.usdtBalance;
+    kingdom.usdtBalance = 0;
+    await this.kingdomRepo.save(kingdom);
+    return { success: true, amount };
+  }
+
   async buyShield(kingdomId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const SHIELD_COST = 50;

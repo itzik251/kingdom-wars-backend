@@ -10,5 +10,6 @@ export declare class NotificationService {
     create(userId: string, type: string, payload: Record<string, any>): Promise<Notification>;
     getUnread(userId: string): Promise<Notification[]>;
     markRead(userId: string): Promise<void>;
+    private recentSends;
     private sendTelegram;
 }

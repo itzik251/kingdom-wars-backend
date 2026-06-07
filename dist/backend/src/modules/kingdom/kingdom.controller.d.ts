@@ -18,4 +18,12 @@ export declare class KingdomController {
         maxGold: number;
         maxWood: number;
     }>;
+    getUsdtBalance(req: any): Promise<{
+        usdtBalance: number;
+        gameBalance: number;
+    }>;
+    withdrawUsdt(req: any): Promise<{
+        success: boolean;
+        amount: number;
+    }>;
 }

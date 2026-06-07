@@ -25,6 +25,20 @@ let AdsService = class AdsService {
         this.kingdomRepo = kingdomRepo;
         this.questService = questService;
     }
+    async verifyAdsgramToken(token) {
+        try {
+            const res = await fetch(`https://api.adsgram.ai/adv?token=${encodeURIComponent(token)}`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!res.ok)
+                return false;
+            const data = await res.json();
+            return data?.done === true;
+        }
+        catch {
+            return true;
+        }
+    }
     async claimReward(userId, kingdomId, rewardType) {
         const today = new Date().toISOString().split('T')[0];
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
@@ -35,7 +49,7 @@ let AdsService = class AdsService {
             kingdom.adsWatchedDate = today;
         }
         if (kingdom.adsWatchedToday >= MAX_ADS_PER_DAY) {
-            throw new common_1.BadRequestException(`מקסימום ${MAX_ADS_PER_DAY} פרסומות ליום`);
+            throw new common_1.BadRequestException('ADS_DAILY_LIMIT');
         }
         kingdom.adsWatchedToday += 1;
         let result;
@@ -47,6 +61,19 @@ let AdsService = class AdsService {
                 boostUntil: until,
                 adsRemainingToday: MAX_ADS_PER_DAY - kingdom.adsWatchedToday,
             };
+        }
+        else if (rewardType === 'double_attack_speed') {
+            const until = new Date(Date.now() + BOOST_DURATION_HOURS * 3_600_000);
+            kingdom.attackSpeedBoostUntil = until;
+            result = {
+                reward: 'double_attack_speed',
+                boostUntil: until,
+                adsRemainingToday: MAX_ADS_PER_DAY - kingdom.adsWatchedToday,
+            };
+        }
+        else if (rewardType === 'usdt_bonus') {
+            kingdom.usdtBalance = (kingdom.usdtBalance || 0) + 0.0001;
+            result = { reward: 'usdt_bonus', usdtAdded: 0.0001 };
         }
         else if (rewardType === 'gems') {
             kingdom.gems += 10;
@@ -80,9 +107,13 @@ let AdsService = class AdsService {
         const adsToday = kingdom.adsWatchedDate === today ? kingdom.adsWatchedToday : 0;
         const until = kingdom.productionBoostUntil ? new Date(kingdom.productionBoostUntil) : null;
         const active = !!(until && new Date() < until);
+        const attackUntil = kingdom.attackSpeedBoostUntil ? new Date(kingdom.attackSpeedBoostUntil) : null;
+        const attackBoostActive = !!(attackUntil && new Date() < attackUntil);
         return {
             boostActive: active,
             boostUntil: active ? until : null,
+            attackBoostActive,
+            attackBoostUntil: attackBoostActive ? attackUntil : null,
             adsWatchedToday: adsToday,
             adsRemainingToday: MAX_ADS_PER_DAY - adsToday,
         };

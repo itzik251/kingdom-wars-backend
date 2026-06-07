@@ -62,6 +62,11 @@ let EconomyService = class EconomyService {
         kingdom.wood = Math.min(kingdom.maxWood, Math.floor(kingdom.wood + production.wood * bonus));
         kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
         kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(kingdom.food + production.food * bonus - upkeep)));
+        if (kingdom.isVip) {
+            const totalProduction = production.gold + production.wood + production.stone + production.food;
+            const gameEarned = totalProduction * 0.000001 * game_constants_1.VIP_GAME_PRODUCTION_MULTIPLIER;
+            kingdom.gameBalance = parseFloat(((kingdom.gameBalance ?? 0) + gameEarned).toFixed(6));
+        }
         kingdom.lastResourceTick = now;
         const hospital = buildings.find(b => b.type === building_entity_1.BuildingType.HOSPITAL);
         const healRate = 5 + (hospital ? hospital.level * 10 : 0);

@@ -21,9 +21,14 @@ const kingdom_service_1 = require("../kingdom/kingdom.service");
 class RewardDto {
 }
 __decorate([
-    (0, class_validator_1.IsEnum)(['double_production', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus']),
+    (0, class_validator_1.IsEnum)(['double_production', 'double_attack_speed', 'usdt_bonus', 'gems', 'gold_bonus', 'wood_bonus', 'stone_bonus', 'food_bonus']),
     __metadata("design:type", String)
 ], RewardDto.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], RewardDto.prototype, "adsgramToken", void 0);
 let AdsController = class AdsController {
     constructor(adsService, kingdomService) {
         this.adsService = adsService;
@@ -34,6 +39,11 @@ let AdsController = class AdsController {
         return this.adsService.getBoostStatus(kingdom.id);
     }
     async claimReward(req, dto) {
+        if (dto.adsgramToken) {
+            const valid = await this.adsService.verifyAdsgramToken(dto.adsgramToken);
+            if (!valid)
+                throw new common_1.BadRequestException('AD_NOT_VERIFIED');
+        }
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.adsService.claimReward(req.user.userId, kingdom.id, dto.type);
     }

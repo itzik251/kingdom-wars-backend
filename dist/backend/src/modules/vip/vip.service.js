@@ -44,6 +44,28 @@ let VipService = class VipService {
         }
         return { success: true, expiresAt, durationDays: game_constants_1.VIP_DURATION_DAYS };
     }
+    async purchaseWithUsdt(userId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
+        if ((kingdom.usdtBalance ?? 0) < game_constants_1.VIP_PRICE_USDT) {
+            throw new common_1.BadRequestException(`נדרש ${game_constants_1.VIP_PRICE_USDT} USDT. יתרתך: ${(kingdom.usdtBalance ?? 0).toFixed(4)} USDT`);
+        }
+        kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance ?? 0) - game_constants_1.VIP_PRICE_USDT).toFixed(6));
+        const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + game_constants_1.VIP_DURATION_DAYS * 86_400_000);
+        kingdom.vipExpiresAt = expiresAt;
+        await this.kingdomRepo.save(kingdom);
+        vipStore.set(userId, expiresAt);
+        return { success: true, expiresAt, durationDays: game_constants_1.VIP_DURATION_DAYS };
+    }
+    getPaymentInfo() {
+        return {
+            walletAddress: game_constants_1.PAYMENT_WALLET_ADDRESS,
+            amount: game_constants_1.VIP_PRICE_USDT,
+            currency: 'USDT (TRC20)',
+            note: 'שלח בדיוק את הסכום. לאחר שליחה הכנס את hash הטרנזקציה.',
+        };
+    }
     isUserVip(userId) {
         const expiresAt = vipStore.get(userId);
         return !!(expiresAt && new Date() < expiresAt);

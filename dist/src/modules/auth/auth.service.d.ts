@@ -17,8 +17,13 @@ export declare class AuthService {
     loginOrRegister(initData: string, referralCode?: string): Promise<{
         token: string;
         userId: string;
+        termsAccepted: boolean;
+        isNewUser: boolean;
     }>;
     private createNewUser;
+    acceptTerms(userId: string): Promise<{
+        accepted: boolean;
+    }>;
     setLanguage(userId: string, language: string): Promise<{
         language: string;
     }>;

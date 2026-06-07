@@ -13,6 +13,7 @@ function AttackScreen() {
     const [targets, setTargets] = (0, react_1.useState)([]);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [attacking, setAttacking] = (0, react_1.useState)(null);
+    const [marchCountdown, setMarchCountdown] = (0, react_1.useState)(0);
     const [report, setReport] = (0, react_1.useState)(null);
     const [showBattle, setShowBattle] = (0, react_1.useState)(false);
     const [profileId, setProfileId] = (0, react_1.useState)(null);
@@ -40,6 +41,20 @@ function AttackScreen() {
         setAttacking(profile.id);
         setReport(null);
         try {
+            const marchSecs = profile.marchSeconds || 5;
+            setMarchCountdown(marchSecs);
+            await new Promise(res => {
+                let remaining = marchSecs;
+                const tick = setInterval(() => {
+                    remaining -= 1;
+                    setMarchCountdown(remaining);
+                    if (remaining <= 0) {
+                        clearInterval(tick);
+                        res();
+                    }
+                }, 1000);
+            });
+            setMarchCountdown(0);
             const result = await client_1.api.post('/combat/attack', { defenderKingdomId: profile.id });
             setProfileId(null);
             setReport(result);
@@ -52,6 +67,7 @@ function AttackScreen() {
         }
         finally {
             setAttacking(null);
+            setMarchCountdown(0);
         }
     }
     return (<div style={{ background: 'linear-gradient(180deg,#0a0a1a 0%,#0d1529 100%)', minHeight: '100vh', paddingBottom: 130 }}>
@@ -150,7 +166,7 @@ function AttackScreen() {
           </div>
         </div>)}
 
-      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={attacking === profileId} onClose={() => setProfileId(null)} onAttack={attack}/>)}
+      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={attacking === profileId} marchCountdown={marchCountdown} onClose={() => setProfileId(null)} onAttack={attack}/>)}
 
       <div style={{ padding: '16px', textAlign: 'center', background: 'rgba(0,0,0,0.4)' }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: '#e74c3c' }}>{t('attack_title')}</div>

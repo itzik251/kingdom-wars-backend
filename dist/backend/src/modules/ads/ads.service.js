@@ -48,6 +48,19 @@ let AdsService = class AdsService {
                 adsRemainingToday: MAX_ADS_PER_DAY - kingdom.adsWatchedToday,
             };
         }
+        else if (rewardType === 'double_attack_speed') {
+            const until = new Date(Date.now() + BOOST_DURATION_HOURS * 3_600_000);
+            kingdom.attackSpeedBoostUntil = until;
+            result = {
+                reward: 'double_attack_speed',
+                boostUntil: until,
+                adsRemainingToday: MAX_ADS_PER_DAY - kingdom.adsWatchedToday,
+            };
+        }
+        else if (rewardType === 'usdt_bonus') {
+            kingdom.usdtBalance = (kingdom.usdtBalance || 0) + 0.0001;
+            result = { reward: 'usdt_bonus', usdtAdded: 0.0001 };
+        }
         else if (rewardType === 'gems') {
             kingdom.gems += 10;
             result = { reward: 'gems', gemsAdded: 10 };
@@ -80,9 +93,13 @@ let AdsService = class AdsService {
         const adsToday = kingdom.adsWatchedDate === today ? kingdom.adsWatchedToday : 0;
         const until = kingdom.productionBoostUntil ? new Date(kingdom.productionBoostUntil) : null;
         const active = !!(until && new Date() < until);
+        const attackUntil = kingdom.attackSpeedBoostUntil ? new Date(kingdom.attackSpeedBoostUntil) : null;
+        const attackBoostActive = !!(attackUntil && new Date() < attackUntil);
         return {
             boostActive: active,
             boostUntil: active ? until : null,
+            attackBoostActive,
+            attackBoostUntil: attackBoostActive ? attackUntil : null,
             adsWatchedToday: adsToday,
             adsRemainingToday: MAX_ADS_PER_DAY - adsToday,
         };

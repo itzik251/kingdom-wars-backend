@@ -38,6 +38,12 @@ let KingdomService = class KingdomService {
         if (!kingdom)
             throw new common_1.NotFoundException('Kingdom not found');
         const updated = await this.economyService.tickKingdom(kingdom.id);
+        const tickBuildings = updated.__completedBuildings || [];
+        const tickUnits = updated.__completedUnits || [];
+        if (tickBuildings.length > 0)
+            this.sendBuildDoneNotifsRaw(userId, tickBuildings).catch(() => { });
+        if (tickUnits.length > 0)
+            this.sendTrainingDoneNotifsRaw(userId, tickUnits).catch(() => { });
         const [buildings, units] = await Promise.all([
             this.buildingRepo.find({ where: { kingdom: { id: kingdom.id } } }),
             this.unitRepo.find({ where: { kingdom: { id: kingdom.id } } }),
@@ -50,39 +56,13 @@ let KingdomService = class KingdomService {
             units.push(...newRows);
         }
         const now = new Date();
-        const buildingsToSave = buildings.filter(b => b.upgradeEndsAt && now >= new Date(b.upgradeEndsAt));
-        for (const b of buildingsToSave) {
-            b.level += 1;
-            b.upgradeEndsAt = null;
-            if (b.type === 'town_hall') {
-                const mult = 1 + (b.level - 1) * 0.3;
-                updated.maxGold = Math.floor(5000 * mult);
-                updated.maxWood = Math.floor(4000 * mult);
-                updated.maxStone = Math.floor(3000 * mult);
-                updated.maxFood = Math.floor(2000 * mult);
-                await this.kingdomRepo.save(updated);
-            }
-        }
-        if (buildingsToSave.length > 0) {
-            await this.buildingRepo.save(buildingsToSave);
-            this.sendBuildDoneNotifs(userId, buildingsToSave).catch(() => { });
-        }
-        const unitsToSave = units.filter(u => u.trainingEndsAt && now >= new Date(u.trainingEndsAt) && u.trainingCount > 0);
-        const trainingSnapshot = unitsToSave.map(u => ({ type: u.type, count: u.trainingCount }));
-        for (const u of unitsToSave) {
-            u.count += u.trainingCount;
-            u.trainingCount = 0;
-            u.trainingEndsAt = null;
-        }
-        if (unitsToSave.length > 0) {
-            await this.unitRepo.save(unitsToSave);
-            this.sendTrainingDoneNotifsRaw(userId, trainingSnapshot).catch(() => { });
-        }
-        if (updated.shieldUntil && new Date(updated.shieldUntil) <= now) {
-            const shieldExpiredKey = `shield_notified_${updated.shieldUntil.getTime()}`;
-            if (!updated[shieldExpiredKey]) {
-                this.notifService.create(userId, 'shield_expired', {}).catch(() => { });
-            }
+        if (updated.shieldUntil &&
+            new Date(updated.shieldUntil) <= now &&
+            (!updated.shieldExpiredNotifiedAt ||
+                new Date(updated.shieldExpiredNotifiedAt) < new Date(updated.shieldUntil))) {
+            updated.shieldExpiredNotifiedAt = new Date(updated.shieldUntil);
+            await this.kingdomRepo.save(updated);
+            this.notifService.create(userId, 'shield_expired', {}).catch(() => { });
         }
         const productionRates = this.economyService.getProductionRates(buildings, updated);
         return {
@@ -101,25 +81,43 @@ let KingdomService = class KingdomService {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         return { telegramId: user?.telegramId, language: user?.language || 'en' };
     }
-    async sendBuildDoneNotifs(userId, buildings) {
+    async sendBuildDoneNotifsRaw(userId, buildings) {
         const payload = await this.getUserPayload(userId);
+        const grouped = new Map();
         for (const b of buildings) {
-            await this.notifService.create(userId, 'build_done', {
-                ...payload,
-                building: b.type,
-                level: b.level,
-            }).catch(() => { });
+            const ex = grouped.get(b.type);
+            if (ex)
+                ex.count++;
+            else
+                grouped.set(b.type, { count: 1, level: b.level });
+        }
+        for (const [type, { count, level }] of grouped) {
+            await this.notifService.create(userId, 'build_done', { ...payload, building: type, level, count }).catch(() => { });
         }
     }
     async sendTrainingDoneNotifsRaw(userId, snapshot) {
         const payload = await this.getUserPayload(userId);
-        for (const s of snapshot) {
-            await this.notifService.create(userId, 'training_done', {
-                ...payload,
-                unit: s.type,
-                count: s.count,
-            }).catch(() => { });
+        const grouped = new Map();
+        for (const s of snapshot)
+            grouped.set(s.type, (grouped.get(s.type) ?? 0) + s.count);
+        for (const [type, count] of grouped) {
+            await this.notifService.create(userId, 'training_done', { ...payload, unit: type, count }).catch(() => { });
         }
+    }
+    async getUsdtBalance(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        return { usdtBalance: kingdom?.usdtBalance ?? 0, gameBalance: kingdom?.gameBalance ?? 0 };
+    }
+    async withdrawUsdt(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        const MIN_WITHDRAW = 20;
+        if ((kingdom?.usdtBalance ?? 0) < MIN_WITHDRAW) {
+            throw new common_1.BadRequestException(`מינימום ${MIN_WITHDRAW} USDT למשיכה`);
+        }
+        const amount = kingdom.usdtBalance;
+        kingdom.usdtBalance = 0;
+        await this.kingdomRepo.save(kingdom);
+        return { success: true, amount };
     }
     async buyShield(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
@@ -128,6 +126,7 @@ let KingdomService = class KingdomService {
             throw new common_1.BadRequestException('Need 50 gems');
         kingdom.gems -= SHIELD_COST;
         kingdom.shieldUntil = new Date(Date.now() + 24 * 3600 * 1000);
+        kingdom.shieldExpiredNotifiedAt = null;
         await this.kingdomRepo.save(kingdom);
         return { shieldUntil: kingdom.shieldUntil };
     }
@@ -136,25 +135,39 @@ let KingdomService = class KingdomService {
         const thBuilding = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: 'town_hall' } });
         const thLevel = thBuilding?.level ?? 1;
         const maxWorkers = 3 + thLevel;
-        if (kingdom.workers >= maxWorkers)
-            throw new common_1.BadRequestException(`מקסימום ${maxWorkers} עובדים (שדרג בית עיר)`);
+        if ((kingdom.workers || 0) >= maxWorkers)
+            throw new common_1.BadRequestException(`MAX_WORKERS:${maxWorkers}`);
         const HIRE_COST = 50;
         if (kingdom.gold < HIRE_COST)
-            throw new common_1.BadRequestException('דרוש 50 זהב לגיוס עובד');
-        kingdom.gold -= HIRE_COST;
-        kingdom.workers = (kingdom.workers || 0) + 1;
-        kingdom.maxWorkers = maxWorkers;
-        await this.kingdomRepo.save(kingdom);
-        return { workers: kingdom.workers, maxWorkers };
+            throw new common_1.BadRequestException('NOT_ENOUGH_GOLD_WORKER');
+        await this.kingdomRepo
+            .createQueryBuilder()
+            .update()
+            .set({ workers: () => 'workers + 1', maxWorkers, gold: () => `gold - ${HIRE_COST}` })
+            .where('id = :id AND workers < :max AND gold >= :cost', { id: kingdomId, max: maxWorkers, cost: HIRE_COST })
+            .execute();
+        const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        return { workers: updated.workers, maxWorkers };
     }
     async fireWorker(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         if (!kingdom.workers || kingdom.workers <= 0)
-            throw new common_1.BadRequestException('אין עובדים לפטר');
-        kingdom.workers -= 1;
-        kingdom.gold += 25;
-        await this.kingdomRepo.save(kingdom);
-        return { workers: kingdom.workers };
+            throw new common_1.BadRequestException('NO_WORKERS_TO_FIRE');
+        await this.kingdomRepo
+            .createQueryBuilder()
+            .update()
+            .set({ workers: () => 'workers - 1', gold: () => 'gold + 25' })
+            .where('id = :id AND workers > 0', { id: kingdomId })
+            .execute();
+        const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        return { workers: updated.workers };
+    }
+    async renameKingdom(kingdomId, name) {
+        const clean = name.trim().slice(0, 25);
+        if (clean.length < 3)
+            throw new common_1.BadRequestException('Name too short');
+        await this.kingdomRepo.update({ id: kingdomId }, { name: clean });
+        return { name: clean };
     }
     async expandStorage(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });

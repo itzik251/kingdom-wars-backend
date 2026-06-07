@@ -44,6 +44,18 @@ let CombatService = class CombatService {
             throw new common_1.BadRequestException('Kingdom not found');
         if (defender.isShielded)
             throw new common_1.BadRequestException('Defender is shielded');
+        const attackerScore = attacker.score || 0;
+        const defenderScore = defender.score || 0;
+        if (attackerScore > 0 && defenderScore > 0 && attackerScore > defenderScore * 10) {
+            throw new common_1.BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
+        }
+        const ATTACK_COOLDOWN_MS = 10_000;
+        if (attacker.lastAttackAt) {
+            const msSinceLast = Date.now() - new Date(attacker.lastAttackAt).getTime();
+            if (msSinceLast < ATTACK_COOLDOWN_MS) {
+                throw new common_1.BadRequestException('ATTACK_COOLDOWN');
+            }
+        }
         await Promise.all([
             this.economyService.tickKingdom(attackerKingdomId),
             this.economyService.tickKingdom(defenderKingdomId),
@@ -164,6 +176,20 @@ let CombatService = class CombatService {
         defender.gold = Math.max(0, defender.gold - report.loot.gold);
         defender.wood = Math.max(0, defender.wood - report.loot.wood);
         defender.stone = Math.max(0, defender.stone - report.loot.stone);
+        if (report.attackerWins && attacker.isVip) {
+            const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.05).toFixed(6));
+            const gameLoot = parseFloat(((defender.gameBalance ?? 0) * 0.05).toFixed(6));
+            if (usdtLoot > 0) {
+                attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));
+                defender.usdtBalance = parseFloat(Math.max(0, (defender.usdtBalance ?? 0) - usdtLoot).toFixed(6));
+                report.loot.usdt = usdtLoot;
+            }
+            if (gameLoot > 0) {
+                attacker.gameBalance = parseFloat(((attacker.gameBalance ?? 0) + gameLoot).toFixed(6));
+                defender.gameBalance = parseFloat(Math.max(0, (defender.gameBalance ?? 0) - gameLoot).toFixed(6));
+                report.loot.game = gameLoot;
+            }
+        }
         if (report.attackerWins) {
             attacker.score += 10 + Math.floor(report.loot.gold / 100);
             attacker.winStreak = (attacker.winStreak || 0) + 1;
@@ -179,6 +205,7 @@ let CombatService = class CombatService {
             report.streakBonus = 0;
         }
         defender.shieldUntil = new Date(Date.now() + game_constants_1.POST_ATTACK_SHIELD_HOURS * 3_600_000);
+        attacker.lastAttackAt = new Date();
         await this.kingdomRepo.save([attacker, defender]);
         const defenderKingdomFull = await this.kingdomRepo.findOne({ where: { id: defender.id }, relations: ['user'] });
         if (defenderKingdomFull?.user) {

@@ -21,6 +21,14 @@ export declare class KingdomService {
     buyShield(kingdomId: string): Promise<{
         shieldUntil: Date;
     }>;
+    getUsdtBalance(kingdomId: string): Promise<{
+        usdtBalance: number;
+        gameBalance: number;
+    }>;
+    withdrawUsdt(kingdomId: string): Promise<{
+        success: boolean;
+        amount: number;
+    }>;
     expandStorage(kingdomId: string): Promise<{
         maxGold: number;
         maxWood: number;

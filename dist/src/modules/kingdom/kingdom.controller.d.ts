@@ -27,4 +27,17 @@ export declare class KingdomController {
     fireWorker(req: any): Promise<{
         workers: number;
     }>;
+    renameKingdom(req: any, body: {
+        name: string;
+    }): Promise<{
+        name: string;
+    }>;
+    getUsdtBalance(req: any): Promise<{
+        usdtBalance: number;
+        gameBalance: number;
+    }>;
+    withdrawUsdt(req: any): Promise<{
+        success: boolean;
+        amount: number;
+    }>;
 }

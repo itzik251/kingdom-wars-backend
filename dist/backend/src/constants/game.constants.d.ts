@@ -38,4 +38,7 @@ export declare const INITIAL_BUILDINGS: BuildingType[];
 export declare const INITIAL_UNITS: UnitType[];
 export declare const VIP_BUILD_TIME_REDUCTION = 0.3;
 export declare const VIP_PRICE_TON = 5;
+export declare const VIP_PRICE_USDT = 5;
 export declare const VIP_DURATION_DAYS = 30;
+export declare const PAYMENT_WALLET_ADDRESS = "TYourTRC20WalletAddressHere";
+export declare const VIP_GAME_PRODUCTION_MULTIPLIER = 1.5;

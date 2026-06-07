@@ -10,5 +10,18 @@ export declare class LeaderboardController {
         avatarUrl: string;
         score: number;
         isShielded: boolean;
+        shieldUntil: Date;
+        usdtBalance: number;
+        gameBalance: number;
     }[]>;
+    getWeekly(): Promise<{
+        resetAt: Date;
+        entries: {
+            rank: number;
+            kingdomName: string;
+            username: string;
+            winStreak: number;
+            score: number;
+        }[];
+    }>;
 }

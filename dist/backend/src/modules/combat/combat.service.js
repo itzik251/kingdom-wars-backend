@@ -44,6 +44,9 @@ let CombatService = class CombatService {
             throw new common_1.BadRequestException('Kingdom not found');
         if (defender.isShielded)
             throw new common_1.BadRequestException('Defender is shielded');
+        if (attacker.score > 0 && defender.score > 0 && attacker.score > defender.score * 10) {
+            throw new common_1.BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
+        }
         await Promise.all([
             this.economyService.tickKingdom(attackerKingdomId),
             this.economyService.tickKingdom(defenderKingdomId),
@@ -164,6 +167,20 @@ let CombatService = class CombatService {
         defender.gold = Math.max(0, defender.gold - report.loot.gold);
         defender.wood = Math.max(0, defender.wood - report.loot.wood);
         defender.stone = Math.max(0, defender.stone - report.loot.stone);
+        if (report.attackerWins && attacker.isVip) {
+            const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.05).toFixed(6));
+            const gameLoot = parseFloat(((defender.gameBalance ?? 0) * 0.05).toFixed(6));
+            if (usdtLoot > 0) {
+                attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));
+                defender.usdtBalance = parseFloat(Math.max(0, (defender.usdtBalance ?? 0) - usdtLoot).toFixed(6));
+                report.loot.usdt = usdtLoot;
+            }
+            if (gameLoot > 0) {
+                attacker.gameBalance = parseFloat(((attacker.gameBalance ?? 0) + gameLoot).toFixed(6));
+                defender.gameBalance = parseFloat(Math.max(0, (defender.gameBalance ?? 0) - gameLoot).toFixed(6));
+                report.loot.game = gameLoot;
+            }
+        }
         if (report.attackerWins) {
             const defenderScoreBonus = Math.floor(defender.score / 10);
             attacker.score += 50 + Math.floor(report.loot.gold / 20) + defenderScoreBonus;

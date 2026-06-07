@@ -10,6 +10,9 @@ export declare class LeaderboardController {
         avatarUrl: string;
         score: number;
         isShielded: boolean;
+        shieldUntil: Date;
+        usdtBalance: number;
+        gameBalance: number;
     }[]>;
     resetScores(key: string): Promise<{
         message: string;

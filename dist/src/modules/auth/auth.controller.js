@@ -44,6 +44,9 @@ let AuthController = class AuthController {
     async setLanguage(req, body) {
         return this.authService.setLanguage(req.user.userId, body.language);
     }
+    async acceptTerms(req) {
+        return this.authService.acceptTerms(req.user.userId);
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -62,6 +65,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "setLanguage", null);
+__decorate([
+    (0, common_1.Post)('accept-terms'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "acceptTerms", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

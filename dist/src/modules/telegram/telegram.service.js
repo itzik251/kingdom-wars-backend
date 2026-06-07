@@ -157,7 +157,7 @@ let TelegramService = class TelegramService {
         if (text.startsWith('/start')) {
             const parts = text.split(' ');
             const param = parts[1] || '';
-            const appUrl = param ? `${miniAppUrl}?ref=${param.replace('ref_', '')}` : miniAppUrl;
+            const appUrl = param ? `${miniAppUrl}?ref=${encodeURIComponent(param)}` : miniAppUrl;
             await this.sendMessage(chatId, BOT_MESSAGES.welcome[lang], {
                 reply_markup: {
                     inline_keyboard: [[{

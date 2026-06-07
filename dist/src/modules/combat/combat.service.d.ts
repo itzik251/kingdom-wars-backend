@@ -13,6 +13,8 @@ export interface BattleReport {
         gold: number;
         wood: number;
         stone: number;
+        usdt?: number;
+        game?: number;
     };
     attackerLosses: Record<string, number>;
     defenderLosses: Record<string, number>;

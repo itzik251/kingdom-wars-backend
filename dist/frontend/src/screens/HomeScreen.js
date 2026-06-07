@@ -38,10 +38,10 @@ const LAYOUT = {
     arcane_tower: { gx: 5, gy: 12 },
 };
 const EXTRA_POSITIONS = {
-    gold_mine: [{ gx: 5, gy: 11 }, { gx: 4, gy: 12 }],
-    stone_quarry: [{ gx: 3, gy: 9 }, { gx: 3, gy: 10 }],
-    lumber_mill: [{ gx: 12, gy: 10 }, { gx: 12, gy: 11 }],
-    farm: [{ gx: 12, gy: 8 }, { gx: 12, gy: 9 }],
+    gold_mine: [{ gx: 4, gy: 11 }, { gx: 4, gy: 12 }, { gx: 3, gy: 10 }, { gx: 3, gy: 11 }, { gx: 3, gy: 12 }],
+    stone_quarry: [{ gx: 3, gy: 8 }, { gx: 4, gy: 9 }, { gx: 3, gy: 9 }, { gx: 4, gy: 7 }, { gx: 3, gy: 7 }],
+    lumber_mill: [{ gx: 12, gy: 10 }, { gx: 11, gy: 11 }, { gx: 12, gy: 11 }, { gx: 11, gy: 12 }, { gx: 12, gy: 12 }],
+    farm: [{ gx: 12, gy: 8 }, { gx: 11, gy: 9 }, { gx: 12, gy: 9 }, { gx: 11, gy: 7 }, { gx: 12, gy: 7 }],
 };
 function buildingStats(type, level, t) {
     const fmt2 = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.floor(n));
@@ -183,8 +183,10 @@ function HomeScreen() {
     const [buildMsg, setBuildMsg] = (0, react_1.useState)('');
     const containerRef = (0, react_1.useRef)(null);
     const [pan, setPan] = (0, react_1.useState)({ x: 0, y: 0 });
+    const [zoom, setZoom] = (0, react_1.useState)(1);
     const dragRef = (0, react_1.useRef)(null);
     const isDragging = (0, react_1.useRef)(false);
+    const lastPinchDist = (0, react_1.useRef)(null);
     const selectedBuilding = buildings.find(b => b.id === selected);
     const selectedType = selectedBuilding?.type ?? '';
     const thBuilding = buildings.find(b => b.type === 'town_hall');
@@ -277,7 +279,24 @@ function HomeScreen() {
     }, []);
     const onPointerUp = (0, react_1.useCallback)(() => {
         dragRef.current = null;
+        lastPinchDist.current = null;
         setTimeout(() => { isDragging.current = false; }, 10);
+    }, []);
+    const onWheel = (0, react_1.useCallback)((e) => {
+        e.preventDefault();
+        setZoom(z => Math.max(0.4, Math.min(3, z - e.deltaY * 0.001)));
+    }, []);
+    const onTouchMove = (0, react_1.useCallback)((e) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (lastPinchDist.current !== null) {
+                const delta = dist - lastPinchDist.current;
+                setZoom(z => Math.max(0.4, Math.min(3, z + delta * 0.005)));
+            }
+            lastPinchDist.current = dist;
+        }
     }, []);
     const buildingCount = buildings.length;
     const tiles = (0, react_1.useMemo)(() => {
@@ -334,7 +353,7 @@ function HomeScreen() {
     };
     const availableToBuild = [
         ...BUILDABLE.filter(t => !existingTypes.includes(t)),
-        ...RESOURCE_BUILDABLE.filter(t => countOfType(t) < 3),
+        ...RESOURCE_BUILDABLE.filter(t => countOfType(t) < 6),
     ];
     function costFor(type) {
         const base = BUILD_COSTS[type] ?? { gold: 200, wood: 100, stone: 100 };
@@ -406,7 +425,7 @@ function HomeScreen() {
       </div>
 
       
-      <div ref={containerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} style={{
+      <div ref={containerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel} onTouchMove={onTouchMove} style={{
             flex: 1,
             overflow: 'hidden',
             position: 'relative',
@@ -415,6 +434,12 @@ function HomeScreen() {
             touchAction: 'none',
             userSelect: 'none',
         }}>
+        
+        <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 400, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          <button onClick={() => setZoom(z => Math.max(0.4, z - 0.2))} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+        </div>
+
         
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.65) 100%)', pointerEvents: 'none', zIndex: 300 }}/>
 
@@ -426,6 +451,8 @@ function HomeScreen() {
             width: sceneW,
             height: sceneH,
             willChange: 'transform',
+            transform: `scale(${zoom})`,
+            transformOrigin: '0 0',
         }}>
 
           
@@ -524,8 +551,10 @@ function HomeScreen() {
             const topColor = isUpg ? '#3a7ab0' : cfg.top;
             const leftColor = isUpg ? '#1a3a60' : cfg.left;
             const rightColor = isUpg ? '#0a1e38' : cfg.right;
-            return (<div key={b.id} data-building="true" onClick={() => { if (!isDragging.current)
-                setSelected(isSelected ? null : b.id); }} style={{
+            return (<div key={b.id} data-building="true" onClick={() => { if (!isDragging.current) {
+                setSelected(isSelected ? null : b.id);
+                setMsg('');
+            } }} style={{
                     position: 'absolute',
                     left: px - tW / 2,
                     top: py - BODY,

@@ -19,7 +19,7 @@ const sheetInner = {
     padding: '20px 16px 110px',
     animation: 'slideUp 0.25s ease-out',
 };
-function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking }) {
+function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown = 0 }) {
     const [profile, setProfile] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [error, setError] = (0, react_1.useState)(false);
@@ -113,9 +113,11 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking }) {
         }}>
           {profile.isShielded
             ? t('protected_btn')
-            : attacking
-                ? t('attacking_label')
-                : t('attack_btn_time', { n: profile.marchSeconds })}
+            : attacking && marchCountdown > 0
+                ? `⚔️ ${t('marching')} ${marchCountdown}s...`
+                : attacking
+                    ? t('attacking_label')
+                    : t('attack_btn_time', { n: profile.marchSeconds })}
         </button>
       </div>
     </div>);

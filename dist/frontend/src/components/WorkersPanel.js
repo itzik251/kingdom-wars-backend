@@ -24,7 +24,14 @@ function WorkersPanel({ onClose }) {
             setMsg(t('worker_hired'));
         }
         catch (e) {
-            setMsg('❌ ' + (e.response?.data?.message || t('error')));
+            const raw = e.response?.data?.message || '';
+            const maxMatch = raw.match(/MAX_WORKERS:(\d+)/);
+            if (maxMatch)
+                setMsg('❌ ' + t('worker_max', { n: maxMatch[1] }));
+            else if (raw === 'NOT_ENOUGH_GOLD_WORKER')
+                setMsg('❌ ' + t('not_enough_gold_worker'));
+            else
+                setMsg('❌ ' + (raw || t('error')));
         }
         finally {
             setLoading(null);
@@ -39,7 +46,11 @@ function WorkersPanel({ onClose }) {
             setMsg(t('worker_fired'));
         }
         catch (e) {
-            setMsg('❌ ' + (e.response?.data?.message || t('error')));
+            const raw = e.response?.data?.message || '';
+            if (raw === 'NO_WORKERS_TO_FIRE')
+                setMsg('❌ ' + t('no_workers_to_fire'));
+            else
+                setMsg('❌ ' + (raw || t('error')));
         }
         finally {
             setLoading(null);

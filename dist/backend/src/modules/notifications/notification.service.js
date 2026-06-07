@@ -22,6 +22,7 @@ let NotificationService = class NotificationService {
     constructor(notifRepo, config) {
         this.notifRepo = notifRepo;
         this.config = config;
+        this.recentSends = new Map();
     }
     async create(userId, type, payload) {
         const notif = this.notifRepo.create({ user: { id: userId }, type, payload });
@@ -45,6 +46,11 @@ let NotificationService = class NotificationService {
             .execute();
     }
     async sendTelegram(userId, type, payload) {
+        const key = `${userId}:${type}`;
+        const lastSent = this.recentSends.get(key) ?? 0;
+        if (Date.now() - lastSent < 10_000)
+            return;
+        this.recentSends.set(key, Date.now());
         const botToken = this.config.get('TELEGRAM_BOT_TOKEN');
         if (!botToken || botToken === 'dev_token')
             return;

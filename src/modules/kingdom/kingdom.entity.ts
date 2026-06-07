@@ -79,6 +79,15 @@ export class Kingdom {
   @Column({ name: 'max_workers', default: 5 })
   maxWorkers: number;
 
+  @Column({ name: 'usdt_balance', type: 'float', default: 0 })
+  usdtBalance: number;
+
+  @Column({ name: 'game_balance', type: 'float', default: 0 })
+  gameBalance: number;
+
+  @Column({ name: 'attack_speed_boost_until', nullable: true })
+  attackSpeedBoostUntil: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

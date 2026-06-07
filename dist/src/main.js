@@ -9,7 +9,18 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
     app.enableCors({ origin: '*', credentials: true });
-    app.useStaticAssets((0, path_1.join)(__dirname, '..', 'public'));
+    app.useStaticAssets((0, path_1.join)(__dirname, '..', 'public'), {
+        setHeaders: (res, path) => {
+            if (path.endsWith('index.html')) {
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+            }
+            else {
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            }
+        },
+    });
     const port = process.env.PORT || 3000;
     await app.listen(port);
     console.log(`Kingdom Wars API running on port ${port}`);

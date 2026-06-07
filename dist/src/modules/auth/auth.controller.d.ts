@@ -9,11 +9,16 @@ export declare class AuthController {
     login(dto: LoginDto): Promise<{
         token: string;
         userId: string;
+        termsAccepted: boolean;
+        isNewUser: boolean;
     }>;
     setLanguage(req: any, body: {
         language: string;
     }): Promise<{
         language: string;
+    }>;
+    acceptTerms(req: any): Promise<{
+        accepted: boolean;
     }>;
 }
 export {};

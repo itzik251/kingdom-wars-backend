@@ -21,7 +21,8 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const MILESTONES = [
     { count: 1, gems: 100, label: '1 חבר' },
     { count: 5, gems: 500, label: '5 חברים' },
-    { count: 10, gems: 0, label: '10 חברים', skin: 'rare_skin' },
+    { count: 10, gems: 0, label: '10 חברים', hero: 'referral_hero' },
+    { count: 20, gems: 0, label: '20 חברים', vipDays: 30 },
     { count: 50, gems: 0, label: '50 חברים', hero: 'ragnar' },
 ];
 let ReferralService = class ReferralService {
@@ -31,7 +32,13 @@ let ReferralService = class ReferralService {
     }
     async getStats(userId) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
-        const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
+        const referredUsers = await this.userRepo.find({ where: { referredBy: { id: userId } } });
+        let referredCount = 0;
+        for (const u of referredUsers) {
+            const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: u.id } } });
+            if (kingdom && kingdom.score > 0)
+                referredCount++;
+        }
         const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
         const milestones = MILESTONES.map(m => ({
             ...m,
@@ -67,7 +74,13 @@ let ReferralService = class ReferralService {
             kingdom.gems += milestone.gems;
             await this.kingdomRepo.save(kingdom);
         }
-        return { claimed: true, gems: milestone.gems, skin: milestone.skin, hero: milestone.hero };
+        if (milestone.vipDays) {
+            const days = milestone.vipDays;
+            const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + days * 86_400_000);
+            kingdom.vipExpiresAt = expiresAt;
+            await this.kingdomRepo.save(kingdom);
+        }
+        return { claimed: true, gems: milestone.gems, hero: milestone.hero, vipDays: milestone.vipDays };
     }
 };
 exports.ReferralService = ReferralService;

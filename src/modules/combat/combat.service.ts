@@ -23,7 +23,7 @@ export interface BattleReport {
   attackerWins: boolean;
   attackerPower: number;
   defenderPower: number;
-  loot: { gold: number; wood: number; stone: number };
+  loot: { gold: number; wood: number; stone: number; usdt?: number; game?: number };
   attackerLosses: Record<string, number>;
   defenderLosses: Record<string, number>;
   winStreak?: number;
@@ -59,7 +59,7 @@ export class CombatService {
     const attackerScore = attacker.score || 0;
     const defenderScore = defender.score || 0;
     if (attackerScore > 0 && defenderScore > 0 && attackerScore > defenderScore * 10) {
-      throw new BadRequestException('SCORE_TOO_LOW'); // attacker is 10x stronger
+      throw new BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
     }
 
     // Server-side attack cooldown — prevents API bypass of march time
@@ -234,6 +234,22 @@ export class CombatService {
     defender.gold  = Math.max(0, defender.gold  - report.loot.gold);
     defender.wood  = Math.max(0, defender.wood  - report.loot.wood);
     defender.stone = Math.max(0, defender.stone - report.loot.stone);
+
+    // VIP players also loot USDT and GAME tokens from the defender
+    if (report.attackerWins && attacker.isVip) {
+      const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.05).toFixed(6));
+      const gameLoot = parseFloat(((defender.gameBalance ?? 0) * 0.05).toFixed(6));
+      if (usdtLoot > 0) {
+        attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));
+        defender.usdtBalance = parseFloat(Math.max(0, (defender.usdtBalance ?? 0) - usdtLoot).toFixed(6));
+        report.loot.usdt = usdtLoot;
+      }
+      if (gameLoot > 0) {
+        attacker.gameBalance = parseFloat(((attacker.gameBalance ?? 0) + gameLoot).toFixed(6));
+        defender.gameBalance = parseFloat(Math.max(0, (defender.gameBalance ?? 0) - gameLoot).toFixed(6));
+        report.loot.game = gameLoot;
+      }
+    }
 
     if (report.attackerWins) {
       attacker.score += 10 + Math.floor(report.loot.gold / 100);

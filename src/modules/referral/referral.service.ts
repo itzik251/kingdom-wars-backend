@@ -5,10 +5,11 @@ import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 
 const MILESTONES = [
-  { count: 1,  gems: 100,  label: '1 חבר'  },
-  { count: 5,  gems: 500,  label: '5 חברים' },
-  { count: 10, gems: 0,    label: '10 חברים', skin: 'rare_skin'  },
-  { count: 50, gems: 0,    label: '50 חברים', hero: 'ragnar'     },
+  { count: 1,  gems: 100, label: '1 חבר'   },
+  { count: 5,  gems: 500, label: '5 חברים'  },
+  { count: 10, gems: 0,   label: '10 חברים', hero: 'referral_hero' },
+  { count: 20, gems: 0,   label: '20 חברים', vipDays: 30          },
+  { count: 50, gems: 0,   label: '50 חברים', hero: 'ragnar'       },
 ];
 
 @Injectable()
@@ -70,6 +71,13 @@ export class ReferralService {
       await this.kingdomRepo.save(kingdom);
     }
 
-    return { claimed: true, gems: milestone.gems, skin: milestone.skin, hero: milestone.hero };
+    if ((milestone as any).vipDays) {
+      const days = (milestone as any).vipDays as number;
+      const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + days * 86_400_000);
+      kingdom.vipExpiresAt = expiresAt;
+      await this.kingdomRepo.save(kingdom);
+    }
+
+    return { claimed: true, gems: milestone.gems, hero: (milestone as any).hero, vipDays: (milestone as any).vipDays };
   }
 }

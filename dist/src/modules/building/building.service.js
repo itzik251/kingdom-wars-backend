@@ -104,8 +104,8 @@ let BuildingService = class BuildingService {
         if (existing.length > 0 && !MULTI_ALLOWED.includes(buildingType)) {
             throw new common_1.BadRequestException('Building already exists');
         }
-        if (existing.length >= 3)
-            throw new common_1.BadRequestException('Maximum 3 of this building');
+        if (existing.length >= 6)
+            throw new common_1.BadRequestException('Maximum 6 of this building');
         if (buildingType === building_entity_1.BuildingType.ARCANE_TOWER && !kingdom.isVip) {
             throw new common_1.BadRequestException('VIP required');
         }

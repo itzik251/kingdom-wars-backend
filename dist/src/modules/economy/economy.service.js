@@ -20,6 +20,7 @@ const schedule_1 = require("@nestjs/schedule");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const building_entity_1 = require("../building/building.entity");
 const unit_entity_1 = require("../units/unit.entity");
+const notification_service_1 = require("../notifications/notification.service");
 const game_constants_1 = require("../../constants/game.constants");
 const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.GOLD_MINE]: 'gold_mine',
@@ -28,16 +29,17 @@ const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.FARM]: 'farm',
 };
 let EconomyService = class EconomyService {
-    constructor(kingdomRepo, buildingRepo, unitRepo) {
+    constructor(kingdomRepo, buildingRepo, unitRepo, notifService) {
         this.kingdomRepo = kingdomRepo;
         this.buildingRepo = buildingRepo;
         this.unitRepo = unitRepo;
+        this.notifService = notifService;
     }
     async tickAllKingdoms() {
-        const kingdoms = await this.kingdomRepo.find();
-        await Promise.all(kingdoms.map(k => this.tickKingdom(k.id).catch(() => { })));
+        const kingdoms = await this.kingdomRepo.find({ relations: ['user'] });
+        await Promise.all(kingdoms.map(k => this.tickKingdom(k.id, k.user?.id).catch(() => { })));
     }
-    async tickKingdom(kingdomId) {
+    async tickKingdom(kingdomId, userId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
         const units = await this.unitRepo.find({ where: { kingdom: { id: kingdomId } } });
@@ -67,6 +69,11 @@ let EconomyService = class EconomyService {
         kingdom.wood = Math.min(kingdom.maxWood, Math.floor(kingdom.wood + production.wood * bonus));
         kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
         kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(newFood)));
+        if (kingdom.isVip) {
+            const totalProduction = production.gold + production.wood + production.stone + production.food;
+            const gameEarned = totalProduction * 0.000001 * game_constants_1.VIP_GAME_PRODUCTION_MULTIPLIER;
+            kingdom.gameBalance = parseFloat(((kingdom.gameBalance ?? 0) + gameEarned).toFixed(6));
+        }
         kingdom.lastResourceTick = now;
         if (foodShortfall > 0) {
             const desertionRate = Math.min(0.05, foodShortfall * 0.005);
@@ -98,9 +105,36 @@ let EconomyService = class EconomyService {
         if (woundedChanged) {
             await this.unitRepo.save(units.filter(u => u.woundedCount >= 0));
         }
-        await this.completeBuildingUpgrades(kingdomId, buildings, now);
-        await this.completeUnitTraining(kingdomId, units, now);
-        return this.kingdomRepo.save(kingdom);
+        const completedBuildings = await this.completeBuildingUpgrades(kingdomId, buildings, now);
+        const completedUnits = await this.completeUnitTraining(kingdomId, units, now);
+        const saved = await this.kingdomRepo.save(kingdom);
+        const resolvedUserId = userId ?? (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
+        if (resolvedUserId) {
+            if (completedBuildings.length > 0) {
+                const grouped = new Map();
+                for (const b of completedBuildings) {
+                    const existing = grouped.get(b.type);
+                    if (existing)
+                        existing.count++;
+                    else
+                        grouped.set(b.type, { count: 1, level: b.level });
+                }
+                for (const [type, { count, level }] of grouped) {
+                    this.notifService.create(resolvedUserId, 'build_done', { building: type, level, count }).catch(() => { });
+                }
+            }
+            if (completedUnits.length > 0) {
+                const grouped = new Map();
+                for (const u of completedUnits)
+                    grouped.set(u.type, (grouped.get(u.type) ?? 0) + u.count);
+                for (const [type, count] of grouped) {
+                    this.notifService.create(resolvedUserId, 'training_done', { unit: type, count }).catch(() => { });
+                }
+            }
+        }
+        saved.__completedBuildings = completedBuildings;
+        saved.__completedUnits = completedUnits;
+        return saved;
     }
     calculateProduction(buildings, hours) {
         const result = { gold: 0, wood: 0, stone: 0, food: 0 };
@@ -126,11 +160,13 @@ let EconomyService = class EconomyService {
         }, 0);
     }
     async completeBuildingUpgrades(kingdomId, buildings, now) {
+        const completed = [];
         for (const building of buildings) {
-            if (building.upgradeEndsAt && now >= building.upgradeEndsAt) {
+            if (building.upgradeEndsAt && now >= new Date(building.upgradeEndsAt)) {
                 building.level += 1;
                 building.upgradeEndsAt = null;
                 await this.buildingRepo.save(building);
+                completed.push({ type: building.type, level: building.level });
                 if (building.type === building_entity_1.BuildingType.TOWN_HALL) {
                     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
                     if (kingdom) {
@@ -144,16 +180,20 @@ let EconomyService = class EconomyService {
                 }
             }
         }
+        return completed;
     }
     async completeUnitTraining(kingdomId, units, now) {
+        const completed = [];
         for (const unit of units) {
-            if (unit.trainingEndsAt && now >= unit.trainingEndsAt) {
+            if (unit.trainingEndsAt && now >= new Date(unit.trainingEndsAt) && unit.trainingCount > 0) {
+                completed.push({ type: unit.type, count: unit.trainingCount });
                 unit.count += unit.trainingCount;
                 unit.trainingCount = 0;
                 unit.trainingEndsAt = null;
                 await this.unitRepo.save(unit);
             }
         }
+        return completed;
     }
     getProductionRates(buildings, kingdom) {
         const rates = this.calculateProduction(buildings, 1);
@@ -186,8 +226,10 @@ exports.EconomyService = EconomyService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
     __param(1, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __param(2, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
+    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        notification_service_1.NotificationService])
 ], EconomyService);
 //# sourceMappingURL=economy.service.js.map

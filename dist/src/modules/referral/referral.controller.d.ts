@@ -12,16 +12,8 @@ export declare class ReferralController {
             count: number;
             gems: number;
             label: string;
-            skin?: undefined;
             hero?: undefined;
-        } | {
-            reached: boolean;
-            alreadyClaimed: boolean;
-            count: number;
-            gems: number;
-            label: string;
-            skin: string;
-            hero?: undefined;
+            vipDays?: undefined;
         } | {
             reached: boolean;
             alreadyClaimed: boolean;
@@ -29,20 +21,28 @@ export declare class ReferralController {
             gems: number;
             label: string;
             hero: string;
-            skin?: undefined;
+            vipDays?: undefined;
+        } | {
+            reached: boolean;
+            alreadyClaimed: boolean;
+            count: number;
+            gems: number;
+            label: string;
+            vipDays: number;
+            hero?: undefined;
         })[];
     }>;
     claim(req: any, count: string): Promise<{
         error: string;
         claimed?: undefined;
         gems?: undefined;
-        skin?: undefined;
         hero?: undefined;
+        vipDays?: undefined;
     } | {
         claimed: boolean;
         gems: number;
-        skin: string;
-        hero: string;
+        hero: any;
+        vipDays: any;
         error?: undefined;
     }>;
 }

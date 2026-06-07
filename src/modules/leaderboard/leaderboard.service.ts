@@ -41,7 +41,7 @@ export class LeaderboardService {
       .createQueryBuilder('k')
       .leftJoinAndSelect('k.user', 'u')
       .select([
-        'k.id', 'k.name', 'k.score', 'k.shieldUntil',
+        'k.id', 'k.name', 'k.score', 'k.shieldUntil', 'k.usdtBalance', 'k.gameBalance',
         'u.username', 'u.firstName', 'u.avatarUrl',
       ])
       .orderBy('k.score', 'DESC')
@@ -58,6 +58,9 @@ export class LeaderboardService {
       avatarUrl: k.user?.avatarUrl || null,
       score: k.score,
       isShielded: !!(k.shieldUntil && now < new Date(k.shieldUntil)),
+      shieldUntil: k.shieldUntil || null,
+      usdtBalance: k.usdtBalance ?? 0,
+      gameBalance: k.gameBalance ?? 0,
     }));
   }
 }

@@ -9,5 +9,6 @@ export declare class User {
     createdAt: Date;
     lastLogin: Date;
     language: string;
+    termsAcceptedAt: Date;
     claimedReferralMilestones: number[];
 }

@@ -45,7 +45,8 @@ function ReferralCard() {
     const MILESTONES = [
         { count: 1, gems: 100, label: mkLabel(1) },
         { count: 5, gems: 500, label: mkLabel(5) },
-        { count: 10, gems: 0, label: mkLabel(10), extra: `🎨 ${t('rare_skin')}` },
+        { count: 10, gems: 0, label: mkLabel(10), extra: `🦸 ${t('referral_hero')}` },
+        { count: 20, gems: 0, label: mkLabel(20), extra: `👑 VIP 30 ${t('days_free')}` },
         { count: 50, gems: 0, label: mkLabel(50), extra: `🦸 ${t('ragnar_name')}` },
     ];
     return (<div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.1),rgba(26,138,64,0.05))', border: '1px solid rgba(39,174,96,0.3)', borderRadius: 14, padding: 14 }}>
@@ -92,11 +93,15 @@ function ReferralCard() {
 }
 function UsdtBalanceSection() {
     const [balance, setBalance] = (0, react_1.useState)(null);
+    const [gameBalance, setGameBalance] = (0, react_1.useState)(0);
     const [withdrawing, setWithdrawing] = (0, react_1.useState)(false);
     const [msg, setMsg] = (0, react_1.useState)('');
     const t = (0, useT_1.useT)();
     (0, react_1.useEffect)(() => {
-        client_1.api.get('/kingdom/usdt-balance').then(r => setBalance(r.usdtBalance || 0)).catch(() => setBalance(0));
+        client_1.api.get('/kingdom/usdt-balance').then(r => {
+            setBalance(r.usdtBalance || 0);
+            setGameBalance(r.gameBalance || 0);
+        }).catch(() => setBalance(0));
     }, []);
     async function withdraw() {
         setWithdrawing(true);
@@ -121,11 +126,23 @@ function UsdtBalanceSection() {
       <div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.12),rgba(26,138,64,0.06))', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: 16 }}>
 
         
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '8px 12px' }}>
+            <div style={{ fontSize: 10, color: '#a0845a' }}>💵 USDT</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>${bal.toFixed(4)}</div>
+          </div>
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '8px 12px' }}>
+            <div style={{ fontSize: 10, color: '#a0845a' }}>🎮 GAME</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: gameBalance > 0 ? '#9b59b6' : '#666' }}>{gameBalance.toFixed(4)}</div>
+          </div>
+        </div>
+
+        
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div>
             <div style={{ fontSize: 11, color: '#a0845a' }}>{t('available_balance')}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>
-              ${bal.toFixed(2)} USDT
+            <div style={{ fontSize: 22, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>
+              ${bal.toFixed(4)} USDT
             </div>
           </div>
           {bal >= 20 ? (<button onClick={withdraw} disabled={withdrawing} style={{ padding: '12px 18px', borderRadius: 12, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
@@ -185,10 +202,10 @@ function ShopScreen() {
         setMsgOk(ok);
         setTimeout(() => setMsg(''), 4000);
     }
-    async function speedUp(type) {
+    async function speedUp(type, buildingId) {
         setSpeeding(type);
         try {
-            await client_1.api.post('/buildings/speedup', { type });
+            await client_1.api.post('/buildings/speedup', { type, buildingId });
             showMsg(t('speedup_done'));
             await Promise.all([load(), refresh()]);
         }
@@ -212,12 +229,14 @@ function ShopScreen() {
             }
             const reward = await client_1.api.post('/ads/reward', { type });
             const msgs = {
-                double_production: t('double_prod_active', { time: new Date(reward.boostUntil).toLocaleTimeString() }),
-                gems: `💎 ${t('donated_gems', { n: 10 })}`,
-                gold_bonus: `💰 ${t('donated_gems', { n: 500 })}`,
-                wood_bonus: `🪵 ${t('donated_gems', { n: 500 })}`,
-                stone_bonus: `🪨 ${t('donated_gems', { n: 500 })}`,
-                food_bonus: `🌾 ${t('donated_gems', { n: 500 })}`,
+                double_production: `🚀 ${t('double_prod')} — ${t('double_prod_active', { time: new Date(reward.boostUntil).toLocaleTimeString() })}`,
+                double_attack_speed: `⚡ ${t('double_attack_speed_active', { time: new Date(reward.boostUntil).toLocaleTimeString() })}`,
+                usdt_bonus: `💵 +0.0001 USDT ${t('added_to_balance')}`,
+                gems: `💎 +10 Gems ${t('added_to_balance')}`,
+                gold_bonus: `💰 +500 ${t('gold')} ${t('added_to_balance')}`,
+                wood_bonus: `🪵 +500 ${t('wood')} ${t('added_to_balance')}`,
+                stone_bonus: `🪨 +500 ${t('stone')} ${t('added_to_balance')}`,
+                food_bonus: `🌾 +500 ${t('food')} ${t('added_to_balance')}`,
             };
             showMsg(msgs[type] || t('confirm'));
             await Promise.all([load(), refresh()]);
@@ -275,29 +294,13 @@ function ShopScreen() {
             </div>
             {isVip
             ? <div style={{ background: 'linear-gradient(135deg,#b8860b,#f4d03f)', borderRadius: 10, padding: '6px 14px', fontSize: 12, fontWeight: 800, color: '#1a0a00' }}>{t('vip_active')}</div>
-            : <button className="btn btn-gold" style={{ fontSize: 13, padding: '10px 16px' }} disabled={loading === 'action'} onClick={async () => {
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px' }} disabled={loading === 'action'} onClick={async () => {
                     setLoading('action');
                     try {
-                        const inv = await client_1.api.get('/vip/invoice');
-                        if (inv.invoiceUrl) {
-                            const tg = window.Telegram?.WebApp;
-                            if (tg?.openTelegramLink) {
-                                tg.openTelegramLink(inv.invoiceUrl);
-                            }
-                            else {
-                                window.open(inv.invoiceUrl, '_blank');
-                            }
-                            showMsg(t('vip_pay_msg'));
-                            const poll = setInterval(async () => {
-                                const v = await client_1.api.get('/vip').catch(() => null);
-                                if (v?.isVip) {
-                                    clearInterval(poll);
-                                    await load();
-                                    refresh();
-                                }
-                            }, 5000);
-                            setTimeout(() => clearInterval(poll), 120_000);
-                        }
+                        await client_1.api.post('/vip/purchase-with-usdt');
+                        showMsg(t('vip_activated_usdt'));
+                        await Promise.all([load(), refresh()]);
                     }
                     catch (e) {
                         showMsg(e.response?.data?.message || t('error'), false);
@@ -306,17 +309,35 @@ function ShopScreen() {
                         setLoading(null);
                     }
                 }}>
-                  {t('buy_vip')}
-                </button>}
+                    💵 {t('vip_pay_usdt_balance')}
+                  </button>
+                  <button className="btn" style={{ fontSize: 12, padding: '8px 12px', background: 'rgba(52,152,219,0.2)', border: '1px solid rgba(52,152,219,0.4)', color: '#3498db' }} disabled={loading === 'action'} onClick={async () => {
+                    setLoading('action');
+                    try {
+                        const info = await client_1.api.get('/vip/payment-info');
+                        showMsg(`📋 ${t('vip_wallet_send')}: ${info.walletAddress} · ${info.amount} ${info.currency}`);
+                    }
+                    catch (e) {
+                        showMsg(e.response?.data?.message || t('error'), false);
+                    }
+                    finally {
+                        setLoading(null);
+                    }
+                }}>
+                    💳 {t('vip_pay_wallet')}
+                  </button>
+                </div>}
           </div>
 
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {[
-            { icon: '⚡', label: t('vip_fast_build_pct'), vipOnly: true },
-            { icon: '🔮', label: t('b_arcane_tower'), vipOnly: true },
-            { icon: '🏆', label: t('vip_badge_feat'), vipOnly: true },
-            { icon: '💎', label: t('vip_gems_x'), vipOnly: true },
+            { icon: '⚡', label: t('vip_fast_build_pct') },
+            { icon: '🔮', label: t('b_arcane_tower') },
+            { icon: '🏆', label: t('vip_badge_feat') },
+            { icon: '💎', label: t('vip_gems_x') },
+            { icon: '💵', label: t('vip_usdt_earn') },
+            { icon: '🎮', label: t('vip_game_earn') },
         ].map(f => (<div key={f.label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 background: isVip ? 'rgba(244,208,63,0.08)' : 'rgba(0,0,0,0.3)',
@@ -383,7 +404,7 @@ function ShopScreen() {
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{t('b_' + b.type)}</div>
                     <div style={{ fontSize: 11, color: '#3498db' }}>⏳ <Countdown_1.default endsAt={b.upgradeEndsAt}/></div>
                   </div>
-                  <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px', opacity: canAfford ? 1 : 0.4 }} disabled={speeding === b.type || !canAfford} onClick={() => speedUp(b.type)}>
+                  <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px', opacity: canAfford ? 1 : 0.4 }} disabled={speeding === b.type || !canAfford} onClick={() => speedUp(b.type, b.id)}>
                     {speeding === b.type ? '...' : `⚡ ${gemCost} 💎`}
                   </button>
                 </div>);
@@ -414,24 +435,27 @@ function ShopScreen() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { type: 'double_production', icon: '🚀', label: t('double_prod'), desc: t('double_prod_desc') },
-            { type: 'gems', icon: '💎', label: '10 Gems', desc: t('instantly') },
-            { type: 'gold_bonus', icon: '💰', label: `500 ${t('gold')}`, desc: t('instantly') },
-            { type: 'wood_bonus', icon: '🪵', label: `500 ${t('wood')}`, desc: t('instantly') },
-            { type: 'stone_bonus', icon: '🪨', label: `500 ${t('stone')}`, desc: t('instantly') },
-            { type: 'food_bonus', icon: '🌾', label: `500 ${t('food')}`, desc: t('instantly') },
-        ].map(({ type, icon, label, desc }) => (<div key={type} style={{
-                background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(39,174,96,0.15)',
+            { type: 'double_production', icon: '🚀', label: t('double_prod'), desc: t('double_prod_desc'), boosted: ads?.boostActive, boostUntil: ads?.boostUntil },
+            { type: 'double_attack_speed', icon: '⚡', label: t('double_attack_speed'), desc: t('double_attack_speed_desc'), boosted: ads?.attackBoostActive, boostUntil: ads?.attackBoostUntil },
+            { type: 'usdt_bonus', icon: '💵', label: '+0.0001 USDT', desc: t('instantly') },
+            { type: 'gems', icon: '💎', label: '+10 Gems', desc: t('instantly') },
+            { type: 'gold_bonus', icon: '💰', label: `+500 ${t('gold')}`, desc: t('instantly') },
+            { type: 'wood_bonus', icon: '🪵', label: `+500 ${t('wood')}`, desc: t('instantly') },
+            { type: 'stone_bonus', icon: '🪨', label: `+500 ${t('stone')}`, desc: t('instantly') },
+            { type: 'food_bonus', icon: '🌾', label: `+500 ${t('food')}`, desc: t('instantly') },
+        ].map(({ type, icon, label, desc, boosted, boostUntil }) => (<div key={type} style={{
+                background: boosted ? 'rgba(39,174,96,0.1)' : 'rgba(0,0,0,0.35)',
+                border: `1px solid ${boosted ? 'rgba(39,174,96,0.4)' : 'rgba(39,174,96,0.15)'}`,
                 borderRadius: 12, padding: '10px 12px',
                 display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', textAlign: 'center',
             }}>
               <span style={{ fontSize: 26 }}>{icon}</span>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 12 }}>{label}</div>
-                <div style={{ fontSize: 10, color: '#a0845a' }}>{desc}</div>
+                <div style={{ fontSize: 10, color: '#a0845a' }}>{boosted ? <Countdown_1.default endsAt={boostUntil}/> : desc}</div>
               </div>
-              <button className="btn btn-green" style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: adsLeft === 0 ? 0.4 : 1 }} disabled={adsLeft === 0 || loading === type} onClick={() => watchAd(type)}>
-                {loading === type ? '...' : t('watch_ad')}
+              <button className="btn btn-green" style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: (adsLeft === 0 || boosted) ? 0.4 : 1 }} disabled={adsLeft === 0 || loading === type || boosted} onClick={() => watchAd(type)}>
+                {loading === type ? '...' : boosted ? '✓ פעיל' : t('watch_ad')}
               </button>
             </div>))}
         </div>

@@ -25,6 +25,7 @@ const notification_module_1 = require("./modules/notifications/notification.modu
 const vip_module_1 = require("./modules/vip/vip.module");
 const ads_module_1 = require("./modules/ads/ads.module");
 const telegram_module_1 = require("./modules/telegram/telegram.module");
+const admin_module_1 = require("./modules/admin/admin.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -71,6 +72,7 @@ exports.AppModule = AppModule = __decorate([
             vip_module_1.VipModule,
             ads_module_1.AdsModule,
             telegram_module_1.TelegramModule,
+            admin_module_1.AdminModule,
         ],
     })
 ], AppModule);

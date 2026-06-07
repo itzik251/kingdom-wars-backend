@@ -21,4 +21,19 @@ export class VipController {
   activate(@Request() req, @Body() dto: ActivateDto) {
     return this.vipService.activateVip(req.user.userId, dto.tonTxHash);
   }
+
+  @Post('purchase-with-usdt')
+  purchaseWithUsdt(@Request() req) {
+    return this.vipService.purchaseWithUsdt(req.user.userId);
+  }
+
+  @Get('payment-info')
+  getPaymentInfo() {
+    return this.vipService.getPaymentInfo();
+  }
+
+  @Get('invoice')
+  getInvoice() {
+    return this.vipService.getPaymentInfo();
+  }
 }

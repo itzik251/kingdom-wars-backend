@@ -7,7 +7,8 @@ const format_1 = require("../utils/format");
 const gameStore_1 = require("../store/gameStore");
 const KingdomProfileSheet_1 = require("../components/KingdomProfileSheet");
 const useT_1 = require("../i18n/useT");
-const W = 48, H = 24;
+const Countdown_1 = require("../components/Countdown");
+const W = 64, H = 32;
 function iso(gx, gy) {
     return { x: (gx - gy) * W, y: (gx + gy) * H };
 }
@@ -24,9 +25,11 @@ function WorldMapScreen() {
     const [battle, setBattle] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [pan, setPan] = (0, react_1.useState)({ x: 0, y: 0 });
+    const [zoom, setZoom] = (0, react_1.useState)(1);
     const dragRef = (0, react_1.useRef)(null);
     const isDragging = (0, react_1.useRef)(false);
     const containerRef = (0, react_1.useRef)(null);
+    const lastPinchDist = (0, react_1.useRef)(null);
     (0, react_1.useEffect)(() => {
         client_1.api.get('/leaderboard?all=true').then((data) => {
             const raw = Array.isArray(data) ? data : data.leaderboard || [];
@@ -36,6 +39,9 @@ function WorldMapScreen() {
                 username: k.username ?? k.user?.username ?? k.user?.firstName,
                 score: k.score ?? 0,
                 shieldActive: k.shieldActive ?? k.isShielded ?? false,
+                shieldUntil: k.shieldUntil ?? null,
+                usdtBalance: k.usdtBalance ?? 0,
+                gameBalance: k.gameBalance ?? 0,
             }));
             setKingdoms(norm);
             setLoading(false);
@@ -71,7 +77,24 @@ function WorldMapScreen() {
     }, []);
     const onPointerUp = (0, react_1.useCallback)(() => {
         dragRef.current = null;
+        lastPinchDist.current = null;
         setTimeout(() => { isDragging.current = false; }, 10);
+    }, []);
+    const onWheel = (0, react_1.useCallback)((e) => {
+        e.preventDefault();
+        setZoom(z => Math.max(0.4, Math.min(3, z - e.deltaY * 0.001)));
+    }, []);
+    const onTouchMove = (0, react_1.useCallback)((e) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (lastPinchDist.current !== null) {
+                const delta = dist - lastPinchDist.current;
+                setZoom(z => Math.max(0.4, Math.min(3, z + delta * 0.005)));
+            }
+            lastPinchDist.current = dist;
+        }
     }, []);
     async function doAttack(profile) {
         setAttacking(true);
@@ -113,11 +136,17 @@ function WorldMapScreen() {
       </div>
 
       
-      <div ref={containerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} style={{
+      <div ref={containerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel} onTouchMove={onTouchMove} style={{
             flex: 1, minHeight: 0, position: 'relative',
             background: 'radial-gradient(ellipse at 50% 40%,#0a1a2e 0%,#050d1a 70%)',
             overflow: 'hidden', cursor: 'grab', touchAction: 'none',
         }}>
+        
+        <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 400, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+          <button onClick={() => setZoom(z => Math.max(0.4, z - 0.2))} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+        </div>
+
         
         {[...Array(30)].map((_, i) => (<div key={i} style={{
                 position: 'absolute',
@@ -136,7 +165,7 @@ function WorldMapScreen() {
           </div>) : kingdoms.length === 0 ? (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5d8aa8', gap: 12 }}>
             <div style={{ fontSize: 40 }}>🏜️</div>
             <div style={{ fontSize: 14 }}>{t('no_kingdoms_yet')}</div>
-          </div>) : (<div style={{ position: 'absolute', left: pan.x, top: pan.y, width: sceneW, height: sceneH, willChange: 'transform' }}>
+          </div>) : (<div style={{ position: 'absolute', left: pan.x, top: pan.y, width: sceneW, height: sceneH, willChange: 'transform', transform: `scale(${zoom})`, transformOrigin: '0 0' }}>
             {kingdoms.map((k, i) => {
                 const gx = i % COLS, gy = Math.floor(i / COLS);
                 const { x, y } = iso(gx, gy);
@@ -222,7 +251,15 @@ function WorldMapScreen() {
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <div style={{ background: 'rgba(52,152,219,0.12)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#3498db' }}>🏆 #{selected.rank}</div>
             <div style={{ background: 'rgba(244,208,63,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#f4d03f' }}>⚡ {t('score_pts', { n: (0, format_1.fmt)(selected.score) })}</div>
-            {selected.shieldActive && <div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#3498db' }}>{t('protected_label')}</div>}
+            {selected.shieldActive && selected.shieldUntil && (<div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#3498db' }}>
+                🛡️ {t('protected_label')} · <Countdown_1.default endsAt={selected.shieldUntil}/>
+              </div>)}
+            {(selected.usdtBalance ?? 0) > 0 && (<div style={{ background: 'rgba(39,174,96,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#27ae60' }}>
+                💵 {selected.usdtBalance?.toFixed(4)} USDT
+              </div>)}
+            {(selected.gameBalance ?? 0) > 0 && (<div style={{ background: 'rgba(155,89,182,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#9b59b6' }}>
+                🎮 {selected.gameBalance?.toFixed(4)} GAME
+              </div>)}
           </div>
           {selected.kingdomName !== kingdom?.name && (<button className="btn" onClick={() => { if (selected.id) {
                 setProfileId(selected.id);

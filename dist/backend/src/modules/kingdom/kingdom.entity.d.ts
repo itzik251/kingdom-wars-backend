@@ -20,6 +20,9 @@ export declare class Kingdom {
     vipExpiresAt: Date;
     adsWatchedToday: number;
     adsWatchedDate: string;
+    usdtBalance: number;
+    gameBalance: number;
+    attackSpeedBoostUntil: Date;
     createdAt: Date;
     get isShielded(): boolean;
     get isVip(): boolean;

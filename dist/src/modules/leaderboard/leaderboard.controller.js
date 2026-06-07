@@ -20,6 +20,9 @@ let LeaderboardController = class LeaderboardController {
     getTop() {
         return this.leaderboardService.getTop();
     }
+    getWeekly() {
+        return this.leaderboardService.getWeeklyTop();
+    }
 };
 exports.LeaderboardController = LeaderboardController;
 __decorate([
@@ -28,6 +31,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], LeaderboardController.prototype, "getTop", null);
+__decorate([
+    (0, common_1.Get)('weekly'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], LeaderboardController.prototype, "getWeekly", null);
 exports.LeaderboardController = LeaderboardController = __decorate([
     (0, common_1.Controller)('leaderboard'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

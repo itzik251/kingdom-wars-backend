@@ -26,7 +26,7 @@
   .btn-info { background: #3498db; color: #fff; }
   .btn-gold { background: linear-gradient(135deg,#b8860b,#f4d03f); color: #000; }
   .btn-purple { background: #9b59b6; color: #fff; }
-  .dashboard { display: none; padding: 16px; max-width: 1300px; margin: 0 auto; }
+  .dashboard { display: none; padding: 16px; width: 100%; box-sizing: border-box; }
   .header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #111827; border-bottom: 1px solid #1e2a3a; margin: -16px -16px 20px; }
   .header h1 { font-size: 18px; color: #f4d03f; }
   .logout { background: none; border: 1px solid #444; color: #888; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; }
@@ -36,8 +36,10 @@
   .stat-card .lbl { font-size: 11px; color: #666; margin-top: 4px; }
   .section { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
   .section-header { padding: 12px 16px; border-bottom: 1px solid #1e2a3a; font-weight: 700; font-size: 13px; color: #a0aec0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+  .table-wrap { overflow-x: auto; width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  td, th { white-space: nowrap; }
+  td.wrap { white-space: normal; word-break: break-all; }
   th { padding: 8px 10px; text-align: right; color: #666; font-weight: 600; border-bottom: 1px solid #1e2a3a; white-space: nowrap; }
   td { padding: 8px 10px; border-bottom: 1px solid #0d1520; vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
@@ -125,24 +127,15 @@
     <table>
       <thead>
         <tr>
-          <th>שם / יוזר</th>
-          <th>Telegram ID</th>
-          <th>ממלכה</th>
-          <th>שפה</th>
-          <th>ניקוד</th>
-          <th>💎</th>
-          <th>💰</th>
-          <th>🪵</th>
-          <th>🪨</th>
-          <th>🌾</th>
+          <th>שחקן</th>
+          <th>ממלכה / ניקוד</th>
+          <th>משאבים</th>
           <th>💵 USDT</th>
-          <th>VIP</th>
-          <th>הפניות (פעיל/סה"כ)</th>
-          <th>כניסה אחרונה</th>
+          <th>VIP / הפניות</th>
           <th>פעולות</th>
         </tr>
       </thead>
-      <tbody id="usersTable"><tr><td colspan="15" class="loading">טוען...</td></tr></tbody>
+      <tbody id="usersTable"><tr><td colspan="6" class="loading" style="text-align:center;padding:30px;color:#666">טוען...</td></tr></tbody>
     </table>
     </div>
   </div>
@@ -299,47 +292,52 @@ function filterUsers() {
 
 function renderUsers(users) {
   document.getElementById('usersTable').innerHTML = users.map(u => {
-    const vipBadge = u.isVip
-      ? `<span class="badge badge-gold">👑 VIP${u.vipUntil ? '<br><small style="color:#888">' + new Date(u.vipUntil).toLocaleDateString('he') + '</small>' : ''}</span>`
-      : `<span class="badge badge-red">—</span>`;
+    const vipText = u.isVip
+      ? `<span class="badge badge-gold">👑 ${u.vipUntil ? new Date(u.vipUntil).toLocaleDateString('he') : 'VIP'}</span>`
+      : `<span style="color:#555">—</span>`;
     return `<tr>
       <td>
-        <strong>${u.name || '?'}</strong>
+        <strong style="font-size:12px">${u.name || '?'}</strong>
         ${u.username ? '<br><span style="color:#555;font-size:10px">@' + u.username + '</span>' : ''}
+        <br><span style="color:#444;font-size:9px">${u.telegramId}</span>
+        <br><span class="badge badge-blue" style="font-size:9px">${u.language||'en'}</span>
+        <span style="color:#555;font-size:9px">${u.lastLogin ? ' · ' + new Date(u.lastLogin).toLocaleDateString('he') : ''}</span>
       </td>
-      <td style="color:#555;font-size:10px">${u.telegramId}</td>
-      <td style="color:#a0845a">${u.kingdomName || '—'}</td>
-      <td><span class="badge badge-blue">${u.language || 'en'}</span></td>
-      <td>${u.score > 0 ? '<strong style="color:#f4d03f">' + u.score.toLocaleString() + '</strong>' : '<span style="color:#444">0</span>'}</td>
-      <td style="color:#9b59b6">${u.gems}</td>
-      <td style="color:#f4d03f">${u.gold?.toLocaleString()}</td>
-      <td style="color:#8fbc8f">${u.wood?.toLocaleString()}</td>
-      <td style="color:#aaa">${u.stone?.toLocaleString()}</td>
-      <td style="color:#90ee90">${u.food?.toLocaleString()}</td>
-      <td style="color:${parseFloat(u.usdtBalance) > 0 ? '#27ae60' : '#555'}">$${u.usdtBalance}</td>
-      <td>${vipBadge}</td>
       <td>
-        <span style="color:#27ae60">${u.referralsActive}</span>/<span style="color:#666">${u.referralsTotal}</span>
+        <span style="color:#a0845a;font-size:11px">${u.kingdomName || '—'}</span>
+        <br><strong style="color:#f4d03f">${u.score?.toLocaleString() || 0}</strong>
       </td>
-      <td style="color:#555;font-size:10px">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('he') : '—'}</td>
+      <td style="font-size:10px;line-height:1.7">
+        <span style="color:#9b59b6">💎 ${u.gems}</span><br>
+        <span style="color:#f4d03f">💰 ${u.gold?.toLocaleString()}</span><br>
+        <span style="color:#8fbc8f">🪵 ${u.wood?.toLocaleString()}</span><br>
+        <span style="color:#aaa">🪨 ${u.stone?.toLocaleString()}</span>
+      </td>
+      <td style="color:${parseFloat(u.usdtBalance)>0?'#27ae60':'#555'};font-weight:700">$${u.usdtBalance}</td>
       <td>
-        <div class="actions">
-          <div class="give-form">
-            <select id="type_${u.telegramId}">
-              <option value="gems">💎 Gems</option>
-              <option value="gold">💰 זהב</option>
-              <option value="wood">🪵 עץ</option>
-              <option value="stone">🪨 אבן</option>
-              <option value="food">🌾 אוכל</option>
-              <option value="usdt">💵 USDT</option>
+        ${vipText}
+        <br><span style="font-size:10px;color:#27ae60">${u.referralsActive}</span><span style="color:#555;font-size:10px">/${u.referralsTotal} הפנ'</span>
+      </td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap">
+            <select id="type_${u.telegramId}" style="font-size:10px;padding:3px 5px;background:#1a2236;border:1px solid #2d3748;border-radius:5px;color:#fff">
+              <option value="gems">💎</option>
+              <option value="gold">💰</option>
+              <option value="wood">🪵</option>
+              <option value="stone">🪨</option>
+              <option value="food">🌾</option>
+              <option value="usdt">💵</option>
             </select>
-            <input type="number" id="amt_${u.telegramId}" value="100" min="1" style="width:60px;"/>
-            <button class="btn-sm btn-success" onclick="giveResource('${u.telegramId}','${u.name||'?'}')">➕ תן</button>
-            <button class="btn-sm" style="background:#2c1a00;color:#e67e22;border:1px solid #e67e22" onclick="takeResource('${u.telegramId}','${u.name||'?'}')">➖ קח</button>
+            <input type="number" id="amt_${u.telegramId}" value="100" min="1" style="width:52px;padding:3px 5px;font-size:10px;background:#1a2236;border:1px solid #2d3748;border-radius:5px;color:#fff;margin:0"/>
+            <button class="btn-sm btn-success" style="padding:3px 7px;font-size:10px" onclick="giveResource('${u.telegramId}','${u.name||'?'}')">➕</button>
+            <button class="btn-sm" style="padding:3px 7px;font-size:10px;background:#2c1a00;color:#e67e22;border:1px solid #e67e22" onclick="takeResource('${u.telegramId}','${u.name||'?'}')">➖</button>
           </div>
-          <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 VIP</button>
-          <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫 חסום</button>
-          <button class="btn-sm" style="background:#1a0a0a;color:#e74c3c;border:1px solid #e74c3c" onclick="deleteUser('${u.telegramId}','${u.name||'?'}')">🗑️ מחק</button>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">
+            <button class="btn-sm btn-gold" style="padding:3px 7px;font-size:10px" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 VIP</button>
+            <button class="btn-sm btn-danger" style="padding:3px 7px;font-size:10px" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫</button>
+            <button class="btn-sm" style="padding:3px 7px;font-size:10px;background:#1a0a0a;color:#e74c3c;border:1px solid #e74c3c" onclick="deleteUser('${u.telegramId}','${u.name||'?'}')">🗑️</button>
+          </div>
         </div>
       </td>
     </tr>`;

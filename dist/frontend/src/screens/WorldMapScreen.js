@@ -22,7 +22,7 @@ function WorldMapScreen() {
     const [kingdoms, setKingdoms] = (0, react_1.useState)([]);
     const [selected, setSelected] = (0, react_1.useState)(null);
     const [profileId, setProfileId] = (0, react_1.useState)(null);
-    const [attacking, setAttacking] = (0, react_1.useState)(false);
+    const [attackingId, setAttackingId] = (0, react_1.useState)(null);
     const [battle, setBattle] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [attackError, setAttackError] = (0, react_1.useState)('');
@@ -99,7 +99,7 @@ function WorldMapScreen() {
         }
     }, []);
     async function doAttack(profile) {
-        setAttacking(true);
+        setAttackingId(profile.id);
         setAttackError('');
         try {
             const result = await client_1.api.post('/combat/attack', { defenderKingdomId: profile.id });
@@ -111,11 +111,10 @@ function WorldMapScreen() {
         catch (e) {
             const msg = e.response?.data?.message || t('attack_error');
             setAttackError(msg);
-            setProfileId(null);
             setTimeout(() => setAttackError(''), 5000);
         }
         finally {
-            setAttacking(false);
+            setAttackingId(null);
         }
     }
     const COLS = Math.max(4, Math.ceil(Math.sqrt(kingdoms.length)));
@@ -185,46 +184,45 @@ function WorldMapScreen() {
                 const cH = sceneH * 0.85;
                 return (<>
                   
-                  <div style={{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH, background: 'radial-gradient(ellipse at 50% 45%,#0a1e35 0%,#050d1a 80%)', zIndex: 0 }}/>
+                  <div style={{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH, background: '#040e1c', zIndex: 0 }}/>
+                  
+                  <div style={{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH, background: 'radial-gradient(ellipse at 50% 50%,#071828 0%,#040e1c 70%)', zIndex: 0 }}/>
                   
                   <div style={{
                         position: 'absolute',
-                        left: cX - cW / 2, top: cY - cH / 2,
-                        width: cW, height: cH,
-                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                        background: 'radial-gradient(ellipse at 50% 40%,#1e3d18 0%,#142d10 40%,#0d2008 70%,#081508 100%)',
+                        left: cX - cW * 0.48, top: cY - cH * 0.44,
+                        width: cW * 0.96, height: cH * 0.88,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(ellipse at 48% 42%, #2d5a20 0%, #1e3d14 35%, #162e0f 60%, #0e1f08 100%)',
+                        boxShadow: '0 0 60px rgba(30,80,15,0.4), 0 0 20px rgba(30,80,15,0.3)',
+                        border: '2px solid rgba(60,130,30,0.35)',
                         zIndex: 1,
                     }}/>
                   
                   <div style={{
                         position: 'absolute',
-                        left: cX - cW * 0.52, top: cY - cH * 0.52,
-                        width: cW * 1.04, height: cH * 1.04,
-                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                        background: 'transparent',
-                        border: '2px solid rgba(56,140,56,0.25)',
-                        zIndex: 1,
+                        left: cX - cW * 0.49, top: cY - cH * 0.45,
+                        width: cW * 0.98, height: cH * 0.90,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(4,14,28,0.7) 100%)',
+                        zIndex: 2, pointerEvents: 'none',
                     }}/>
                   
                   {[
-                        { dx: -0.15, dy: -0.1, r: 0.2, c: 'rgba(10,24,8,0.5)' },
-                        { dx: 0.12, dy: 0.08, r: 0.18, c: 'rgba(10,24,8,0.4)' },
-                        { dx: -0.08, dy: 0.15, r: 0.15, c: 'rgba(8,18,6,0.45)' },
-                        { dx: 0.18, dy: -0.12, r: 0.14, c: 'rgba(12,28,10,0.35)' },
+                        { dx: -0.12, dy: -0.08, rx: 0.18, ry: 0.12, c: 'rgba(20,50,12,0.6)' },
+                        { dx: 0.14, dy: 0.10, rx: 0.16, ry: 0.10, c: 'rgba(18,44,10,0.5)' },
+                        { dx: -0.06, dy: 0.14, rx: 0.13, ry: 0.08, c: 'rgba(40,80,20,0.3)' },
+                        { dx: 0.16, dy: -0.10, rx: 0.12, ry: 0.08, c: 'rgba(16,40,8,0.4)' },
+                        { dx: 0.0, dy: 0.0, rx: 0.10, ry: 0.06, c: 'rgba(45,90,20,0.25)' },
                     ].map((p, pi) => (<div key={pi} style={{
                             position: 'absolute',
-                            left: cX + cW * p.dx - cW * p.r / 2,
-                            top: cY + cH * p.dy - cH * p.r / 2,
-                            width: cW * p.r, height: cH * p.r,
+                            left: cX + cW * p.dx - cW * p.rx / 2,
+                            top: cY + cH * p.dy - cH * p.ry / 2,
+                            width: cW * p.rx, height: cH * p.ry,
                             borderRadius: '50%',
                             background: p.c,
                             zIndex: 2, pointerEvents: 'none',
                         }}/>))}
-                  
-                  <svg style={{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH, zIndex: 2, pointerEvents: 'none', opacity: 0.2 }}>
-                    <line x1={cX} y1={cY - cH * 0.3} x2={cX} y2={cY + cH * 0.3} stroke="#6a8a30" strokeWidth="2" strokeDasharray="6,8"/>
-                    <line x1={cX - cW * 0.28} y1={cY} x2={cX + cW * 0.28} y2={cY} stroke="#6a8a30" strokeWidth="2" strokeDasharray="6,8"/>
-                  </svg>
                 </>);
             })()}
 
@@ -350,7 +348,7 @@ function WorldMapScreen() {
         </div>)}
 
       
-      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={attacking} onClose={() => setProfileId(null)} onAttack={doAttack}/>)}
+      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={attackingId === profileId} onClose={() => setProfileId(null)} onAttack={doAttack}/>)}
 
       
       {battle && (<div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, textAlign: 'center' }} onClick={() => setBattle(null)}>

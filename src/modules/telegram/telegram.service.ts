@@ -185,39 +185,34 @@ export class TelegramService {
     const user = await this.userRepo.findOne({ where: { telegramId: String(chatId) } }).catch(() => null);
     const lang = this.getLang(tgLang, user?.language);
 
-    if (text.startsWith('/start')) {
+    // Helper: match command regardless of @botname suffix
+    const cmd = (c: string) => text === c || text.startsWith(c + ' ') || text.startsWith(c + '@');
+
+    if (cmd('/start')) {
       const parts = text.split(' ');
       const param = parts[1] || '';
-      // Pass the full param (e.g. ref_CODE) as ?ref= so the Mini App can read it
       const appUrl = param ? `${miniAppUrl}?ref=${encodeURIComponent(param)}` : miniAppUrl;
-
       await this.sendMessage(chatId, BOT_MESSAGES.welcome[lang], {
-        reply_markup: {
-          inline_keyboard: [[{
-            text: BOT_MESSAGES.open_game[lang],
-            web_app: { url: appUrl },
-          }]],
-        },
+        reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_game[lang], web_app: { url: appUrl } }]] },
       });
+      return;
     }
 
-    if (text === '/kingdom') {
+    if (cmd('/kingdom')) {
       await this.sendMessage(chatId, BOT_MESSAGES.kingdom_btn[lang], {
-        reply_markup: {
-          inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]],
-        },
+        reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]] },
       });
+      return;
     }
 
-    if (text === '/leaderboard') {
+    if (cmd('/leaderboard')) {
       await this.sendMessage(chatId, BOT_MESSAGES.leaderboard_msg[lang], {
-        reply_markup: {
-          inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: miniAppUrl } }]],
-        },
+        reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: miniAppUrl } }]] },
       });
+      return;
     }
 
-    if (text === '/referral' || text.startsWith('/referral ')) {
+    if (cmd('/referral')) {
       await this.sendMessage(chatId, BOT_MESSAGES.referral_msg[lang], {
         reply_markup: {
           inline_keyboard: [[{ text: BOT_MESSAGES.referral_btn[lang], web_app: { url: miniAppUrl } }]],
@@ -226,7 +221,7 @@ export class TelegramService {
       return;
     }
 
-    if (text === '/help' || text === '/start@KingdomWarsBot') {
+    if (cmd('/help')) {
       await this.sendMessage(chatId, BOT_MESSAGES.help_msg[lang], {
         reply_markup: {
           inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]],
@@ -235,7 +230,7 @@ export class TelegramService {
       return;
     }
 
-    if (text === '/status') {
+    if (cmd('/status')) {
       const kingdom = user
         ? await this.kingdomRepo.findOne({ where: { user: { id: user.id } } }).catch(() => null)
         : null;

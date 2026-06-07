@@ -52,7 +52,8 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
         </div>
       </div>);
     }
-    const toWeakToAttack = myScore > 0 && (profile.score ?? 0) > 0 && myScore > (profile.score ?? 0) * 10;
+    const defScore = Number(profile.score) || 0;
+    const toWeakToAttack = myScore >= 10 && defScore >= 10 && myScore > defScore * 10;
     const wcColor = profile.winChance >= 60 ? '#27ae60' : profile.winChance >= 40 ? '#f39c12' : '#e74c3c';
     const wcBar = profile.winChance >= 60
         ? 'linear-gradient(90deg,#27ae60,#2ecc71)'
@@ -93,16 +94,16 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪵</div><div style={{ fontSize: 14, fontWeight: 700, color: '#a0682a' }}>{(0, format_1.fmt)(profile.lootable.wood)}</div></div>
             <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪨</div><div style={{ fontSize: 14, fontWeight: 700, color: '#aaa' }}>{(0, format_1.fmt)(profile.lootable.stone)}</div></div>
             
-            <div style={{ textAlign: 'center', position: 'relative', opacity: isVip ? 1 : 0.6 }}>
+            <div style={{ textAlign: 'center', position: 'relative', opacity: isVip ? 1 : 0.5 }}>
               <div style={{ fontSize: 18 }}>💵</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: isVip ? '#27ae60' : '#666' }}>
-                {isVip ? `$${((profile.usdtBalance ?? 0) * 0.05).toFixed(4)}` : '🔒'}
+              <div style={{ fontSize: 14, fontWeight: 700, color: isVip ? '#27ae60' : '#555' }}>
+                ${((profile.usdtBalance ?? 0) * 0.20).toFixed(4)}
               </div>
-              <div style={{ fontSize: 9, color: '#a0845a' }}>USDT{!isVip && ' VIP'}</div>
+              <div style={{ fontSize: 9, color: isVip ? '#a0845a' : '#666' }}>USDT {!isVip && '🔒'}</div>
             </div>
           </div>
-          {!isVip && (<div style={{ fontSize: 10, color: '#9b59b6', textAlign: 'center', marginTop: 8 }}>
-              👑 {t('vip_usdt_raid_note')}
+          {!isVip && (<div style={{ fontSize: 10, color: '#9b59b6', textAlign: 'center', marginTop: 8, background: 'rgba(155,89,182,0.08)', borderRadius: 6, padding: '5px 8px' }}>
+              🔒 {t('vip_usdt_raid_note')}
             </div>)}
         </div>
 

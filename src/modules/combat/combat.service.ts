@@ -55,10 +55,10 @@ export class CombatService {
     if (!attacker || !defender) throw new BadRequestException('Kingdom not found');
     if (defender.isShielded) throw new BadRequestException('Defender is shielded');
 
-    // Score-based protection — prevent bullying low-score players
+    // Score-based protection — only when BOTH have meaningful scores (≥10)
     const attackerScore = attacker.score || 0;
     const defenderScore = defender.score || 0;
-    if (attackerScore > 0 && defenderScore > 0 && attackerScore > defenderScore * 10) {
+    if (attackerScore >= 10 && defenderScore >= 10 && attackerScore > defenderScore * 10) {
       throw new BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
     }
 

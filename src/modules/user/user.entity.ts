@@ -33,6 +33,12 @@ export class User {
   @Column({ name: 'last_login', nullable: true })
   lastLogin: Date;
 
+  @Column({ default: 'en' })
+  language: string;
+
+  @Column({ name: 'terms_accepted_at', nullable: true })
+  termsAcceptedAt: Date;
+
   @Column({ name: 'claimed_referral_milestones', type: 'simple-array', default: '' })
   claimedReferralMilestones: number[];
 }

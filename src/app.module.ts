@@ -17,6 +17,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
 import { VipModule } from './modules/vip/vip.module';
 import { AdsModule } from './modules/ads/ads.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { TelegramModule } from './modules/telegram/telegram.module';
     VipModule,
     AdsModule,
     TelegramModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

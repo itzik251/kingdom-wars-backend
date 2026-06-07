@@ -46,6 +46,9 @@ export class Kingdom {
   @Column({ name: 'shield_until', nullable: true })
   shieldUntil: Date;
 
+  @Column({ name: 'shield_expired_notified_at', nullable: true })
+  shieldExpiredNotifiedAt: Date;
+
   @Column({ default: 0 })
   score: number;
 
@@ -54,6 +57,9 @@ export class Kingdom {
 
   @Column({ name: 'last_resource_tick', nullable: true })
   lastResourceTick: Date;
+
+  @Column({ name: 'last_attack_at', nullable: true })
+  lastAttackAt: Date;
 
   @Column({ name: 'production_boost_until', nullable: true })
   productionBoostUntil: Date;

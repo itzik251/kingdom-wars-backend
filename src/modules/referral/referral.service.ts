@@ -20,7 +20,13 @@ export class ReferralService {
 
   async getStats(userId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
-    const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
+    // Count only ACTIVE referred users — those who have a kingdom with score > 0
+    const referredUsers = await this.userRepo.find({ where: { referredBy: { id: userId } } });
+    let referredCount = 0;
+    for (const u of referredUsers) {
+      const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: u.id } } });
+      if (kingdom && kingdom.score > 0) referredCount++;
+    }
 
     const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
     const milestones = MILESTONES.map(m => ({

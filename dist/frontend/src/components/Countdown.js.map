@@ -1,0 +1,1 @@
+{"version":3,"file":"Countdown.js","sourceRoot":"","sources":["../../../../frontend/src/components/Countdown.tsx"],"names":[],"mappings":";;AAEA,4BAIC;AAND,wDAAqD;AAErD,SAAwB,SAAS,CAAC,EAAE,MAAM,EAAE,MAAM,GAAG,EAAE,EAA0D;IAC/G,MAAM,OAAO,GAAG,IAAA,2BAAY,EAAC,MAAM,CAAC,CAAC;IACrC,IAAI,CAAC,OAAO;QAAE,OAAO,IAAI,CAAC;IAC1B,OAAO,EAAE,CAAC,MAAM,CAAC,CAAC,OAAO,CAAC,GAAG,CAAC;AAChC,CAAC"}

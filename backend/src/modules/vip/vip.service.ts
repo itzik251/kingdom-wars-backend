@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
-import { VIP_PRICE_TON, VIP_DURATION_DAYS } from '../../constants/game.constants';
+import { VIP_PRICE_TON, VIP_DURATION_DAYS, VIP_PRICE_USDT, PAYMENT_WALLET_ADDRESS } from '../../constants/game.constants';
 
 // Simple in-memory VIP store (upgrade to DB table for production)
 const vipStore = new Map<string, Date>();
@@ -43,6 +43,29 @@ export class VipService {
     }
 
     return { success: true, expiresAt, durationDays: VIP_DURATION_DAYS };
+  }
+
+  async purchaseWithUsdt(userId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+    if ((kingdom.usdtBalance ?? 0) < VIP_PRICE_USDT) {
+      throw new BadRequestException(`נדרש ${VIP_PRICE_USDT} USDT. יתרתך: ${(kingdom.usdtBalance ?? 0).toFixed(4)} USDT`);
+    }
+    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance ?? 0) - VIP_PRICE_USDT).toFixed(6));
+    const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + VIP_DURATION_DAYS * 86_400_000);
+    kingdom.vipExpiresAt = expiresAt;
+    await this.kingdomRepo.save(kingdom);
+    vipStore.set(userId, expiresAt);
+    return { success: true, expiresAt, durationDays: VIP_DURATION_DAYS };
+  }
+
+  getPaymentInfo() {
+    return {
+      walletAddress: PAYMENT_WALLET_ADDRESS,
+      amount: VIP_PRICE_USDT,
+      currency: 'USDT (TRC20)',
+      note: 'שלח בדיוק את הסכום. לאחר שליחה הכנס את hash הטרנזקציה.',
+    };
   }
 
   isUserVip(userId: string): boolean {

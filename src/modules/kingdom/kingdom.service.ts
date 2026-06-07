@@ -4,7 +4,9 @@ import { Repository } from 'typeorm';
 import { Kingdom } from './kingdom.entity';
 import { Building } from '../building/building.entity';
 import { Unit, UnitType } from '../units/unit.entity';
+import { User } from '../user/user.entity';
 import { EconomyService } from '../economy/economy.service';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class KingdomService {
@@ -12,7 +14,9 @@ export class KingdomService {
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
+    @InjectRepository(User) private userRepo: Repository<User>,
     private economyService: EconomyService,
+    private notifService: NotificationService,
   ) {}
 
   async getKingdomByUser(userId: string) {
@@ -21,8 +25,17 @@ export class KingdomService {
     });
     if (!kingdom) throw new NotFoundException('Kingdom not found');
 
-    // Tick resources before returning
+    // Tick resources before returning — tickKingdom also completes buildings/units
     const updated = await this.economyService.tickKingdom(kingdom.id);
+
+    // Collect what tickKingdom just completed (attached as hidden fields)
+    const tickBuildings: { type: string; level: number }[] = (updated as any).__completedBuildings || [];
+    const tickUnits: { type: string; count: number }[]     = (updated as any).__completedUnits     || [];
+
+    // Send push notifications for each completed building/unit (one per item)
+    if (tickBuildings.length > 0) this.sendBuildDoneNotifsRaw(userId, tickBuildings).catch(() => {});
+    if (tickUnits.length > 0)    this.sendTrainingDoneNotifsRaw(userId, tickUnits).catch(() => {});
+
     const [buildings, units] = await Promise.all([
       this.buildingRepo.find({ where: { kingdom: { id: kingdom.id } } }),
       this.unitRepo.find({ where: { kingdom: { id: kingdom.id } } }),
@@ -39,35 +52,18 @@ export class KingdomService {
       units.push(...newRows);
     }
 
-    // Complete finished building upgrades
+    // Notify ONCE when shield expires — only if we haven't already notified for this specific shield
     const now = new Date();
-    const buildingsToSave = buildings.filter(
-      b => b.upgradeEndsAt && now >= new Date(b.upgradeEndsAt),
-    );
-    for (const b of buildingsToSave) {
-      b.level += 1;
-      b.upgradeEndsAt = null;
-      if (b.type === 'town_hall') {
-        const mult = 1 + (b.level - 1) * 0.3;
-        updated.maxGold  = Math.floor(5000 * mult);
-        updated.maxWood  = Math.floor(4000 * mult);
-        updated.maxStone = Math.floor(3000 * mult);
-        updated.maxFood  = Math.floor(2000 * mult);
-        await this.kingdomRepo.save(updated);
-      }
+    if (
+      updated.shieldUntil &&
+      new Date(updated.shieldUntil) <= now &&
+      (!updated.shieldExpiredNotifiedAt ||
+        new Date(updated.shieldExpiredNotifiedAt) < new Date(updated.shieldUntil))
+    ) {
+      updated.shieldExpiredNotifiedAt = new Date(updated.shieldUntil);
+      await this.kingdomRepo.save(updated);
+      this.notifService.create(userId, 'shield_expired', {}).catch(() => {});
     }
-    if (buildingsToSave.length > 0) await this.buildingRepo.save(buildingsToSave);
-
-    // Complete finished unit training
-    const unitsToSave = units.filter(
-      u => u.trainingEndsAt && now >= new Date(u.trainingEndsAt) && u.trainingCount > 0,
-    );
-    for (const u of unitsToSave) {
-      u.count += u.trainingCount;
-      u.trainingCount = 0;
-      u.trainingEndsAt = null;
-    }
-    if (unitsToSave.length > 0) await this.unitRepo.save(unitsToSave);
 
     const productionRates = this.economyService.getProductionRates(buildings, updated);
 
@@ -84,12 +80,43 @@ export class KingdomService {
     };
   }
 
+  private async getUserPayload(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    return { telegramId: user?.telegramId, language: user?.language || 'en' };
+  }
+
+  private async sendBuildDoneNotifsRaw(userId: string, buildings: { type: string; level: number }[]) {
+    const payload = await this.getUserPayload(userId);
+    // Group by type — one push per building type
+    const grouped = new Map<string, { count: number; level: number }>();
+    for (const b of buildings) {
+      const ex = grouped.get(b.type);
+      if (ex) ex.count++;
+      else grouped.set(b.type, { count: 1, level: b.level });
+    }
+    for (const [type, { count, level }] of grouped) {
+      await this.notifService.create(userId, 'build_done', { ...payload, building: type, level, count }).catch(() => {});
+    }
+  }
+
+  private async sendTrainingDoneNotifsRaw(userId: string, snapshot: { type: string; count: number }[]) {
+    const payload = await this.getUserPayload(userId);
+    // Group by unit type
+    const grouped = new Map<string, number>();
+    for (const s of snapshot) grouped.set(s.type, (grouped.get(s.type) ?? 0) + s.count);
+    for (const [type, count] of grouped) {
+      await this.notifService.create(userId, 'training_done', { ...payload, unit: type, count }).catch(() => {});
+    }
+  }
+
+
   async buyShield(kingdomId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const SHIELD_COST = 50;
     if (kingdom.gems < SHIELD_COST) throw new BadRequestException('Need 50 gems');
     kingdom.gems -= SHIELD_COST;
     kingdom.shieldUntil = new Date(Date.now() + 24 * 3600 * 1000);
+    kingdom.shieldExpiredNotifiedAt = null; // reset so we notify again when this shield expires
     await this.kingdomRepo.save(kingdom);
     return { shieldUntil: kingdom.shieldUntil };
   }
@@ -98,24 +125,40 @@ export class KingdomService {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const thBuilding = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: 'town_hall' as any } });
     const thLevel = thBuilding?.level ?? 1;
-    const maxWorkers = 3 + thLevel; // max workers scales with TH level
-    if (kingdom.workers >= maxWorkers) throw new BadRequestException(`מקסימום ${maxWorkers} עובדים (שדרג בית עיר)`);
+    const maxWorkers = 3 + thLevel;
+    if ((kingdom.workers || 0) >= maxWorkers) throw new BadRequestException(`MAX_WORKERS:${maxWorkers}`);
     const HIRE_COST = 50;
-    if (kingdom.gold < HIRE_COST) throw new BadRequestException('דרוש 50 זהב לגיוס עובד');
-    kingdom.gold -= HIRE_COST;
-    kingdom.workers = (kingdom.workers || 0) + 1;
-    kingdom.maxWorkers = maxWorkers;
-    await this.kingdomRepo.save(kingdom);
-    return { workers: kingdom.workers, maxWorkers };
+    if (kingdom.gold < HIRE_COST) throw new BadRequestException('NOT_ENOUGH_GOLD_WORKER');
+    // Atomic update — prevents race condition with the economy cron
+    await this.kingdomRepo
+      .createQueryBuilder()
+      .update()
+      .set({ workers: () => 'workers + 1', maxWorkers, gold: () => `gold - ${HIRE_COST}` })
+      .where('id = :id AND workers < :max AND gold >= :cost', { id: kingdomId, max: maxWorkers, cost: HIRE_COST })
+      .execute();
+    const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    return { workers: updated.workers, maxWorkers };
   }
 
   async fireWorker(kingdomId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-    if (!kingdom.workers || kingdom.workers <= 0) throw new BadRequestException('אין עובדים לפטר');
-    kingdom.workers -= 1;
-    kingdom.gold += 25; // partial refund
-    await this.kingdomRepo.save(kingdom);
-    return { workers: kingdom.workers };
+    if (!kingdom.workers || kingdom.workers <= 0) throw new BadRequestException('NO_WORKERS_TO_FIRE');
+    // Atomic update — prevents race condition with the economy cron
+    await this.kingdomRepo
+      .createQueryBuilder()
+      .update()
+      .set({ workers: () => 'workers - 1', gold: () => 'gold + 25' })
+      .where('id = :id AND workers > 0', { id: kingdomId })
+      .execute();
+    const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    return { workers: updated.workers };
+  }
+
+  async renameKingdom(kingdomId: string, name: string) {
+    const clean = name.trim().slice(0, 25);
+    if (clean.length < 3) throw new BadRequestException('Name too short');
+    await this.kingdomRepo.update({ id: kingdomId }, { name: clean });
+    return { name: clean };
   }
 
   async expandStorage(kingdomId: string) {

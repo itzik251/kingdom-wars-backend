@@ -55,6 +55,22 @@ export class CombatService {
     if (!attacker || !defender) throw new BadRequestException('Kingdom not found');
     if (defender.isShielded) throw new BadRequestException('Defender is shielded');
 
+    // Score-based protection — prevent bullying low-score players
+    const attackerScore = attacker.score || 0;
+    const defenderScore = defender.score || 0;
+    if (attackerScore > 0 && defenderScore > 0 && attackerScore > defenderScore * 10) {
+      throw new BadRequestException('SCORE_TOO_LOW'); // attacker is 10x stronger
+    }
+
+    // Server-side attack cooldown — prevents API bypass of march time
+    const ATTACK_COOLDOWN_MS = 10_000; // 10 seconds minimum between attacks
+    if (attacker.lastAttackAt) {
+      const msSinceLast = Date.now() - new Date(attacker.lastAttackAt).getTime();
+      if (msSinceLast < ATTACK_COOLDOWN_MS) {
+        throw new BadRequestException('ATTACK_COOLDOWN');
+      }
+    }
+
     await Promise.all([
       this.economyService.tickKingdom(attackerKingdomId),
       this.economyService.tickKingdom(defenderKingdomId),
@@ -236,6 +252,7 @@ export class CombatService {
     }
 
     defender.shieldUntil = new Date(Date.now() + POST_ATTACK_SHIELD_HOURS * 3_600_000);
+    attacker.lastAttackAt = new Date();
     await this.kingdomRepo.save([attacker, defender]);
 
     // Notify the DEFENDER's user that they were attacked

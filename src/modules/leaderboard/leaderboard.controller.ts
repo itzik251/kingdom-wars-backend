@@ -11,4 +11,9 @@ export class LeaderboardController {
   getTop() {
     return this.leaderboardService.getTop();
   }
+
+  @Get('weekly')
+  getWeekly() {
+    return this.leaderboardService.getWeeklyTop();
+  }
 }

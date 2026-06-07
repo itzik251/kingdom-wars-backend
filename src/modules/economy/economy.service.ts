@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
+import { NotificationService } from '../notifications/notification.service';
 import {
   BASE_PRODUCTION,
   PRODUCTION_MULTIPLIER,
@@ -25,18 +26,17 @@ export class EconomyService {
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
+    @Inject(forwardRef(() => NotificationService)) private notifService: NotificationService,
   ) {}
 
-  // Called every hour by cron — tick all kingdoms
-  // Tick every 5 minutes in dev, every hour in prod
   @Cron('*/5 * * * *')
   async tickAllKingdoms() {
-    const kingdoms = await this.kingdomRepo.find();
-    await Promise.all(kingdoms.map(k => this.tickKingdom(k.id).catch(() => {})));
+    const kingdoms = await this.kingdomRepo.find({ relations: ['user'] });
+    await Promise.all(kingdoms.map(k => this.tickKingdom(k.id, k.user?.id).catch(() => {})));
   }
 
   // Apply idle production since last tick for a single kingdom
-  async tickKingdom(kingdomId: string): Promise<Kingdom> {
+  async tickKingdom(kingdomId: string, userId?: string): Promise<Kingdom> {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
     const units = await this.unitRepo.find({ where: { kingdom: { id: kingdomId } } });
@@ -112,11 +112,40 @@ export class EconomyService {
       await this.unitRepo.save(units.filter(u => u.woundedCount >= 0));
     }
 
-    // Complete any finished building upgrades
-    await this.completeBuildingUpgrades(kingdomId, buildings, now);
-    await this.completeUnitTraining(kingdomId, units, now);
+    // Complete any finished building upgrades — returns completed list for notifications
+    const completedBuildings = await this.completeBuildingUpgrades(kingdomId, buildings, now);
+    const completedUnits = await this.completeUnitTraining(kingdomId, units, now);
 
-    return this.kingdomRepo.save(kingdom);
+    const saved = await this.kingdomRepo.save(kingdom);
+
+    // Send push notifications if we have a userId (from cron or passed by caller)
+    const resolvedUserId = userId ?? (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
+    if (resolvedUserId) {
+      // Group by type — one push per building type (e.g. 3 farms → one notification)
+      if (completedBuildings.length > 0) {
+        const grouped = new Map<string, { count: number; level: number }>();
+        for (const b of completedBuildings) {
+          const existing = grouped.get(b.type);
+          if (existing) existing.count++;
+          else grouped.set(b.type, { count: 1, level: b.level });
+        }
+        for (const [type, { count, level }] of grouped) {
+          this.notifService.create(resolvedUserId, 'build_done', { building: type, level, count }).catch(() => {});
+        }
+      }
+      // Group units by type — one push per unit type
+      if (completedUnits.length > 0) {
+        const grouped = new Map<string, number>();
+        for (const u of completedUnits) grouped.set(u.type, (grouped.get(u.type) ?? 0) + u.count);
+        for (const [type, count] of grouped) {
+          this.notifService.create(resolvedUserId, 'training_done', { unit: type, count }).catch(() => {});
+        }
+      }
+    }
+
+    (saved as any).__completedBuildings = completedBuildings;
+    (saved as any).__completedUnits = completedUnits;
+    return saved;
   }
 
   calculateProduction(buildings: Building[], hours: number): Record<string, number> {
@@ -145,18 +174,19 @@ export class EconomyService {
     }, 0);
   }
 
-  private async completeBuildingUpgrades(kingdomId: string, buildings: Building[], now: Date) {
+  private async completeBuildingUpgrades(kingdomId: string, buildings: Building[], now: Date): Promise<{ type: string; level: number }[]> {
+    const completed: { type: string; level: number }[] = [];
     for (const building of buildings) {
-      if (building.upgradeEndsAt && now >= building.upgradeEndsAt) {
+      if (building.upgradeEndsAt && now >= new Date(building.upgradeEndsAt)) {
         building.level += 1;
         building.upgradeEndsAt = null;
         await this.buildingRepo.save(building);
+        completed.push({ type: building.type, level: building.level });
 
-        // If town hall upgraded, expand storage
         if (building.type === BuildingType.TOWN_HALL) {
           const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
           if (kingdom) {
-            const mult = 1 + (building.level - 1) * 0.3; // +30% per TH level
+            const mult = 1 + (building.level - 1) * 0.3;
             kingdom.maxGold  = Math.floor(5000 * mult);
             kingdom.maxWood  = Math.floor(4000 * mult);
             kingdom.maxStone = Math.floor(3000 * mult);
@@ -166,17 +196,21 @@ export class EconomyService {
         }
       }
     }
+    return completed;
   }
 
-  private async completeUnitTraining(kingdomId: string, units: Unit[], now: Date) {
+  private async completeUnitTraining(kingdomId: string, units: Unit[], now: Date): Promise<{ type: string; count: number }[]> {
+    const completed: { type: string; count: number }[] = [];
     for (const unit of units) {
-      if (unit.trainingEndsAt && now >= unit.trainingEndsAt) {
+      if (unit.trainingEndsAt && now >= new Date(unit.trainingEndsAt) && unit.trainingCount > 0) {
+        completed.push({ type: unit.type, count: unit.trainingCount });
         unit.count += unit.trainingCount;
         unit.trainingCount = 0;
         unit.trainingEndsAt = null;
         await this.unitRepo.save(unit);
       }
     }
+    return completed;
   }
 
   getProductionRates(buildings: Building[], kingdom?: Kingdom): Record<string, number> {

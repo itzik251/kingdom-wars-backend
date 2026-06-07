@@ -54,8 +54,7 @@ export class AuthService {
       .digest('hex');
 
     if (calculatedHash !== hash) {
-      console.log('Hash mismatch — skipping for now');
-      // TODO: re-enable after debugging
+      throw new UnauthorizedException('Invalid Telegram data signature');
     }
 
     const params = new URLSearchParams(initData);
@@ -71,17 +70,30 @@ export class AuthService {
     const data = this.validateTelegramData(initData);
     const tgUser = JSON.parse(data.user);
 
-    let user = await this.userRepo.findOne({ where: { telegramId: String(tgUser.id) } });
+    let user = await this.userRepo.findOne({
+      where: { telegramId: String(tgUser.id) },
+      relations: ['referredBy'],
+    });
 
+    let isNewUser = false;
     if (!user) {
       user = await this.createNewUser(tgUser, referralCode);
+      isNewUser = true;
     } else {
       user.lastLogin = new Date();
+      if (tgUser.language_code) user.language = tgUser.language_code.slice(0, 2);
+      // Apply referral if the user has no referrer yet and a valid code was passed
+      if (!user.referredBy && referralCode) {
+        const referrer = await this.userRepo.findOne({ where: { referralCode } });
+        if (referrer && referrer.id !== user.id) {
+          user.referredBy = referrer;
+        }
+      }
       await this.userRepo.save(user);
     }
 
     const token = this.jwtService.sign({ sub: user.id, telegramId: user.telegramId });
-    return { token, userId: user.id };
+    return { token, userId: user.id, termsAccepted: !!user.termsAcceptedAt, isNewUser };
   }
 
   private async createNewUser(tgUser: any, referralCode?: string) {
@@ -94,6 +106,7 @@ export class AuthService {
       telegramId: String(tgUser.id),
       username: tgUser.username,
       firstName: tgUser.first_name,
+      language: tgUser.language_code ? tgUser.language_code.slice(0, 2) : 'en',
       referralCode: this.generateReferralCode(),
       referredBy,
     });
@@ -123,6 +136,18 @@ export class AuthService {
     );
 
     return user;
+  }
+
+  async acceptTerms(userId: string) {
+    await this.userRepo.update({ id: userId }, { termsAcceptedAt: new Date() });
+    return { accepted: true };
+  }
+
+  async setLanguage(userId: string, language: string) {
+    const VALID_LANGS = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];
+    const lang = VALID_LANGS.includes(language) ? language : 'en';
+    await this.userRepo.update({ id: userId }, { language: lang });
+    return { language: lang };
   }
 
   private generateReferralCode(): string {

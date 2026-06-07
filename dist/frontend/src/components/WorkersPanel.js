@@ -1,0 +1,107 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = WorkersPanel;
+const react_1 = require("react");
+const gameStore_1 = require("../store/gameStore");
+const format_1 = require("../utils/format");
+const client_1 = require("../api/client");
+const useT_1 = require("../i18n/useT");
+function WorkersPanel({ onClose }) {
+    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
+    const [loading, setLoading] = (0, react_1.useState)(null);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const t = (0, useT_1.useT)();
+    const workers = kingdom?.workers ?? 0;
+    const maxWorkers = kingdom?.maxWorkers ?? 5;
+    const workerBonus = workers * 4;
+    const workerSalary = workers * 5;
+    async function hire() {
+        setLoading('hire');
+        setMsg('');
+        try {
+            await client_1.api.post('/kingdom/hire-worker');
+            await refresh();
+            setMsg(t('worker_hired'));
+        }
+        catch (e) {
+            setMsg('❌ ' + (e.response?.data?.message || t('error')));
+        }
+        finally {
+            setLoading(null);
+        }
+    }
+    async function fire() {
+        setLoading('fire');
+        setMsg('');
+        try {
+            await client_1.api.post('/kingdom/fire-worker');
+            await refresh();
+            setMsg(t('worker_fired'));
+        }
+        catch (e) {
+            setMsg('❌ ' + (e.response?.data?.message || t('error')));
+        }
+        finally {
+            setLoading(null);
+        }
+    }
+    return (<div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={e => { if (e.target === e.currentTarget)
+        onClose(); }}>
+      <div style={{
+            width: '100%', maxHeight: '70vh', overflowY: 'auto',
+            background: 'linear-gradient(180deg,#0a1800,#060e04)',
+            borderRadius: '20px 20px 0 0',
+            border: '1px solid rgba(39,174,96,0.3)',
+            padding: '20px 16px 30px',
+            animation: 'slideUp 0.25s ease-out',
+        }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#27ae60' }}>{t('workers_title')}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', fontSize: 22, cursor: 'pointer' }}>✕</button>
+        </div>
+
+        <div style={{ background: 'rgba(39,174,96,0.1)', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: '16px', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ color: '#a0845a', fontSize: 12 }}>{t('workers_active')}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#27ae60' }}>👷 {workers} / {maxWorkers}</div>
+            </div>
+            <div style={{ textAlign: 'right', fontSize: 12, color: '#a0845a' }}>
+              <div>{t('production_bonus')}: <span style={{ color: '#f4d03f', fontWeight: 700 }}>+{workerBonus}%</span></div>
+              <div>{t('salary')}: <span style={{ color: '#e74c3c', fontWeight: 700 }}>-{(0, format_1.fmt)(workerSalary)} 💰{t('per_hour')}</span></div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {Array.from({ length: maxWorkers }).map((_, i) => (<div key={i} style={{
+                width: 36, height: 36, borderRadius: 8,
+                background: i < workers ? 'rgba(39,174,96,0.3)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${i < workers ? 'rgba(39,174,96,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18,
+            }}>
+                {i < workers ? '👷' : '·'}
+              </div>))}
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 14, lineHeight: 1.6 }}>
+          {t('workers_info')}
+        </div>
+
+        {msg && (<div style={{ padding: '10px 14px', borderRadius: 10, marginBottom: 12, background: msg.startsWith('✅') ? 'rgba(39,174,96,0.15)' : 'rgba(231,76,60,0.15)', border: `1px solid ${msg.startsWith('✅') ? '#27ae60' : '#e74c3c'}44`, color: msg.startsWith('✅') ? '#27ae60' : '#e74c3c', fontSize: 13, textAlign: 'center' }}>
+            {msg}
+          </div>)}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-green" style={{ flex: 1, padding: '12px', fontSize: 14, opacity: workers < maxWorkers ? 1 : 0.4 }} disabled={!!loading || workers >= maxWorkers} onClick={hire}>
+            {loading === 'hire' ? '...' : t('hire_worker')}
+          </button>
+          <button className="btn btn-red" style={{ flex: 1, padding: '12px', fontSize: 14, opacity: workers > 0 ? 1 : 0.4 }} disabled={!!loading || workers <= 0} onClick={fire}>
+            {loading === 'fire' ? '...' : t('fire_worker')}
+          </button>
+        </div>
+      </div>
+    </div>);
+}
+//# sourceMappingURL=WorkersPanel.js.map

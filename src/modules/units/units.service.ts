@@ -25,12 +25,12 @@ export class UnitsService {
 
     const stats = UNIT_STATS[unitType];
     if (barracks.level < stats.requiredBarracksLevel) {
-      throw new BadRequestException(`נדרש בסיס צבאי ברמה ${stats.requiredBarracksLevel}`);
+      throw new BadRequestException(`Requires Barracks level ${stats.requiredBarracksLevel}`);
     }
     // Use direct column comparison — the getter may not be available on a plain DB row
     const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
     if (stats.requiresVip && !isVip) {
-      throw new BadRequestException('נדרש VIP פעיל');
+      throw new BadRequestException('VIP_REQUIRED');
     }
 
     // Create the unit row lazily if it doesn't exist yet (avoids null crash below)

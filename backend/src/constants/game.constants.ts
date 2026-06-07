@@ -125,4 +125,7 @@ export const INITIAL_UNITS = Object.values(UnitType);
 // ─── VIP ─────────────────────────────────────────────────────
 export const VIP_BUILD_TIME_REDUCTION = 0.30;  // 30% faster
 export const VIP_PRICE_TON = 5;
+export const VIP_PRICE_USDT = 5;               // $5 USDT from in-game balance
 export const VIP_DURATION_DAYS = 30;
+export const PAYMENT_WALLET_ADDRESS = 'TYourTRC20WalletAddressHere'; // Replace with real wallet
+export const VIP_GAME_PRODUCTION_MULTIPLIER = 1.5; // VIP earns 1.5x GAME tokens per tick

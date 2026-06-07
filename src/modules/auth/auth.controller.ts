@@ -1,6 +1,7 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Patch, Body, HttpException, HttpStatus, UseGuards, Request } from '@nestjs/common';
 import { IsString, IsOptional } from 'class-validator';
 import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 class LoginDto {
   @IsString()
@@ -26,5 +27,17 @@ export class AuthController {
         e?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  @Patch('language')
+  @UseGuards(JwtAuthGuard)
+  async setLanguage(@Request() req, @Body() body: { language: string }) {
+    return this.authService.setLanguage(req.user.userId, body.language);
+  }
+
+  @Post('accept-terms')
+  @UseGuards(JwtAuthGuard)
+  async acceptTerms(@Request() req) {
+    return this.authService.acceptTerms(req.user.userId);
   }
 }

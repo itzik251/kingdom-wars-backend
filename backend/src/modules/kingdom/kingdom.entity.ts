@@ -67,6 +67,15 @@ export class Kingdom {
   @Column({ name: 'ads_watched_date', nullable: true })
   adsWatchedDate: string; // ISO date string like '2024-01-15'
 
+  @Column({ name: 'usdt_balance', type: 'float', default: 0 })
+  usdtBalance: number;
+
+  @Column({ name: 'game_balance', type: 'float', default: 0 })
+  gameBalance: number;
+
+  @Column({ name: 'attack_speed_boost_until', nullable: true })
+  attackSpeedBoostUntil: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

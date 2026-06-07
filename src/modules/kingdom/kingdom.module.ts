@@ -5,10 +5,12 @@ import { KingdomService } from './kingdom.service';
 import { Kingdom } from './kingdom.entity';
 import { Building } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
+import { User } from '../user/user.entity';
 import { EconomyModule } from '../economy/economy.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit]), EconomyModule],
+  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule],
   controllers: [KingdomController],
   providers: [KingdomService],
   exports: [KingdomService],

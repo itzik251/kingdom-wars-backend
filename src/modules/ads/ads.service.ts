@@ -14,6 +14,21 @@ export class AdsService {
     private questService: QuestService,
   ) {}
 
+  // Verify with AdsGram API that the token is valid (ad was actually watched)
+  async verifyAdsgramToken(token: string): Promise<boolean> {
+    try {
+      const res = await fetch(`https://api.adsgram.ai/adv?token=${encodeURIComponent(token)}`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data?.done === true;
+    } catch {
+      // If AdsGram is unreachable, allow the reward (don't block legitimate users)
+      return true;
+    }
+  }
+
   async claimReward(userId: string, kingdomId: string, rewardType: 'double_production' | 'gems' | 'gold_bonus' | 'wood_bonus' | 'stone_bonus' | 'food_bonus') {
     const today = new Date().toISOString().split('T')[0];
 
@@ -27,7 +42,7 @@ export class AdsService {
     }
 
     if (kingdom.adsWatchedToday >= MAX_ADS_PER_DAY) {
-      throw new BadRequestException(`מקסימום ${MAX_ADS_PER_DAY} פרסומות ליום`);
+      throw new BadRequestException('ADS_DAILY_LIMIT');
     }
 
     kingdom.adsWatchedToday += 1;

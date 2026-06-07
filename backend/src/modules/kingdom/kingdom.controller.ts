@@ -23,4 +23,16 @@ export class KingdomController {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.kingdomService.expandStorage(kingdom.id);
   }
+
+  @Get('usdt-balance')
+  async getUsdtBalance(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.getUsdtBalance(kingdom.id);
+  }
+
+  @Post('withdraw-usdt')
+  async withdrawUsdt(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.withdrawUsdt(kingdom.id);
+  }
 }

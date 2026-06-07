@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { KingdomService } from './kingdom.service';
 
@@ -34,5 +34,11 @@ export class KingdomController {
   async fireWorker(@Request() req) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.kingdomService.fireWorker(kingdom.id);
+  }
+
+  @Post('rename')
+  async renameKingdom(@Request() req, @Body() body: { name: string }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.renameKingdom(kingdom.id, body.name);
   }
 }

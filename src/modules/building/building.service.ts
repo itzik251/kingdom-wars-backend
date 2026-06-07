@@ -110,7 +110,7 @@ export class BuildingService {
     if (existing.length > 0 && !MULTI_ALLOWED.includes(buildingType)) {
       throw new BadRequestException('Building already exists');
     }
-    if (existing.length >= 3) throw new BadRequestException('Maximum 3 of this building');
+    if (existing.length >= 6) throw new BadRequestException('Maximum 6 of this building');
 
     // VIP-only buildings
     if (buildingType === BuildingType.ARCANE_TOWER && !kingdom.isVip) {

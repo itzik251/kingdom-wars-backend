@@ -134,6 +134,30 @@ export class AdminController {
     return this.giveResource(telegramId, 'gems', body.gems);
   }
 
+  @Post('take-resource/:telegramId')
+  async takeResource(
+    @Param('telegramId') telegramId: string,
+    @Body('type') type: ResourceType,
+    @Body('amount') amount: number,
+    @Headers() headers?: any,
+  ) {
+    if (headers) this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+    if (!kingdom) return { error: 'Kingdom not found' };
+
+    if (type === 'gems')  kingdom.gems  = Math.max(0, (kingdom.gems  || 0) - amount);
+    else if (type === 'gold')  kingdom.gold  = Math.max(0, (kingdom.gold  || 0) - amount);
+    else if (type === 'wood')  kingdom.wood  = Math.max(0, (kingdom.wood  || 0) - amount);
+    else if (type === 'stone') kingdom.stone = Math.max(0, (kingdom.stone || 0) - amount);
+    else if (type === 'food')  kingdom.food  = Math.max(0, (kingdom.food  || 0) - amount);
+    else if (type === 'usdt')  kingdom.usdtBalance = Math.max(0, parseFloat(((kingdom.usdtBalance || 0) - amount).toFixed(6)));
+
+    await this.kingdomRepo.save(kingdom);
+    return { success: true, type, amount };
+  }
+
   @Post('give-resource/:telegramId')
   async giveResource(
     @Param('telegramId') telegramId: string,

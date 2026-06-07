@@ -73,6 +73,17 @@ export declare class AdminController {
         error?: undefined;
         vipUntil?: undefined;
     }>;
+    takeResource(telegramId: string, type: ResourceType, amount: number, headers?: any): Promise<{
+        error: string;
+        success?: undefined;
+        type?: undefined;
+        amount?: undefined;
+    } | {
+        success: boolean;
+        type: ResourceType;
+        amount: number;
+        error?: undefined;
+    }>;
     giveResource(telegramId: string, type: ResourceType, amount: number, headers?: any): Promise<{
         error: string;
         success?: undefined;

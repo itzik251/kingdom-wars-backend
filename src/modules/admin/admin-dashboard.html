@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
@@ -261,7 +261,6 @@ function renderStats(data) {
     <div class="stat-card"><div class="val" style="color:#f4d03f">${data.vipCount || 0}</div><div class="lbl">👑 VIP פעילים</div></div>
     <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות</div></div>
     <div class="stat-card" id="walletBalanceCard"><div class="val" style="color:#3498db" id="walletUsdtVal">...</div><div class="lbl">💳 ארנק USDT</div></div>
-    <div class="stat-card" id="walletTrxCard"><div class="val" style="color:#e67e22" id="walletTrxVal">...</div><div class="lbl">⚡ ארנק TRX</div></div>
   `;
   // Update wallet display
   if (data.gameWalletAddress !== undefined) {
@@ -336,6 +335,7 @@ function renderUsers(users) {
             </select>
             <input type="number" id="amt_${u.telegramId}" value="100" min="1" style="width:60px;"/>
             <button class="btn-sm btn-success" onclick="giveResource('${u.telegramId}','${u.name||'?'}')">➕ תן</button>
+            <button class="btn-sm" style="background:#2c1a00;color:#e67e22;border:1px solid #e67e22" onclick="takeResource('${u.telegramId}','${u.name||'?'}')">➖ קח</button>
           </div>
           <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 VIP</button>
           <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫 חסום</button>
@@ -352,6 +352,20 @@ function showToast(msg) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3500);
+}
+
+async function takeResource(telegramId, name) {
+  const type = document.getElementById('type_' + telegramId).value;
+  const amount = parseFloat(document.getElementById('amt_' + telegramId).value);
+  if (!amount || amount <= 0) return;
+  const labels = { gems:'💎 Gems', gold:'💰 זהב', wood:'🪵 עץ', stone:'🪨 אבן', food:'🌾 אוכל', usdt:'💵 USDT' };
+  if (!confirm('לקחת ' + amount + ' ' + (labels[type]||type) + ' מ-' + name + '?')) return;
+  const r = await fetch(API + '/take-resource/' + telegramId, {
+    method: 'POST', headers: h(), body: JSON.stringify({ type, amount })
+  });
+  const d = await r.json();
+  if (d.success) { showToast('✅ נלקח: ' + amount + ' ' + (labels[type]||type) + ' מ-' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
 }
 
 async function giveResource(telegramId, name) {
@@ -412,18 +426,8 @@ async function loadWalletBalance() {
     const usdtEl = document.getElementById('walletUsdtVal');
     const trxEl  = document.getElementById('walletTrxVal');
     if (!usdtEl) return;
-    if (d.error) {
-      usdtEl.textContent = '—';
-      trxEl.textContent = '—';
-      return;
-    }
+    if (d.error) { usdtEl.textContent = '—'; return; }
     usdtEl.textContent = '$' + (d.usdtBalance ?? 0).toFixed(2);
-    trxEl.textContent  = (d.trxBalance ?? 0).toFixed(2);
-    // Warn if TRX is low
-    if ((d.trxBalance ?? 0) < 5) {
-      trxEl.style.color = '#e74c3c';
-      trxEl.title = '⚠️ TRX נמוך מדי לעמלות — העבר לפחות 10 TRX';
-    }
   } catch {}
 }
 
@@ -438,3 +442,4 @@ setInterval(() => { if (SECRET) loadAll(); }, 60000);
 </script>
 </body>
 </html>
+

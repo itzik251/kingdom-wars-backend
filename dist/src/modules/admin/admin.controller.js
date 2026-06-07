@@ -128,6 +128,30 @@ let AdminController = class AdminController {
         this.guard(headers);
         return this.giveResource(telegramId, 'gems', body.gems);
     }
+    async takeResource(telegramId, type, amount, headers) {
+        if (headers)
+            this.guard(headers);
+        const user = await this.userRepo.findOne({ where: { telegramId } });
+        if (!user)
+            return { error: 'User not found' };
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+        if (!kingdom)
+            return { error: 'Kingdom not found' };
+        if (type === 'gems')
+            kingdom.gems = Math.max(0, (kingdom.gems || 0) - amount);
+        else if (type === 'gold')
+            kingdom.gold = Math.max(0, (kingdom.gold || 0) - amount);
+        else if (type === 'wood')
+            kingdom.wood = Math.max(0, (kingdom.wood || 0) - amount);
+        else if (type === 'stone')
+            kingdom.stone = Math.max(0, (kingdom.stone || 0) - amount);
+        else if (type === 'food')
+            kingdom.food = Math.max(0, (kingdom.food || 0) - amount);
+        else if (type === 'usdt')
+            kingdom.usdtBalance = Math.max(0, parseFloat(((kingdom.usdtBalance || 0) - amount).toFixed(6)));
+        await this.kingdomRepo.save(kingdom);
+        return { success: true, type, amount };
+    }
     async giveResource(telegramId, type, amount, headers) {
         if (headers)
             this.guard(headers);
@@ -346,6 +370,16 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "giveGems", null);
+__decorate([
+    (0, common_1.Post)('take-resource/:telegramId'),
+    __param(0, (0, common_1.Param)('telegramId')),
+    __param(1, (0, common_1.Body)('type')),
+    __param(2, (0, common_1.Body)('amount')),
+    __param(3, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Number, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "takeResource", null);
 __decorate([
     (0, common_1.Post)('give-resource/:telegramId'),
     __param(0, (0, common_1.Param)('telegramId')),

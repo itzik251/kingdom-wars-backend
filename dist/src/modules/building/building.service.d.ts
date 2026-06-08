@@ -33,6 +33,14 @@ export declare class BuildingService {
             stone: number;
         };
     }>;
+    getRepairCost(type: BuildingType, level: number): {
+        cost: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+        repairTimeSeconds: number;
+    };
     repairBuilding(kingdomId: string, buildingId: string): Promise<{
         building: Building;
         cost: {
@@ -40,7 +48,10 @@ export declare class BuildingService {
             wood: number;
             stone: number;
         };
+        repairEndsAt: Date;
+        repairTimeSeconds: number;
     }>;
+    completeRepairs(kingdomId: string): Promise<void>;
     getAllUpgradeCosts(kingdomId: string): Promise<{
         type: BuildingType;
         level: number;

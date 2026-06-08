@@ -5,6 +5,7 @@ import { Cron } from '@nestjs/schedule';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
+import { User } from '../user/user.entity';
 import { NotificationService } from '../notifications/notification.service';
 import {
   BASE_PRODUCTION,
@@ -26,17 +27,21 @@ export class EconomyService {
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
+    @InjectRepository(User) private userRepo: Repository<User>,
     @Inject(forwardRef(() => NotificationService)) private notifService: NotificationService,
   ) {}
 
   @Cron('*/5 * * * *')
   async tickAllKingdoms() {
     const kingdoms = await this.kingdomRepo.find({ relations: ['user'] });
-    await Promise.all(kingdoms.map(k => this.tickKingdom(k.id, k.user?.id).catch(() => {})));
+    // Sequential to avoid DB overload and notification flood
+    for (const k of kingdoms) {
+      await this.tickKingdom(k.id, k.user?.id, k.user).catch(() => {});
+    }
   }
 
   // Apply idle production since last tick for a single kingdom
-  async tickKingdom(kingdomId: string, userId?: string): Promise<Kingdom> {
+  async tickKingdom(kingdomId: string, userId?: string, userObj?: any): Promise<Kingdom> {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
     const units = await this.unitRepo.find({ where: { kingdom: { id: kingdomId } } });
@@ -116,12 +121,18 @@ export class EconomyService {
     // Complete any finished building upgrades — returns completed list for notifications
     const completedBuildings = await this.completeBuildingUpgrades(kingdomId, buildings, now);
     const completedUnits = await this.completeUnitTraining(kingdomId, units, now);
+    // Complete finished repairs
+    await this.completeRepairs(buildings, now);
 
     const saved = await this.kingdomRepo.save(kingdom);
 
     // Send push notifications if we have a userId (from cron or passed by caller)
     const resolvedUserId = userId ?? (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
-    if (resolvedUserId) {
+    if (resolvedUserId && (completedBuildings.length > 0 || completedUnits.length > 0)) {
+      // Fetch user for telegramId + language (use passed userObj to avoid extra DB query)
+      const user = userObj ?? await this.userRepo?.findOne({ where: { id: resolvedUserId } }).catch(() => null);
+      const userPayload = user ? { telegramId: user.telegramId, language: user.language || 'en' } : {};
+
       // Group by type — one push per building type (e.g. 3 farms → one notification)
       if (completedBuildings.length > 0) {
         const grouped = new Map<string, { count: number; level: number }>();
@@ -131,7 +142,7 @@ export class EconomyService {
           else grouped.set(b.type, { count: 1, level: b.level });
         }
         for (const [type, { count, level }] of grouped) {
-          this.notifService.create(resolvedUserId, 'build_done', { building: type, level, count }).catch(() => {});
+          this.notifService.create(resolvedUserId, 'build_done', { ...userPayload, building: type, level, count }).catch(() => {});
         }
       }
       // Group units by type — one push per unit type
@@ -139,7 +150,7 @@ export class EconomyService {
         const grouped = new Map<string, number>();
         for (const u of completedUnits) grouped.set(u.type, (grouped.get(u.type) ?? 0) + u.count);
         for (const [type, count] of grouped) {
-          this.notifService.create(resolvedUserId, 'training_done', { unit: type, count }).catch(() => {});
+          this.notifService.create(resolvedUserId, 'training_done', { ...userPayload, unit: type, count }).catch(() => {});
         }
       }
     }
@@ -214,6 +225,16 @@ export class EconomyService {
     return completed;
   }
 
+  private async completeRepairs(buildings: Building[], now: Date): Promise<void> {
+    for (const building of buildings) {
+      if (building.needsRepair && building.repairEndsAt && now >= new Date(building.repairEndsAt)) {
+        building.needsRepair = false;
+        building.repairEndsAt = null;
+        await this.buildingRepo.save(building);
+      }
+    }
+  }
+
   getProductionRates(buildings: Building[], kingdom?: Kingdom): Record<string, number> {
     const rates = this.calculateProduction(buildings, 1); // per-hour rates
 
@@ -222,9 +243,10 @@ export class EconomyService {
     const boostActive = !!(kingdom?.productionBoostUntil && now < new Date(kingdom.productionBoostUntil));
     const weakBonus = isWeak ? WEAK_PLAYER_RESOURCE_BONUS : 0;
     const boostBonus = boostActive ? 1 : 0;
+    const vipBonus = kingdom?.isVip ? 0.5 : 0;
     const workerCount = kingdom?.workers || 0;
     const workerProductionBonus = 1 + workerCount * 0.04;
-    const bonus = (1 + weakBonus + boostBonus) * workerProductionBonus;
+    const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
     const workerSalary = workerCount * 5;
 
     return {

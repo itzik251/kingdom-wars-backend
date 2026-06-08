@@ -106,8 +106,18 @@ const BOT_MESSAGES = {
         ar: '🏆 عرض التصنيف العالمي:',
     },
     leaderboard_btn: {
-        en: '🏆 Leaderboard', he: '🏆 דירוג', es: '🏆 Ranking', fr: '🏆 Classement',
-        de: '🏆 Rangliste', ru: '🏆 Рейтинг', pt: '🏆 Ranking', ar: '🏆 تصنيف',
+        en: '🏆 Open Leaderboard', he: '🏆 פתח דירוג', es: '🏆 Ver Ranking', fr: '🏆 Classement',
+        de: '🏆 Rangliste', ru: '🏆 Открыть рейтинг', pt: '🏆 Ver Ranking', ar: '🏆 فتح التصنيف',
+    },
+    referral_link_msg: {
+        en: '🔗 <b>Your referral link:</b>\n\n{link}\n\n👥 Friends invited: {count}\n💎 100 gems per active friend, +200 every 5, skin every 10, VIP every 20!',
+        he: '🔗 <b>הקישור האישי שלך:</b>\n\n{link}\n\n👥 חברים שהוזמנו: {count}\n💎 100 Gems לכל חבר פעיל, +200 כל 5, סקין כל 10, VIP כל 20!',
+        es: '🔗 <b>Tu enlace personal:</b>\n\n{link}\n\n👥 Invitados: {count}\n💎 100 gemas por amigo activo!',
+        fr: '🔗 <b>Votre lien personnel:</b>\n\n{link}\n\n👥 Invites: {count}\n💎 100 gemmes par ami actif!',
+        de: '🔗 <b>Dein Link:</b>\n\n{link}\n\n👥 Eingeladen: {count}\n💎 100 Edelsteine pro Freund!',
+        ru: '🔗 <b>Ваша ссылка:</b>\n\n{link}\n\n👥 Приглашено: {count}\n💎 100 самоцветов за активного друга!',
+        pt: '🔗 <b>Seu link:</b>\n\n{link}\n\n👥 Convidados: {count}\n💎 100 gemas por amigo ativo!',
+        ar: '🔗 <b>رابطك:</b>\n\n{link}\n\n👥 المدعوون: {count}\n💎 100 جوهرة لكل صديق نشط!',
     },
     referral_msg: {
         en: '🔗 Invite friends and earn rewards!\nOpen the game for your personal link:',
@@ -125,24 +135,24 @@ const BOT_MESSAGES = {
         ru: '🔗 Пригласить друзей', pt: '🔗 Convidar Amigos', ar: '🔗 دعوة الأصدقاء',
     },
     help_msg: {
-        en: '⚔️ <b>Kingdom Wars — Commands</b>\n\n/start — Start the game\n/kingdom — View your kingdom\n/status — Your kingdom stats\n/referral — Invite friends\n/leaderboard — Global rankings\n/help — This help message',
-        he: '⚔️ <b>Kingdom Wars — פקודות</b>\n\n/start — הפעל את המשחק\n/kingdom — ממלכה שלך\n/status — סטטוס הממלכה\n/referral — הזמן חברים\n/leaderboard — דירוג עולמי\n/help — עזרה',
-        es: '⚔️ <b>Kingdom Wars — Comandos</b>\n\n/start — Iniciar el juego\n/kingdom — Tu reino\n/status — Estado del reino\n/referral — Invitar amigos\n/leaderboard — Rankings\n/help — Ayuda',
-        fr: '⚔️ <b>Kingdom Wars — Commandes</b>\n\n/start — Démarrer le jeu\n/kingdom — Votre royaume\n/status — Statut du royaume\n/referral — Inviter des amis\n/leaderboard — Classement\n/help — Aide',
-        de: '⚔️ <b>Kingdom Wars — Befehle</b>\n\n/start — Spiel starten\n/kingdom — Dein Königreich\n/status — Königreich-Status\n/referral — Freunde einladen\n/leaderboard — Rangliste\n/help — Hilfe',
-        ru: '⚔️ <b>Kingdom Wars — Команды</b>\n\n/start — Запустить игру\n/kingdom — Ваше королевство\n/status — Статус королевства\n/referral — Пригласить друзей\n/leaderboard — Рейтинг\n/help — Помощь',
-        pt: '⚔️ <b>Kingdom Wars — Comandos</b>\n\n/start — Iniciar o jogo\n/kingdom — Seu reino\n/status — Status do reino\n/referral — Convidar amigos\n/leaderboard — Rankings\n/help — Ajuda',
-        ar: '⚔️ <b>Kingdom Wars — الأوامر</b>\n\n/start — بدء اللعبة\n/kingdom — مملكتك\n/status — حالة المملكة\n/referral — دعوة الأصدقاء\n/leaderboard — التصنيف\n/help — المساعدة',
+        en: '⚔️ <b>Kingdom Wars — How to Play</b>\n\n🏰 Build: Upgrade buildings for Gold, Wood, Stone, Food\n⚔️ Army: Train soldiers in the Barracks\n🗡️ Attack: Raid players for resources\n🛡️ Shield: Protects from attacks (buy with 50 gems)\n💎 Gems: Premium currency — buy shields, speed builds\n💵 USDT: Loot from VIP players / watch ads — withdraw at 20 USDT\n👑 VIP: +50% production, no ads, exclusive units\n\n/status — Your stats\n/referral — Invite link\n/leaderboard — Rankings',
+        he: '⚔️ <b>Kingdom Wars — איך משחקים</b>\n\n🏰 בנה: שדרג מבנים לזהב, עץ, אבן, אוכל\n⚔️ צבא: אמן חיילים בבסיס\n🗡️ תקוף: בוז משאבים משחקנים\n🛡️ מגן: מגן מתקיפות (50 Gems)\n💎 Gems: מטבע פרמיום — מגנים, האצת בנייה\n💵 USDT: בוז מ-VIP / פרסומות — משיכה מ-20 USDT\n👑 VIP: +50% ייצור, ללא פרסומות, יחידות בלעדיות\n\n/status — סטטוס\n/referral — קישור הפניה\n/leaderboard — דירוג',
+        es: '⚔️ <b>Kingdom Wars</b>\n\n🏰 Construye edificios\n⚔️ Entrena soldados\n🗡️ Ataca y saquea recursos\n🛡️ Escudo: protege de ataques\n💎 Gemas: moneda premium\n💵 USDT: saquea VIPs / ve anuncios\n👑 VIP: +50% produccion, sin anuncios\n\n/status /referral /leaderboard',
+        fr: '⚔️ <b>Kingdom Wars</b>\n\n🏰 Construisez des batiments\n⚔️ Entrainez des soldats\n🗡️ Pillez dautres joueurs\n🛡️ Bouclier: protege des attaques\n💎 Gemmes: monnaie premium\n💵 USDT: pillez les VIP ou regardez des pubs\n👑 VIP: +50% production, sans pubs\n\n/status /referral /leaderboard',
+        de: '⚔️ <b>Kingdom Wars</b>\n\n🏰 Gebaeude upgraden\n⚔️ Soldaten trainieren\n🗡️ Spieler angreifen und pluendern\n🛡️ Schild: schuetzt vor Angriffen\n💎 Edelsteine: Premium-Waehrung\n💵 USDT: VIP-Pluenderung oder Werbung\n👑 VIP: +50% Produktion, keine Werbung\n\n/status /referral /leaderboard',
+        ru: '⚔️ <b>Kingdom Wars</b>\n\n🏰 Улучшайте здания\n⚔️ Обучайте солдат\n🗡️ Грабьте других игроков\n🛡️ Щит: защищает от атак\n💎 Самоцветы: премиум-валюта\n💵 USDT: грабь VIP или смотри рекламу\n👑 VIP: +50% производство, без рекламы\n\n/status /referral /leaderboard',
+        pt: '⚔️ <b>Kingdom Wars</b>\n\n🏰 Melhore edificios\n⚔️ Treine soldados\n🗡️ Ataque outros jogadores\n🛡️ Escudo: protege de ataques\n💎 Gemas: moeda premium\n💵 USDT: saqueie VIPs ou assista anuncios\n👑 VIP: +50% producao, sem anuncios\n\n/status /referral /leaderboard',
+        ar: '⚔️ <b>Kingdom Wars</b>\n\n🏰 طور المباني\n⚔️ درب الجنود\n🗡️ هاجم اللاعبين الآخرين\n🛡️ الدرع: يحمي من الهجمات\n💎 الجواهر: عملة مميزة\n💵 USDT: انهب لاعبي VIP / شاهد إعلانات\n👑 VIP: +50% إنتاج، بدون إعلانات\n\n/status /referral /leaderboard',
     },
     status_msg: {
-        en: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gems: {gems}\n💰 Gold: {gold}\n🛡️ Shield: {shield}',
-        he: '🏰 <b>{name}</b>\n⚔️ ניקוד: {score}\n💎 Gems: {gems}\n💰 זהב: {gold}\n🛡️ מגן: {shield}',
-        es: '🏰 <b>{name}</b>\n⚔️ Puntos: {score}\n💎 Gemas: {gems}\n💰 Oro: {gold}\n🛡️ Escudo: {shield}',
-        fr: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gemmes: {gems}\n💰 Or: {gold}\n🛡️ Bouclier: {shield}',
-        de: '🏰 <b>{name}</b>\n⚔️ Punkte: {score}\n💎 Edelsteine: {gems}\n💰 Gold: {gold}\n🛡️ Schild: {shield}',
-        ru: '🏰 <b>{name}</b>\n⚔️ Очки: {score}\n💎 Самоцветы: {gems}\n💰 Золото: {gold}\n🛡️ Щит: {shield}',
-        pt: '🏰 <b>{name}</b>\n⚔️ Pontos: {score}\n💎 Gemas: {gems}\n💰 Ouro: {gold}\n🛡️ Escudo: {shield}',
-        ar: '🏰 <b>{name}</b>\n⚔️ النقاط: {score}\n💎 الجواهر: {gems}\n💰 الذهب: {gold}\n🛡️ الدرع: {shield}',
+        en: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gems: {gems}\n💰 Gold: {gold}\n💵 USDT: {usdt}\n🛡️ Shield: {shield}',
+        he: '🏰 <b>{name}</b>\n⚔️ ניקוד: {score}\n💎 Gems: {gems}\n💰 זהב: {gold}\n💵 USDT: {usdt}\n🛡️ מגן: {shield}',
+        es: '🏰 <b>{name}</b>\n⚔️ Puntos: {score}\n💎 Gemas: {gems}\n💰 Oro: {gold}\n💵 USDT: {usdt}\n🛡️ Escudo: {shield}',
+        fr: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gemmes: {gems}\n💰 Or: {gold}\n💵 USDT: {usdt}\n🛡️ Bouclier: {shield}',
+        de: '🏰 <b>{name}</b>\n⚔️ Punkte: {score}\n💎 Edelsteine: {gems}\n💰 Gold: {gold}\n💵 USDT: {usdt}\n🛡️ Schild: {shield}',
+        ru: '🏰 <b>{name}</b>\n⚔️ Очки: {score}\n💎 Самоцветы: {gems}\n💰 Золото: {gold}\n💵 USDT: {usdt}\n🛡️ Щит: {shield}',
+        pt: '🏰 <b>{name}</b>\n⚔️ Pontos: {score}\n💎 Gemas: {gems}\n💰 Ouro: {gold}\n💵 USDT: {usdt}\n🛡️ Escudo: {shield}',
+        ar: '🏰 <b>{name}</b>\n⚔️ النقاط: {score}\n💎 الجواهر: {gems}\n💰 الذهب: {gold}\n💵 USDT: {usdt}\n🛡️ الدرع: {shield}',
     },
     shield_active: { en: '✅ Active', he: '✅ פעיל', es: '✅ Activo', fr: '✅ Actif', de: '✅ Aktiv', ru: '✅ Активен', pt: '✅ Ativo', ar: '✅ نشط' },
     shield_none: { en: '❌ No shield', he: '❌ אין מגן', es: '❌ Sin escudo', fr: '❌ Pas de bouclier', de: '❌ Kein Schild', ru: '❌ Нет щита', pt: '❌ Sem escudo', ar: '❌ لا درع' },
@@ -195,17 +205,33 @@ let TelegramService = class TelegramService {
             return;
         }
         if (cmd('/leaderboard')) {
+            const lbUrl = `${miniAppUrl}?startapp=tab_leaderboard`;
             await this.sendMessage(chatId, BOT_MESSAGES.leaderboard_msg[lang], {
-                reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: miniAppUrl } }]] },
+                reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: lbUrl } }]] },
             });
             return;
         }
         if (cmd('/referral')) {
-            await this.sendMessage(chatId, BOT_MESSAGES.referral_msg[lang], {
-                reply_markup: {
-                    inline_keyboard: [[{ text: BOT_MESSAGES.referral_btn[lang], web_app: { url: miniAppUrl } }]],
-                },
-            });
+            if (user?.referralCode) {
+                const botUsername = this.config.get('TELEGRAM_BOT_USERNAME') || 'KingdomWarsBot';
+                const refLink = `https://t.me/${botUsername}?start=ref_${user.referralCode}`;
+                const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } }).catch(() => null);
+                const referredUsers = await this.userRepo.find({ where: { referredBy: { id: user.id } } }).catch(() => []);
+                const refCount = String(referredUsers.length);
+                const refMsg = (BOT_MESSAGES.referral_link_msg[lang] ?? BOT_MESSAGES.referral_link_msg.en)
+                    .replace('{link}', refLink)
+                    .replace('{count}', refCount);
+                await this.sendMessage(chatId, refMsg, {
+                    reply_markup: {
+                        inline_keyboard: [[{ text: BOT_MESSAGES.referral_btn[lang], url: `https://t.me/share/url?url=${encodeURIComponent(refLink)}` }]],
+                    },
+                });
+            }
+            else {
+                await this.sendMessage(chatId, BOT_MESSAGES.welcome[lang], {
+                    reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_game[lang], web_app: { url: miniAppUrl } }]] },
+                });
+            }
             return;
         }
         if (cmd('/help')) {
@@ -227,11 +253,12 @@ let TelegramService = class TelegramService {
                 return;
             }
             const shieldStr = kingdom.isShielded ? BOT_MESSAGES.shield_active[lang] : BOT_MESSAGES.shield_none[lang];
-            const statusText = BOT_MESSAGES.status_msg[lang]
+            const statusText = (BOT_MESSAGES.status_msg[lang] ?? BOT_MESSAGES.status_msg.en)
                 .replace('{name}', kingdom.name)
                 .replace('{score}', String(kingdom.score))
                 .replace('{gems}', String(kingdom.gems))
                 .replace('{gold}', String(Math.floor(kingdom.gold)))
+                .replace('{usdt}', (kingdom.usdtBalance ?? 0).toFixed(4))
                 .replace('{shield}', shieldStr);
             await this.sendMessage(chatId, statusText, {
                 reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]] },

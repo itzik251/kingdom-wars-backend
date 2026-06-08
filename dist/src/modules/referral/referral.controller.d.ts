@@ -6,43 +6,49 @@ export declare class ReferralController {
         referralCode: string;
         link: string;
         referredCount: number;
-        milestones: ({
-            reached: boolean;
-            alreadyClaimed: boolean;
-            count: number;
+        claimedCount: number;
+        pendingRewards: {
             gems: number;
-            label: string;
-            hero?: undefined;
-            vipDays?: undefined;
-        } | {
-            reached: boolean;
-            alreadyClaimed: boolean;
-            count: number;
-            gems: number;
-            label: string;
-            hero: string;
-            vipDays?: undefined;
-        } | {
-            reached: boolean;
-            alreadyClaimed: boolean;
-            count: number;
-            gems: number;
-            label: string;
+            skins: number;
             vipDays: number;
-            hero?: undefined;
-        })[];
+        };
+        hasPending: boolean;
+        nextMilestones: {
+            gems100At: number;
+            bonus200At: number;
+            skinAt: number;
+            vipAt: number;
+        };
+        milestones: any[];
     }>;
-    claim(req: any, count: string): Promise<{
-        error: string;
-        claimed?: undefined;
+    claimAll(req: any): Promise<{
+        claimed: boolean;
+        reason: string;
         gems?: undefined;
-        hero?: undefined;
+        skins?: undefined;
         vipDays?: undefined;
+        newClaimedCount?: undefined;
     } | {
         claimed: boolean;
         gems: number;
-        hero: any;
-        vipDays: any;
-        error?: undefined;
+        skins: number;
+        vipDays: number;
+        newClaimedCount: number;
+        reason?: undefined;
+    }>;
+    claim(req: any, count: string): Promise<{
+        claimed: boolean;
+        reason: string;
+        gems?: undefined;
+        skins?: undefined;
+        vipDays?: undefined;
+        newClaimedCount?: undefined;
+    } | {
+        claimed: boolean;
+        gems: number;
+        skins: number;
+        vipDays: number;
+        newClaimedCount: number;
+        reason?: undefined;
     }>;
 }

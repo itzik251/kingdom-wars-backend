@@ -41,10 +41,17 @@ export class Building {
   @Column({ name: 'needs_repair', default: false })
   needsRepair: boolean;
 
+  @Column({ name: 'repair_ends_at', nullable: true })
+  repairEndsAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   get isUpgrading(): boolean {
     return this.upgradeEndsAt && new Date() < new Date(this.upgradeEndsAt);
+  }
+
+  get isRepairing(): boolean {
+    return this.repairEndsAt && new Date() < new Date(this.repairEndsAt);
   }
 }

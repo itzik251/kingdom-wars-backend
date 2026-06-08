@@ -12,8 +12,14 @@ export class ReferralController {
     return this.referralService.getStats(req.user.userId);
   }
 
+  @Post('claim')
+  claimAll(@Request() req) {
+    return this.referralService.claimRewards(req.user.userId);
+  }
+
+  // Legacy — kept for backward compat
   @Post('claim/:count')
   claim(@Request() req, @Param('count') count: string) {
-    return this.referralService.claimMilestone(req.user.userId, parseInt(count));
+    return this.referralService.claimRewards(req.user.userId);
   }
 }

@@ -194,20 +194,17 @@ export class CombatService {
         }
       : { gold: 0, wood: 0, stone: 0 };
 
-    const ratio = attackerWins
-      ? Math.min(0.5, defensePower / attackPower)
-      : Math.min(0.7, attackPower / defensePower);
+    // Winner loses 10-20% of troops, loser loses 50-70%
+    const winnerLossRate = this.random(0.10, 0.20);
+    const loserLossRate  = this.random(0.50, 0.70);
 
     return {
       attackerWins,
       attackerPower: Math.round(attackPower),
       defenderPower: Math.round(defensePower),
       loot,
-      attackerLosses: this.calculateLosses(attackerUnits, ratio * 0.3),
-      defenderLosses: this.calculateLosses(
-        defenderUnits,
-        attackerWins ? Math.min(DEFENDER_LOSS_MAX, ratio) : ratio * 0.1,
-      ),
+      attackerLosses: this.calculateLosses(attackerUnits, attackerWins ? winnerLossRate : loserLossRate),
+      defenderLosses: this.calculateLosses(defenderUnits, attackerWins ? loserLossRate : winnerLossRate),
     };
   }
 
@@ -236,10 +233,10 @@ export class CombatService {
     defender.wood  = Math.max(0, defender.wood  - report.loot.wood);
     defender.stone = Math.max(0, defender.stone - report.loot.stone);
 
-    // VIP players also loot 20% of defender's USDT
+    // VIP players also loot 20% of defender's USDT — always set field so frontend shows it
     if (report.attackerWins && attacker.isVip) {
       const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.20).toFixed(6));
-      report.loot.usdt = usdtLoot; // always set (even 0) so frontend can display
+      report.loot.usdt = usdtLoot;
       if (usdtLoot > 0) {
         attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));
         defender.usdtBalance = parseFloat(Math.max(0, (defender.usdtBalance ?? 0) - usdtLoot).toFixed(6));
@@ -275,38 +272,37 @@ export class CombatService {
         wood: report.loot.wood,
         won: report.attackerWins,
         telegramId: defenderKingdomFull.user.telegramId,
+        language: defenderKingdomFull.user.language,
       }).catch(() => {});
     }
 
-    // Wounded soldiers: a portion of losses become wounded (recover later) instead of dead.
+    // Wounded soldiers: 30% of losses become wounded (recover via hospital) instead of dying.
     for (const unit of attackerUnits) {
       const losses = report.attackerLosses[unit.type] ?? 0;
-      const actualDead = Math.floor(losses * 0.8); // attacker: 20% wounded
-      const wounded = losses - actualDead;
-      unit.count = Math.max(0, unit.count - actualDead);
+      const wounded = Math.floor(losses * 0.3);
+      unit.count = Math.max(0, unit.count - (losses - wounded));
       unit.woundedCount = (unit.woundedCount || 0) + wounded;
     }
     for (const unit of defenderUnits) {
       const losses = report.defenderLosses[unit.type] ?? 0;
-      const actualDead = Math.floor(losses * 0.7); // defender: 30% wounded
-      const wounded = losses - actualDead;
-      unit.count = Math.max(0, unit.count - actualDead);
+      const wounded = Math.floor(losses * 0.3);
+      unit.count = Math.max(0, unit.count - (losses - wounded));
       unit.woundedCount = (unit.woundedCount || 0) + wounded;
     }
     await this.unitRepo.save([...attackerUnits, ...defenderUnits]);
 
-    // Building damage on decisive wins (attack power more than double defense)
-    if (report.attackerWins && report.attackerPower > report.defenderPower * 2) {
-      const defenderBuildings = await this.buildingRepo.find({ where: { kingdom: { id: defender.id } } });
-      const candidates = defenderBuildings.filter(
-        b => b.type !== BuildingType.TOWN_HALL && b.level > 1,
-      );
-      if (candidates.length > 0) {
-        const target = candidates[Math.floor(Math.random() * candidates.length)];
-        target.level = Math.max(1, target.level - 1);
-        target.needsRepair = true;
-        await this.buildingRepo.save(target);
-        report.buildingDamaged = { type: target.type, newLevel: target.level };
+    // Building damage — only the loser's buildings get damaged
+    const loserKingdomId = report.attackerWins ? defender.id : attacker.id;
+    const loserBuildings = await this.buildingRepo.find({ where: { kingdom: { id: loserKingdomId } } });
+    const candidates = loserBuildings.filter(b => b.type !== BuildingType.TOWN_HALL && b.level > 1);
+    if (candidates.length > 0) {
+      const dmgCount = report.attackerWins && report.attackerPower > report.defenderPower * 1.5 ? 2 : 1;
+      const shuffled = [...candidates].sort(() => Math.random() - 0.5).slice(0, dmgCount);
+      for (const bld of shuffled) {
+        bld.level = Math.max(1, bld.level - 1);
+        bld.needsRepair = true;
+        await this.buildingRepo.save(bld);
+        report.buildingDamaged = { type: bld.type, newLevel: bld.level };
       }
     }
   }

@@ -109,6 +109,7 @@ export class AuthService {
       language: tgUser.language_code ? tgUser.language_code.slice(0, 2) : 'en',
       referralCode: this.generateReferralCode(),
       referredBy,
+      lastLogin: new Date(),
     });
     await this.userRepo.save(user);
 

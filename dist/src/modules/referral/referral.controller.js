@@ -23,8 +23,11 @@ let ReferralController = class ReferralController {
     getStats(req) {
         return this.referralService.getStats(req.user.userId);
     }
+    claimAll(req) {
+        return this.referralService.claimRewards(req.user.userId);
+    }
     claim(req, count) {
-        return this.referralService.claimMilestone(req.user.userId, parseInt(count));
+        return this.referralService.claimRewards(req.user.userId);
     }
 };
 exports.ReferralController = ReferralController;
@@ -35,6 +38,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ReferralController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Post)('claim'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ReferralController.prototype, "claimAll", null);
 __decorate([
     (0, common_1.Post)('claim/:count'),
     __param(0, (0, common_1.Request)()),

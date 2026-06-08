@@ -55,6 +55,13 @@ let BuildingController = class BuildingController {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.buildingService.buildNew(kingdom.id, dto.type);
     }
+    async repairCost(req, buildingId) {
+        const { buildings } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        const building = buildings.find((b) => b.id === buildingId);
+        if (!building)
+            return { cost: { gold: 0, wood: 0, stone: 0 }, repairTimeSeconds: 0 };
+        return this.buildingService.getRepairCost(building.type, building.level);
+    }
     async repair(req, buildingId) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.buildingService.repairBuilding(kingdom.id, buildingId);
@@ -92,6 +99,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, UpgradeDto]),
     __metadata("design:returntype", Promise)
 ], BuildingController.prototype, "buildNew", null);
+__decorate([
+    (0, common_1.Get)('repair-cost/:id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], BuildingController.prototype, "repairCost", null);
 __decorate([
     (0, common_1.Post)('repair/:id'),
     __param(0, (0, common_1.Request)()),

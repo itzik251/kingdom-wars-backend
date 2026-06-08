@@ -26,6 +26,7 @@ const vip_module_1 = require("./modules/vip/vip.module");
 const ads_module_1 = require("./modules/ads/ads.module");
 const telegram_module_1 = require("./modules/telegram/telegram.module");
 const admin_module_1 = require("./modules/admin/admin.module");
+const cryptobot_full_module_1 = require("./modules/cryptobot/cryptobot.full.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -73,6 +74,7 @@ exports.AppModule = AppModule = __decorate([
             ads_module_1.AdsModule,
             telegram_module_1.TelegramModule,
             admin_module_1.AdminModule,
+            cryptobot_full_module_1.CryptoBotFullModule,
         ],
     })
 ], AppModule);

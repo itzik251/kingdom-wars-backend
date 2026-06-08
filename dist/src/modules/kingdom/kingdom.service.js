@@ -40,10 +40,6 @@ let KingdomService = class KingdomService {
         const updated = await this.economyService.tickKingdom(kingdom.id);
         const tickBuildings = updated.__completedBuildings || [];
         const tickUnits = updated.__completedUnits || [];
-        if (tickBuildings.length > 0)
-            this.sendBuildDoneNotifsRaw(userId, tickBuildings).catch(() => { });
-        if (tickUnits.length > 0)
-            this.sendTrainingDoneNotifsRaw(userId, tickUnits).catch(() => { });
         const [buildings, units] = await Promise.all([
             this.buildingRepo.find({ where: { kingdom: { id: kingdom.id } } }),
             this.unitRepo.find({ where: { kingdom: { id: kingdom.id } } }),
@@ -62,7 +58,8 @@ let KingdomService = class KingdomService {
                 new Date(updated.shieldExpiredNotifiedAt) < new Date(updated.shieldUntil))) {
             updated.shieldExpiredNotifiedAt = new Date(updated.shieldUntil);
             await this.kingdomRepo.save(updated);
-            this.notifService.create(userId, 'shield_expired', {}).catch(() => { });
+            const shieldPayload = await this.getUserPayload(userId);
+            this.notifService.create(userId, 'shield_expired', shieldPayload).catch(() => { });
         }
         const productionRates = this.economyService.getProductionRates(buildings, updated);
         return {
@@ -109,8 +106,9 @@ let KingdomService = class KingdomService {
         return { usdtBalance: kingdom?.usdtBalance ?? 0, gameBalance: kingdom?.gameBalance ?? 0 };
     }
     async requestWithdrawal(kingdomId, walletAddress) {
-        if (!walletAddress || walletAddress.trim().length < 10) {
-            throw new common_1.BadRequestException('כתובת ארנק לא תקינה');
+        const addr = walletAddress?.trim() || '';
+        if (!addr || !(/^[UE]Q[A-Za-z0-9_-]{46}$/.test(addr) || /^[0-9a-fA-F]{64}$/.test(addr))) {
+            throw new common_1.BadRequestException('כתובת ארנק TON לא תקינה — חייבת להתחיל ב-UQ או EQ');
         }
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         const MIN_WITHDRAW = 20;

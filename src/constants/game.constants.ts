@@ -124,8 +124,14 @@ export const INITIAL_UNITS = Object.values(UnitType);
 
 // ─── VIP ─────────────────────────────────────────────────────
 export const VIP_BUILD_TIME_REDUCTION = 0.30;  // 30% faster
-export const VIP_PRICE_TON = 5;
-export const VIP_PRICE_USDT = 5;
+export const VIP_PRICE_USDT_TON = 5;           // 5 USDT-TON per month
 export const VIP_DURATION_DAYS = 30;
-export const PAYMENT_WALLET_ADDRESS = 'TYourTRC20WalletAddressHere'; // Replace with real wallet
+// Game wallet TON address (UQ format = non-bounceable, for receiving)
+export const PAYMENT_WALLET_ADDRESS = 'UQBQeWT7nw0KjeKmSbxsmqqgDRh61H-_ZamVc3_I5S1jNX0T';
+// USDT Jetton master on TON mainnet
+export const USDT_JETTON_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 export const VIP_GAME_PRODUCTION_MULTIPLIER = 1.5;
+
+// ─── Backwards compat aliases ────────────────────────────────
+export const VIP_PRICE_TON  = VIP_PRICE_USDT_TON;
+export const VIP_PRICE_USDT = VIP_PRICE_USDT_TON;

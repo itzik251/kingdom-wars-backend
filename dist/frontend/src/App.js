@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = App;
 const react_1 = require("react");
+const ui_react_1 = require("@tonconnect/ui-react");
 const useT_1 = require("./i18n/useT");
 const translations_1 = require("./i18n/translations");
 const gameStore_1 = require("./store/gameStore");
@@ -51,8 +52,10 @@ class ErrorBoundary extends react_1.Component {
 }
 const INTERSTITIAL_BLOCK_ID = 'int-34204';
 const INTERSTITIAL_SCREENS = new Set(['shop', 'army', 'attack', 'alliance', 'leaderboard']);
-const INTERSTITIAL_INTERVAL_MS = 3 * 60 * 1000;
-function showInterstitial() {
+const INTERSTITIAL_INTERVAL_MS = 5 * 60 * 1000;
+function showInterstitial(isVip = false) {
+    if (isVip)
+        return;
     const AdController = window.Adsgram?.init({ blockId: INTERSTITIAL_BLOCK_ID });
     AdController?.show().catch(() => { });
 }
@@ -144,7 +147,7 @@ function AppInner() {
     (0, react_1.useEffect)(() => {
         if (token) {
             loadKingdom();
-            setTimeout(() => showInterstitial(), 2000);
+            setTimeout(() => showInterstitial(!!kingdom?.isVip), 2000);
             lastInterstitialRef.current = Date.now();
         }
     }, [token]);
@@ -160,12 +163,12 @@ function AppInner() {
         if (now - lastInterstitialRef.current < INTERSTITIAL_INTERVAL_MS)
             return;
         lastInterstitialRef.current = now;
-        showInterstitial();
+        showInterstitial(!!kingdom?.isVip);
     }, [activeScreen, token, kingdom]);
     (0, react_1.useEffect)(() => {
         if (!token)
             return;
-        const interval = setInterval(() => loadKingdom(), 30_000);
+        const interval = setInterval(() => loadKingdom(), 10_000);
         return () => clearInterval(interval);
     }, [token]);
     if (authError === 'no_telegram') {
@@ -218,9 +221,12 @@ function AppInner() {
       <NavBar_1.default />
     </div>);
 }
+const TON_MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`;
 function App() {
-    return (<ErrorBoundary>
-      <AppInner />
-    </ErrorBoundary>);
+    return (<ui_react_1.TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
+      <ErrorBoundary>
+        <AppInner />
+      </ErrorBoundary>
+    </ui_react_1.TonConnectUIProvider>);
 }
 //# sourceMappingURL=App.js.map

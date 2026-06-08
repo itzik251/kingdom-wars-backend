@@ -14,44 +14,25 @@ exports.TronService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-const TRON_FULL_NODE = 'https://api.trongrid.io';
-const TRON_API_KEY = '';
+const TRONGRID_BASE = 'https://api.trongrid.io';
 let TronService = TronService_1 = class TronService {
     constructor(config) {
         this.config = config;
         this.logger = new common_1.Logger(TronService_1.name);
     }
-    getTronWeb(withKey = false) {
-        const TronWeb = require('tronweb');
-        const privateKey = withKey ? this.config.get('GAME_WALLET_PRIVATE_KEY') : undefined;
-        const apiKey = this.config.get('TRONGRID_API_KEY') || TRON_API_KEY;
-        const headers = apiKey ? { 'TRON-PRO-API-KEY': apiKey } : {};
-        return new TronWeb(TRON_FULL_NODE, TRON_FULL_NODE, TRON_FULL_NODE, privateKey, headers);
+    getApiHeaders() {
+        const apiKey = this.config.get('TRONGRID_API_KEY') || '';
+        const h = { Accept: 'application/json' };
+        if (apiKey)
+            h['TRON-PRO-API-KEY'] = apiKey;
+        return h;
     }
     async getUsdtBalance(address) {
+        if (!address || !this.isValidAddress(address))
+            return -1;
         try {
-            const tronWeb = this.getTronWeb();
-            if (!tronWeb.isAddress(address))
-                return -1;
-            const contract = await tronWeb.contract().at(USDT_CONTRACT);
-            const balanceRaw = await contract.balanceOf(address).call();
-            const rawStr = balanceRaw?.toString?.() ?? balanceRaw;
-            const balance = parseFloat(rawStr) / 1_000_000;
-            return parseFloat(balance.toFixed(6));
-        }
-        catch (e) {
-            this.logger.error('getUsdtBalance error', e?.message);
-            return this.getUsdtBalanceRest(address);
-        }
-    }
-    async getUsdtBalanceRest(address) {
-        try {
-            const apiKey = this.config.get('TRONGRID_API_KEY') || '';
-            const headers = { Accept: 'application/json' };
-            if (apiKey)
-                headers['TRON-PRO-API-KEY'] = apiKey;
-            const url = `https://api.trongrid.io/v1/accounts/${address}/tokens?limit=200&type=trc20`;
-            const res = await fetch(url, { headers });
+            const url = `${TRONGRID_BASE}/v1/accounts/${encodeURIComponent(address)}/tokens?limit=200&type=trc20`;
+            const res = await fetch(url, { headers: this.getApiHeaders() });
             const json = await res.json();
             const usdt = (json?.data || []).find((t) => t.tokenId === USDT_CONTRACT || t.token_id === USDT_CONTRACT);
             if (usdt) {
@@ -60,7 +41,22 @@ let TronService = TronService_1 = class TronService {
             return 0;
         }
         catch (e) {
-            this.logger.error('getUsdtBalanceRest error', e?.message);
+            this.logger.error('getUsdtBalance error', e?.message);
+            return 0;
+        }
+    }
+    async getTrxBalance(address) {
+        if (!address || !this.isValidAddress(address))
+            return 0;
+        try {
+            const url = `${TRONGRID_BASE}/v1/accounts/${encodeURIComponent(address)}`;
+            const res = await fetch(url, { headers: this.getApiHeaders() });
+            const json = await res.json();
+            const sunBalance = json?.data?.[0]?.balance ?? 0;
+            return parseFloat((sunBalance / 1_000_000).toFixed(6));
+        }
+        catch (e) {
+            this.logger.error('getTrxBalance error', e?.message);
             return 0;
         }
     }
@@ -68,10 +64,18 @@ let TronService = TronService_1 = class TronService {
         const privateKey = this.config.get('GAME_WALLET_PRIVATE_KEY');
         if (!privateKey)
             return { error: 'GAME_WALLET_PRIVATE_KEY לא מוגדר ב-ENV' };
+        if (!this.isValidAddress(toAddress))
+            return { error: 'כתובת ארנק לא תקינה' };
         try {
-            const tronWeb = this.getTronWeb(true);
-            if (!tronWeb.isAddress(toAddress))
-                return { error: 'כתובת ארנק לא תקינה' };
+            const mod = require('tronweb');
+            const TronWebClass = mod.TronWeb ?? mod.default ?? mod;
+            const apiKey = this.config.get('TRONGRID_API_KEY') || '';
+            const headers = apiKey ? { 'TRON-PRO-API-KEY': apiKey } : undefined;
+            const tronWeb = new TronWebClass({
+                fullHost: TRONGRID_BASE,
+                ...(headers ? { headers } : {}),
+                privateKey,
+            });
             const amountSun = Math.floor(amount * 1_000_000);
             const contract = await tronWeb.contract().at(USDT_CONTRACT);
             const result = await contract.transfer(toAddress, amountSun).send({
@@ -86,24 +90,10 @@ let TronService = TronService_1 = class TronService {
             return { error: e?.message || 'שגיאה בשליחה' };
         }
     }
-    async getTrxBalance(address) {
-        try {
-            const tronWeb = this.getTronWeb();
-            const balance = await tronWeb.trx.getBalance(address);
-            return parseFloat(tronWeb.fromSun(balance));
-        }
-        catch {
-            return 0;
-        }
-    }
     isValidAddress(address) {
-        try {
-            const TronWeb = require('tronweb');
-            return TronWeb.isAddress(address);
-        }
-        catch {
+        if (!address || typeof address !== 'string')
             return false;
-        }
+        return /^T[a-zA-Z0-9]{33}$/.test(address.trim());
     }
 };
 exports.TronService = TronService;

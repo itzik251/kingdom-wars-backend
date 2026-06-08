@@ -18,68 +18,101 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
-const MILESTONES = [
-    { count: 1, gems: 100, label: '1 חבר' },
-    { count: 5, gems: 200, label: '5 חברים' },
-    { count: 10, gems: 0, label: '10 חברים', hero: 'ragnar' },
-    { count: 20, gems: 0, label: '20 חברים', vipDays: 30 },
-];
+function calcRewards(from, to) {
+    let gems = 0;
+    let skins = 0;
+    let vipDays = 0;
+    for (let i = from + 1; i <= to; i++) {
+        gems += 100;
+        if (i % 5 === 0)
+            gems += 200;
+        if (i % 10 === 0)
+            skins++;
+        if (i % 20 === 0)
+            vipDays += 30;
+    }
+    return { gems, skins, vipDays };
+}
 let ReferralService = class ReferralService {
     constructor(userRepo, kingdomRepo) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
     }
+    async getActiveReferralCount(userId) {
+        const result = await this.kingdomRepo
+            .createQueryBuilder('k')
+            .innerJoin('k.user', 'u')
+            .innerJoin('u.referredBy', 'ref')
+            .where('ref.id = :userId', { userId })
+            .andWhere('k.score > 0')
+            .getCount();
+        return result;
+    }
     async getStats(userId) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
-        const referredUsers = await this.userRepo.find({ where: { referredBy: { id: userId } } });
-        let referredCount = 0;
-        for (const u of referredUsers) {
-            const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: u.id } } });
-            if (kingdom && kingdom.score > 0)
-                referredCount++;
-        }
-        const claimedSet = new Set((user.claimedReferralMilestones ?? []).map(Number));
-        const milestones = MILESTONES.map(m => ({
-            ...m,
-            reached: referredCount >= m.count && !claimedSet.has(m.count),
-            alreadyClaimed: claimedSet.has(m.count),
-        }));
+        const referredCount = await this.getActiveReferralCount(userId);
+        const claimedCount = user.referralClaimedCount ?? 0;
+        const pending = calcRewards(claimedCount, referredCount);
+        const nextPerReferral = referredCount + 1;
+        const nextBonus5 = Math.ceil((referredCount + 1) / 5) * 5;
+        const nextSkin = Math.ceil((referredCount + 1) / 10) * 10;
+        const nextVip = Math.ceil((referredCount + 1) / 20) * 20;
         const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'KingdomWarsBot';
         const link = `https://t.me/${botUsername}?start=ref_${user.referralCode}`;
         return {
             referralCode: user.referralCode,
             link,
             referredCount,
-            milestones,
+            claimedCount,
+            pendingRewards: pending,
+            hasPending: pending.gems > 0 || pending.skins > 0 || pending.vipDays > 0,
+            nextMilestones: {
+                gems100At: nextPerReferral,
+                bonus200At: nextBonus5,
+                skinAt: nextSkin,
+                vipAt: nextVip,
+            },
+            milestones: [],
         };
     }
-    async claimMilestone(userId, milestoneCount) {
+    async claimRewards(userId) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
-        const referredCount = await this.userRepo.count({ where: { referredBy: { id: userId } } });
-        const milestone = MILESTONES.find(m => m.count === milestoneCount);
-        if (!milestone)
-            return { error: 'milestone not found' };
-        if (referredCount < milestone.count)
-            return { error: 'not reached yet' };
-        const claimed = user.claimedReferralMilestones ?? [];
-        if (claimed.map(Number).includes(milestoneCount))
-            return { error: 'already claimed' };
-        user.claimedReferralMilestones = [...claimed.map(Number), milestoneCount];
-        await this.userRepo.save(user);
+        const referredCount = await this.getActiveReferralCount(userId);
+        const claimedCount = user.referralClaimedCount ?? 0;
+        if (referredCount <= claimedCount) {
+            return { claimed: false, reason: 'no_pending' };
+        }
+        const { gems, skins, vipDays } = calcRewards(claimedCount, referredCount);
+        const updateResult = await this.userRepo
+            .createQueryBuilder()
+            .update()
+            .set({ referralClaimedCount: referredCount })
+            .where('id = :id AND referral_claimed_count = :expected', { id: userId, expected: claimedCount })
+            .execute();
+        if (!updateResult.affected || updateResult.affected === 0) {
+            return { claimed: false, reason: 'concurrent_claim' };
+        }
         const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
         if (!kingdom)
-            return { error: 'kingdom not found' };
-        if (milestone.gems > 0) {
-            kingdom.gems += milestone.gems;
-            await this.kingdomRepo.save(kingdom);
+            return { claimed: false, reason: 'no_kingdom' };
+        if (gems > 0) {
+            kingdom.gems += gems;
         }
-        if (milestone.vipDays) {
-            const days = milestone.vipDays;
-            const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + days * 86_400_000);
+        if (vipDays > 0) {
+            const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + vipDays * 86_400_000);
             kingdom.vipExpiresAt = expiresAt;
-            await this.kingdomRepo.save(kingdom);
         }
-        return { claimed: true, gems: milestone.gems, hero: milestone.hero, vipDays: milestone.vipDays };
+        await this.kingdomRepo.save(kingdom);
+        return {
+            claimed: true,
+            gems,
+            skins,
+            vipDays,
+            newClaimedCount: referredCount,
+        };
+    }
+    async claimMilestone(userId, _milestoneCount) {
+        return this.claimRewards(userId);
     }
 };
 exports.ReferralService = ReferralService;

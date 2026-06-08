@@ -45,6 +45,14 @@ export declare class BuildingController {
             stone: number;
         };
     }>;
+    repairCost(req: any, buildingId: string): Promise<{
+        cost: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+        repairTimeSeconds: number;
+    }>;
     repair(req: any, buildingId: string): Promise<{
         building: import("./building.entity").Building;
         cost: {
@@ -52,6 +60,8 @@ export declare class BuildingController {
             wood: number;
             stone: number;
         };
+        repairEndsAt: Date;
+        repairTimeSeconds: number;
     }>;
 }
 export {};

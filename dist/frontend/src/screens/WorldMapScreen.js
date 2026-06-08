@@ -231,81 +231,65 @@ function WorldMapScreen() {
                 const { x, y } = iso(gx, gy);
                 const px = x - minX, py = y;
                 const isMe = k.kingdomName === kingdom?.name;
-                const isSel = selected?.kingdomName === k.kingdomName;
-                const hue = (i * 53 + 120) % 360;
-                const h = 20 + Math.round((k.score / maxScore) * 55);
-                const tw = 36;
-                const IW = W * 2.2, IH = H * 2.2;
+                const isSel = selected?.id === k.id;
+                const hue = (k.rank * 47 + 160) % 360;
+                const TILE = 54;
+                const tierColor = k.rank <= 3
+                    ? ['#f4d03f', '#c0c0c0', '#cd7f32'][k.rank - 1]
+                    : isMe ? '#27ae60'
+                        : k.shieldActive ? '#3498db'
+                            : `hsl(${hue},55%,55%)`;
+                const tileBg = isMe
+                    ? 'linear-gradient(135deg,#1a3d0a,#2d6a12,#1a3d0a)'
+                    : k.rank <= 3
+                        ? ['linear-gradient(135deg,#3d3000,#7a5a00,#3d3000)', 'linear-gradient(135deg,#222,#555,#222)', 'linear-gradient(135deg,#2a1500,#6b3a00,#2a1500)'][k.rank - 1]
+                        : k.shieldActive
+                            ? 'linear-gradient(135deg,#0a1e35,#1a3a5c,#0a1e35)'
+                            : `linear-gradient(135deg,hsl(${hue},35%,8%),hsl(${hue},40%,16%),hsl(${hue},35%,8%))`;
+                const castleEmoji = isMe ? '⭐' : k.rank === 1 ? '👑' : k.rank === 2 ? '🏆' : k.rank === 3 ? '🥉' : k.shieldActive ? '🛡️' : '🏰';
                 return (<div key={k.id || i}>
                   
                   <div style={{
-                        position: 'absolute', left: px - IW * 0.55, top: py - IH * 0.1,
-                        width: IW * 1.1, height: IH * 0.7,
-                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                        background: 'radial-gradient(ellipse,#0a1e2e 0%,#050d1a 100%)',
-                        zIndex: gx + gy - 1,
+                        position: 'absolute', left: px - TILE * 0.55, top: py + TILE * 0.3,
+                        width: TILE * 1.1, height: TILE * 0.3, borderRadius: '50%',
+                        background: `radial-gradient(ellipse,${tierColor}22 0%,transparent 70%)`,
+                        zIndex: gx + gy, pointerEvents: 'none',
                     }}/>
 
                   
-                  <div style={{
-                        position: 'absolute', left: px - IW / 2, top: py - IH * 0.15,
-                        width: IW, height: IH * 0.6,
-                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                        background: isMe
-                            ? 'linear-gradient(135deg,#3a6020,#2a4a18,#1e3610)'
-                            : `linear-gradient(135deg,hsl(${(hue + 30) % 360},40%,18%),hsl(${hue},35%,12%),hsl(${(hue + 15) % 360},30%,8%))`,
-                        boxShadow: isMe ? '0 0 12px rgba(39,174,96,0.3)' : `0 0 8px hsla(${hue},50%,20%,0.2)`,
-                        zIndex: gx + gy,
-                    }}/>
-                  
-                  <div style={{ position: 'absolute', left: px - IW / 2, top: py - IH * 0.15 + IH * 0.3, width: IW / 2, height: 10, background: isMe ? '#1a3008' : `hsl(${hue},30%,6%)`, transform: 'skewY(26.6deg)', transformOrigin: 'top left', zIndex: gx + gy }}/>
-                  <div style={{ position: 'absolute', left: px, top: py - IH * 0.15 + IH * 0.3, width: IW / 2, height: 10, background: isMe ? '#122206' : `hsl(${hue},25%,4%)`, transform: 'skewY(-26.6deg)', transformOrigin: 'top right', zIndex: gx + gy }}/>
-
-                  
-                  {[{ dx: -IW * 0.25, dy: IH * 0.05 }, { dx: IW * 0.25, dy: IH * 0.05 }].map((pos, ti) => (<div key={ti} style={{
-                            position: 'absolute', left: px + pos.dx - 5, top: py - IH * 0.15 + pos.dy - 8,
-                            width: 10, height: 10, fontSize: 8, textAlign: 'center',
-                            zIndex: gx + gy + 1, pointerEvents: 'none',
-                        }}>🌿</div>))}
+                  {(isSel || isMe) && (<div style={{
+                            position: 'absolute', left: px - TILE / 2 - 4, top: py - TILE / 2 - 4,
+                            width: TILE + 8, height: TILE + 8, borderRadius: '50%',
+                            border: `2px solid ${tierColor}`,
+                            boxShadow: `0 0 18px ${tierColor}88, 0 0 6px ${tierColor}66`,
+                            zIndex: 199 + gx + gy, pointerEvents: 'none',
+                            animation: isSel ? 'pulse-glow 1.5s infinite' : undefined,
+                        }}/>)}
 
                   
                   <div data-kingdom="true" onClick={() => { if (!isDragging.current)
                     setSelected(isSel ? null : k); }} style={{
-                        position: 'absolute',
-                        left: px - tw / 2, top: py - h,
-                        width: tw, height: h + H * 0.6,
-                        zIndex: 200 + gx + gy,
-                        cursor: 'pointer',
+                        position: 'absolute', left: px - TILE / 2, top: py - TILE / 2,
+                        width: TILE, height: TILE, borderRadius: '50%',
+                        background: tileBg,
+                        border: `1.5px solid ${isSel || isMe ? tierColor : 'rgba(255,255,255,0.12)'}`,
+                        zIndex: 200 + gx + gy, cursor: 'pointer',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     }}>
-                    
-                    <div style={{ position: 'absolute', left: 0, top: h * 0.4, width: tw / 2, height: h * 0.8, background: shade(hue, 55, 20, -5), transform: 'skewY(26.6deg)', transformOrigin: 'top left' }}/>
-                    <div style={{ position: 'absolute', right: 0, top: h * 0.4, width: tw / 2, height: h * 0.8, background: shade(hue, 55, 20, -15), transform: 'skewY(-26.6deg)', transformOrigin: 'top right' }}/>
-                    
-                    <div style={{
-                        position: 'absolute', left: 0, top: 0, width: tw, height: H * 0.8,
-                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                        background: isMe
-                            ? 'linear-gradient(135deg,#f4d03f,#b8860b)'
-                            : `linear-gradient(135deg,${shade(hue, 65, 40, 15)},${shade(hue, 65, 40, 0)})`,
-                        boxShadow: isSel || isMe ? `0 0 16px ${isMe ? 'rgba(244,208,63,0.8)' : `hsla(${hue},70%,55%,0.7)`}` : 'none',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{ fontSize: 12, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.9))' }}>
-                        {isMe ? '⭐' : k.shieldActive ? '🛡️' : '🏰'}
-                      </span>
-                    </div>
+                    <span style={{ fontSize: 20, lineHeight: 1, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' }}>{castleEmoji}</span>
+                    <div style={{ fontSize: 8, fontWeight: 800, color: tierColor, marginTop: 2 }}>#{k.rank}</div>
+                  </div>
 
-                    
-                    <div style={{
-                        position: 'absolute', left: '50%', top: -18, transform: 'translateX(-50%)',
-                        background: isMe ? 'rgba(184,134,11,0.9)' : 'rgba(0,0,0,0.8)',
-                        border: `1px solid ${isMe ? '#f4d03f' : 'rgba(255,255,255,0.1)'}`,
-                        borderRadius: 8, padding: '2px 6px',
-                        fontSize: 8, fontWeight: 700, color: isMe ? '#000' : '#cfe6f5',
-                        whiteSpace: 'nowrap', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis',
+                  
+                  <div style={{
+                        position: 'absolute', left: px - 38, top: py + TILE / 2 + 3, width: 76,
+                        textAlign: 'center', fontSize: 8, fontWeight: 700,
+                        color: isMe ? '#f4d03f' : 'rgba(200,220,255,0.75)',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.95)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        zIndex: 210 + gx + gy, pointerEvents: 'none',
                     }}>
-                      #{k.rank} {k.kingdomName.substring(0, 8)}
-                    </div>
+                    {k.kingdomName.substring(0, 11)}
                   </div>
                 </div>);
             })}

@@ -20,6 +20,7 @@ const schedule_1 = require("@nestjs/schedule");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const building_entity_1 = require("../building/building.entity");
 const unit_entity_1 = require("../units/unit.entity");
+const user_entity_1 = require("../user/user.entity");
 const notification_service_1 = require("../notifications/notification.service");
 const game_constants_1 = require("../../constants/game.constants");
 const PRODUCER_BUILDINGS = {
@@ -29,17 +30,20 @@ const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.FARM]: 'farm',
 };
 let EconomyService = class EconomyService {
-    constructor(kingdomRepo, buildingRepo, unitRepo, notifService) {
+    constructor(kingdomRepo, buildingRepo, unitRepo, userRepo, notifService) {
         this.kingdomRepo = kingdomRepo;
         this.buildingRepo = buildingRepo;
         this.unitRepo = unitRepo;
+        this.userRepo = userRepo;
         this.notifService = notifService;
     }
     async tickAllKingdoms() {
         const kingdoms = await this.kingdomRepo.find({ relations: ['user'] });
-        await Promise.all(kingdoms.map(k => this.tickKingdom(k.id, k.user?.id).catch(() => { })));
+        for (const k of kingdoms) {
+            await this.tickKingdom(k.id, k.user?.id, k.user).catch(() => { });
+        }
     }
-    async tickKingdom(kingdomId, userId) {
+    async tickKingdom(kingdomId, userId, userObj) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });
         const units = await this.unitRepo.find({ where: { kingdom: { id: kingdomId } } });
@@ -103,9 +107,12 @@ let EconomyService = class EconomyService {
         }
         const completedBuildings = await this.completeBuildingUpgrades(kingdomId, buildings, now);
         const completedUnits = await this.completeUnitTraining(kingdomId, units, now);
+        await this.completeRepairs(buildings, now);
         const saved = await this.kingdomRepo.save(kingdom);
         const resolvedUserId = userId ?? (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
-        if (resolvedUserId) {
+        if (resolvedUserId && (completedBuildings.length > 0 || completedUnits.length > 0)) {
+            const user = userObj ?? await this.userRepo?.findOne({ where: { id: resolvedUserId } }).catch(() => null);
+            const userPayload = user ? { telegramId: user.telegramId, language: user.language || 'en' } : {};
             if (completedBuildings.length > 0) {
                 const grouped = new Map();
                 for (const b of completedBuildings) {
@@ -116,7 +123,7 @@ let EconomyService = class EconomyService {
                         grouped.set(b.type, { count: 1, level: b.level });
                 }
                 for (const [type, { count, level }] of grouped) {
-                    this.notifService.create(resolvedUserId, 'build_done', { building: type, level, count }).catch(() => { });
+                    this.notifService.create(resolvedUserId, 'build_done', { ...userPayload, building: type, level, count }).catch(() => { });
                 }
             }
             if (completedUnits.length > 0) {
@@ -124,7 +131,7 @@ let EconomyService = class EconomyService {
                 for (const u of completedUnits)
                     grouped.set(u.type, (grouped.get(u.type) ?? 0) + u.count);
                 for (const [type, count] of grouped) {
-                    this.notifService.create(resolvedUserId, 'training_done', { unit: type, count }).catch(() => { });
+                    this.notifService.create(resolvedUserId, 'training_done', { ...userPayload, unit: type, count }).catch(() => { });
                 }
             }
         }
@@ -191,6 +198,15 @@ let EconomyService = class EconomyService {
         }
         return completed;
     }
+    async completeRepairs(buildings, now) {
+        for (const building of buildings) {
+            if (building.needsRepair && building.repairEndsAt && now >= new Date(building.repairEndsAt)) {
+                building.needsRepair = false;
+                building.repairEndsAt = null;
+                await this.buildingRepo.save(building);
+            }
+        }
+    }
     getProductionRates(buildings, kingdom) {
         const rates = this.calculateProduction(buildings, 1);
         const now = new Date();
@@ -198,9 +214,10 @@ let EconomyService = class EconomyService {
         const boostActive = !!(kingdom?.productionBoostUntil && now < new Date(kingdom.productionBoostUntil));
         const weakBonus = isWeak ? game_constants_1.WEAK_PLAYER_RESOURCE_BONUS : 0;
         const boostBonus = boostActive ? 1 : 0;
+        const vipBonus = kingdom?.isVip ? 0.5 : 0;
         const workerCount = kingdom?.workers || 0;
         const workerProductionBonus = 1 + workerCount * 0.04;
-        const bonus = (1 + weakBonus + boostBonus) * workerProductionBonus;
+        const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
         const workerSalary = workerCount * 5;
         return {
             gold: Math.floor(rates.gold * bonus - workerSalary),
@@ -222,8 +239,10 @@ exports.EconomyService = EconomyService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
     __param(1, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __param(2, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
-    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
+    __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         notification_service_1.NotificationService])

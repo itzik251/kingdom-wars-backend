@@ -149,16 +149,15 @@ let CombatService = class CombatService {
                 stone: Math.floor(defender.stone * lootMultiplier),
             }
             : { gold: 0, wood: 0, stone: 0 };
-        const ratio = attackerWins
-            ? Math.min(0.5, defensePower / attackPower)
-            : Math.min(0.7, attackPower / defensePower);
+        const winnerLossRate = this.random(0.10, 0.20);
+        const loserLossRate = this.random(0.50, 0.70);
         return {
             attackerWins,
             attackerPower: Math.round(attackPower),
             defenderPower: Math.round(defensePower),
             loot,
-            attackerLosses: this.calculateLosses(attackerUnits, ratio * 0.3),
-            defenderLosses: this.calculateLosses(defenderUnits, attackerWins ? Math.min(game_constants_1.DEFENDER_LOSS_MAX, ratio) : ratio * 0.1),
+            attackerLosses: this.calculateLosses(attackerUnits, attackerWins ? winnerLossRate : loserLossRate),
+            defenderLosses: this.calculateLosses(defenderUnits, attackerWins ? loserLossRate : winnerLossRate),
         };
     }
     calculateLosses(units, lossRate) {
@@ -210,32 +209,33 @@ let CombatService = class CombatService {
                 wood: report.loot.wood,
                 won: report.attackerWins,
                 telegramId: defenderKingdomFull.user.telegramId,
+                language: defenderKingdomFull.user.language,
             }).catch(() => { });
         }
         for (const unit of attackerUnits) {
             const losses = report.attackerLosses[unit.type] ?? 0;
-            const actualDead = Math.floor(losses * 0.8);
-            const wounded = losses - actualDead;
-            unit.count = Math.max(0, unit.count - actualDead);
+            const wounded = Math.floor(losses * 0.3);
+            unit.count = Math.max(0, unit.count - (losses - wounded));
             unit.woundedCount = (unit.woundedCount || 0) + wounded;
         }
         for (const unit of defenderUnits) {
             const losses = report.defenderLosses[unit.type] ?? 0;
-            const actualDead = Math.floor(losses * 0.7);
-            const wounded = losses - actualDead;
-            unit.count = Math.max(0, unit.count - actualDead);
+            const wounded = Math.floor(losses * 0.3);
+            unit.count = Math.max(0, unit.count - (losses - wounded));
             unit.woundedCount = (unit.woundedCount || 0) + wounded;
         }
         await this.unitRepo.save([...attackerUnits, ...defenderUnits]);
-        if (report.attackerWins && report.attackerPower > report.defenderPower * 2) {
-            const defenderBuildings = await this.buildingRepo.find({ where: { kingdom: { id: defender.id } } });
-            const candidates = defenderBuildings.filter(b => b.type !== building_entity_1.BuildingType.TOWN_HALL && b.level > 1);
-            if (candidates.length > 0) {
-                const target = candidates[Math.floor(Math.random() * candidates.length)];
-                target.level = Math.max(1, target.level - 1);
-                target.needsRepair = true;
-                await this.buildingRepo.save(target);
-                report.buildingDamaged = { type: target.type, newLevel: target.level };
+        const loserKingdomId = report.attackerWins ? defender.id : attacker.id;
+        const loserBuildings = await this.buildingRepo.find({ where: { kingdom: { id: loserKingdomId } } });
+        const candidates = loserBuildings.filter(b => b.type !== building_entity_1.BuildingType.TOWN_HALL && b.level > 1);
+        if (candidates.length > 0) {
+            const dmgCount = report.attackerWins && report.attackerPower > report.defenderPower * 1.5 ? 2 : 1;
+            const shuffled = [...candidates].sort(() => Math.random() - 0.5).slice(0, dmgCount);
+            for (const bld of shuffled) {
+                bld.level = Math.max(1, bld.level - 1);
+                bld.needsRepair = true;
+                await this.buildingRepo.save(bld);
+                report.buildingDamaged = { type: bld.type, newLevel: bld.level };
             }
         }
     }

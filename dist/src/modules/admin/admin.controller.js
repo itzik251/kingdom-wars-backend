@@ -22,16 +22,18 @@ const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const config_1 = require("@nestjs/config");
 const notification_service_1 = require("../notifications/notification.service");
-const tron_service_1 = require("./tron.service");
+const ton_service_1 = require("../ton/ton.service");
+const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 const game_constants_1 = require("../../constants/game.constants");
 const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config, notifService, tronService) {
+    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
         this.notifService = notifService;
-        this.tronService = tronService;
+        this.tonService = tonService;
+        this.cryptoBotService = cryptoBotService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -126,11 +128,10 @@ let AdminController = class AdminController {
     }
     async giveGems(headers, telegramId, body) {
         this.guard(headers);
-        return this.giveResource(telegramId, 'gems', body.gems);
+        return this.giveResource(telegramId, 'gems', body.gems, headers);
     }
     async takeResource(telegramId, type, amount, headers) {
-        if (headers)
-            this.guard(headers);
+        this.guard(headers);
         const user = await this.userRepo.findOne({ where: { telegramId } });
         if (!user)
             return { error: 'User not found' };
@@ -153,8 +154,7 @@ let AdminController = class AdminController {
         return { success: true, type, amount };
     }
     async giveResource(telegramId, type, amount, headers) {
-        if (headers)
-            this.guard(headers);
+        this.guard(headers);
         const user = await this.userRepo.findOne({ where: { telegramId } });
         if (!user)
             return { error: 'User not found' };
@@ -192,7 +192,7 @@ let AdminController = class AdminController {
             kingdom.food = Math.min(kingdom.maxFood, Math.max(0, (kingdom.food || 0) + amount));
         }
         else if (type === 'usdt') {
-            kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) + amount).toFixed(6));
+            kingdom.usdtBalance = parseFloat(Math.max(0, (kingdom.usdtBalance || 0) + amount).toFixed(6));
         }
         await this.kingdomRepo.save(kingdom);
         await this.notifService.create(user.id, 'admin_gift', {
@@ -216,14 +216,24 @@ let AdminController = class AdminController {
     }
     async getWalletBalance(headers) {
         this.guard(headers);
+        const cryptoBalance = await this.cryptoBotService.getBalance();
+        const result = {
+            usdtBalance: parseFloat(cryptoBalance['USDT'] || '0'),
+            tonBalance: parseFloat(cryptoBalance['TON'] || '0'),
+            source: 'CryptoBot',
+            network: 'TON/CryptoBot',
+        };
         const cfg = this.getWalletConfig();
-        if (!cfg.address)
-            return { error: 'לא הוגדרה כתובת ארנק' };
-        const [usdtBalance, trxBalance] = await Promise.all([
-            this.tronService.getUsdtBalance(cfg.address),
-            this.tronService.getTrxBalance(cfg.address),
-        ]);
-        return { address: cfg.address, usdtBalance, trxBalance };
+        if (cfg.address && this.tonService.isValidAddress(cfg.address)) {
+            const [chainUsdt, chainTon] = await Promise.all([
+                this.tonService.getUsdtBalance(cfg.address),
+                this.tonService.getTonBalance(cfg.address),
+            ]);
+            result.chainAddress = cfg.address;
+            result.chainUsdtBalance = chainUsdt;
+            result.chainTonBalance = chainTon;
+        }
+        return result;
     }
     async getPendingWithdrawals(headers) {
         this.guard(headers);
@@ -247,14 +257,14 @@ let AdminController = class AdminController {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
         if (!kingdom)
             return { error: 'Not found' };
-        if (kingdom.withdrawalStatus !== 'pending')
+        if (kingdom.withdrawalStatus !== 'pending' && kingdom.withdrawalStatus !== 'processing')
             return { error: 'Not pending' };
+        if (kingdom.withdrawalStatus === 'processing')
+            return { error: 'Already being processed' };
         const amount = kingdom.withdrawalPending;
         const wallet = kingdom.withdrawalWallet;
-        const txResult = await this.tronService.sendUsdt(wallet, amount);
-        if (txResult.error) {
-            return { error: txResult.error, hint: 'ודא שמפתח GAME_WALLET_PRIVATE_KEY מוגדר ושיש מספיק TRX לעמלות' };
-        }
+        kingdom.withdrawalStatus = 'processing';
+        await this.kingdomRepo.save(kingdom);
         kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
         kingdom.withdrawalPending = 0;
         kingdom.withdrawalStatus = 'approved';
@@ -266,7 +276,7 @@ let AdminController = class AdminController {
                 language: kingdom.user.language,
             }).catch(() => { });
         }
-        return { success: true, amount, wallet, txId: txResult.txId };
+        return { success: true, amount, wallet, note: `שלח ידנית ${amount} USDT-TON ל: ${wallet}` };
     }
     async rejectWithdrawal(headers, kingdomId, body) {
         this.guard(headers);
@@ -287,25 +297,59 @@ let AdminController = class AdminController {
     }
     async giveVip(headers, telegramId, body) {
         this.guard(headers);
-        return this.giveResource(telegramId, 'vip', body.days || game_constants_1.VIP_DURATION_DAYS);
+        return this.giveResource(telegramId, 'vip', body.days || game_constants_1.VIP_DURATION_DAYS, headers);
+    }
+    async removeVip(headers, telegramId) {
+        this.guard(headers);
+        const user = await this.userRepo.findOne({ where: { telegramId } });
+        if (!user)
+            return { error: 'User not found' };
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+        if (!kingdom)
+            return { error: 'Kingdom not found' };
+        kingdom.vipExpiresAt = null;
+        await this.kingdomRepo.save(kingdom);
+        return { success: true };
     }
     async listUsers(headers) {
         this.guard(headers);
-        const users = await this.userRepo.find({
-            order: { createdAt: 'DESC' },
-            take: 100,
-        });
-        const result = [];
-        for (const u of users) {
-            const k = await this.kingdomRepo.findOne({ where: { user: { id: u.id } } });
-            const referredUsers = await this.userRepo.find({ where: { referredBy: { id: u.id } } });
-            let activeReferrals = 0;
-            for (const ru of referredUsers) {
-                const rk = await this.kingdomRepo.findOne({ where: { user: { id: ru.id } } });
-                if (rk && rk.score > 0)
-                    activeReferrals++;
-            }
-            result.push({
+        const users = await this.userRepo.find({ order: { createdAt: 'DESC' }, take: 100 });
+        const userIds = users.map(u => u.id);
+        const kingdoms = userIds.length
+            ? await this.kingdomRepo
+                .createQueryBuilder('k')
+                .select(['k', 'u.id'])
+                .innerJoin('k.user', 'u')
+                .where('u.id IN (:...ids)', { ids: userIds })
+                .getMany()
+            : [];
+        const kingdomMap = new Map(kingdoms.map(k => [k.user?.id, k]));
+        const totalRefRows = userIds.length
+            ? await this.userRepo
+                .createQueryBuilder('u')
+                .select('u.referredBy', 'referrerId')
+                .addSelect('COUNT(*)', 'cnt')
+                .where('u.referredBy IN (:...ids)', { ids: userIds })
+                .groupBy('u.referredBy')
+                .getRawMany()
+            : [];
+        const totalRefMap = new Map(totalRefRows.map((r) => [r.referrerId, parseInt(r.cnt)]));
+        const activeRefRows = userIds.length
+            ? await this.kingdomRepo
+                .createQueryBuilder('k')
+                .innerJoin('k.user', 'u')
+                .select('u.referredBy', 'referrerId')
+                .addSelect('COUNT(*)', 'cnt')
+                .where('u.referredBy IN (:...ids)', { ids: userIds })
+                .andWhere('k.score > 0')
+                .groupBy('u.referredBy')
+                .getRawMany()
+            : [];
+        const activeRefMap = new Map(activeRefRows.map((r) => [r.referrerId, parseInt(r.cnt)]));
+        const now = new Date();
+        return users.map(u => {
+            const k = kingdomMap.get(u.id);
+            return {
                 telegramId: u.telegramId,
                 name: u.firstName || u.username,
                 username: u.username || '',
@@ -321,13 +365,12 @@ let AdminController = class AdminController {
                 stone: k?.stone ?? 0,
                 food: k?.food ?? 0,
                 usdtBalance: (k?.usdtBalance ?? 0).toFixed(4),
-                isVip: !!(k?.vipExpiresAt && new Date() < new Date(k.vipExpiresAt)),
+                isVip: !!(k?.vipExpiresAt && now < new Date(k.vipExpiresAt)),
                 vipUntil: k?.vipExpiresAt ?? null,
-                referralsTotal: referredUsers.length,
-                referralsActive: activeReferrals,
-            });
-        }
-        return result;
+                referralsTotal: totalRefMap.get(u.id) ?? 0,
+                referralsActive: activeRefMap.get(u.id) ?? 0,
+            };
+        });
     }
 };
 exports.AdminController = AdminController;
@@ -446,6 +489,14 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "giveVip", null);
 __decorate([
+    (0, common_1.Post)('remove-vip/:telegramId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "removeVip", null);
+__decorate([
     (0, common_1.Get)('users'),
     __param(0, (0, common_1.Headers)()),
     __metadata("design:type", Function),
@@ -460,6 +511,7 @@ exports.AdminController = AdminController = __decorate([
         typeorm_2.Repository,
         config_1.ConfigService,
         notification_service_1.NotificationService,
-        tron_service_1.TronService])
+        ton_service_1.TonService,
+        cryptobot_service_1.CryptoBotService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

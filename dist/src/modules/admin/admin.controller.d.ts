@@ -4,15 +4,17 @@ import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
-import { TronService } from './tron.service';
+import { TonService } from '../ton/ton.service';
+import { CryptoBotService } from '../cryptobot/cryptobot.service';
 type ResourceType = 'gems' | 'gold' | 'wood' | 'stone' | 'food' | 'usdt' | 'vip';
 export declare class AdminController {
     private userRepo;
     private kingdomRepo;
     private config;
     private notifService;
-    private tronService;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tronService: TronService);
+    private tonService;
+    private cryptoBotService;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService);
     dashboard(res: Response): void;
     private getWalletConfig;
     private guard;
@@ -73,7 +75,7 @@ export declare class AdminController {
         error?: undefined;
         vipUntil?: undefined;
     }>;
-    takeResource(telegramId: string, type: ResourceType, amount: number, headers?: any): Promise<{
+    takeResource(telegramId: string, type: ResourceType, amount: number, headers: any): Promise<{
         error: string;
         success?: undefined;
         type?: undefined;
@@ -84,7 +86,7 @@ export declare class AdminController {
         amount: number;
         error?: undefined;
     }>;
-    giveResource(telegramId: string, type: ResourceType, amount: number, headers?: any): Promise<{
+    giveResource(telegramId: string, type: ResourceType, amount: number, headers: any): Promise<{
         error: string;
         success?: undefined;
         type?: undefined;
@@ -112,17 +114,7 @@ export declare class AdminController {
         address: string;
         success: boolean;
     };
-    getWalletBalance(headers: any): Promise<{
-        error: string;
-        address?: undefined;
-        usdtBalance?: undefined;
-        trxBalance?: undefined;
-    } | {
-        address: string;
-        usdtBalance: number;
-        trxBalance: number;
-        error?: undefined;
-    }>;
+    getWalletBalance(headers: any): Promise<any>;
     getPendingWithdrawals(headers: any): Promise<{
         kingdomId: string;
         kingdomName: string;
@@ -133,25 +125,16 @@ export declare class AdminController {
     }[]>;
     approveWithdrawal(headers: any, kingdomId: string): Promise<{
         error: string;
-        hint?: undefined;
         success?: undefined;
         amount?: undefined;
         wallet?: undefined;
-        txId?: undefined;
-    } | {
-        error: string;
-        hint: string;
-        success?: undefined;
-        amount?: undefined;
-        wallet?: undefined;
-        txId?: undefined;
+        note?: undefined;
     } | {
         success: boolean;
         amount: number;
         wallet: string;
-        txId: string;
+        note: string;
         error?: undefined;
-        hint?: undefined;
     }>;
     rejectWithdrawal(headers: any, kingdomId: string, body: {
         reason?: string;
@@ -183,6 +166,33 @@ export declare class AdminController {
         error?: undefined;
         vipUntil?: undefined;
     }>;
-    listUsers(headers: any): Promise<any[]>;
+    removeVip(headers: any, telegramId: string): Promise<{
+        error: string;
+        success?: undefined;
+    } | {
+        success: boolean;
+        error?: undefined;
+    }>;
+    listUsers(headers: any): Promise<{
+        telegramId: string;
+        name: string;
+        username: string;
+        language: string;
+        joined: Date;
+        lastLogin: Date;
+        termsAccepted: boolean;
+        kingdomName: string;
+        score: number;
+        gems: number;
+        gold: number;
+        wood: number;
+        stone: number;
+        food: number;
+        usdtBalance: string;
+        isVip: boolean;
+        vipUntil: Date;
+        referralsTotal: number;
+        referralsActive: number;
+    }[]>;
 }
 export {};

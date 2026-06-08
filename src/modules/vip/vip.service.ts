@@ -3,9 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
-import { VIP_PRICE_TON, VIP_PRICE_USDT, VIP_DURATION_DAYS, PAYMENT_WALLET_ADDRESS } from '../../constants/game.constants';
+import { TonService } from '../ton/ton.service';
+import { VIP_PRICE_USDT_TON, VIP_DURATION_DAYS, PAYMENT_WALLET_ADDRESS } from '../../constants/game.constants';
 
-// Simple in-memory VIP store (upgrade to DB table for production)
 const vipStore = new Map<string, Date>();
 
 @Injectable()
@@ -13,48 +13,77 @@ export class VipService {
   constructor(
     @InjectRepository(User)    private userRepo: Repository<User>,
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
+    private tonService: TonService,
   ) {}
 
   async getStatus(userId: string) {
-    const expiresAt = vipStore.get(userId);
-    const isVip = expiresAt && new Date() < expiresAt;
-    return { isVip: !!isVip, expiresAt: isVip ? expiresAt : null, priceToN: VIP_PRICE_TON };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+    const dbExpiry = kingdom?.vipExpiresAt;
+    const isVip = !!(dbExpiry && new Date() < new Date(dbExpiry));
+    if (isVip && dbExpiry) vipStore.set(userId, new Date(dbExpiry));
+    return {
+      isVip,
+      expiresAt: isVip ? dbExpiry : null,
+      priceUsdt: VIP_PRICE_USDT_TON,
+      currency: 'USDT-TON',
+      gameWallet: PAYMENT_WALLET_ADDRESS,
+      usdtBalance: parseFloat(((kingdom?.usdtBalance ?? 0)).toFixed(4)),
+    };
   }
 
-  // Called after TON payment is verified on-chain
-  // In production: verify tx hash via TonCenter API
+  /** Activate VIP after user sends USDT-TON to game wallet */
   async activateVip(userId: string, tonTxHash: string) {
-    if (!tonTxHash || tonTxHash.length < 10) {
-      throw new BadRequestException('Invalid transaction hash');
+    if (!tonTxHash || tonTxHash.length < 20) {
+      throw new BadRequestException('hash טרנזקציה לא תקין');
     }
 
-    // TODO: verify tx on-chain via https://toncenter.com/api/v2/getTransaction
-    // For now: accept any hash in dev, verify in prod
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      const verified = await this.tonService.verifyUsdtTx(
+        tonTxHash,
+        VIP_PRICE_USDT_TON,
+        PAYMENT_WALLET_ADDRESS,
+      );
+      if (!verified) throw new BadRequestException('הטרנזקציה לא נמצאה ב-TON — המתן מספר שניות ונסה שוב');
+    }
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + VIP_DURATION_DAYS);
-    vipStore.set(userId, expiresAt);
-
-    // Persist on the kingdom so combat/building/unit VIP gates work off the entity.
     const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+    const expiresAt = new Date(
+      Math.max(Date.now(), kingdom?.vipExpiresAt?.getTime() ?? 0) + VIP_DURATION_DAYS * 86_400_000,
+    );
+
     if (kingdom) {
       kingdom.vipExpiresAt = expiresAt;
       await this.kingdomRepo.save(kingdom);
     }
-
+    vipStore.set(userId, expiresAt);
     return { success: true, expiresAt, durationDays: VIP_DURATION_DAYS };
   }
 
+  /** Purchase VIP using in-game USDT balance */
   async purchaseWithUsdt(userId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
     if (!kingdom) throw new BadRequestException('Kingdom not found');
-    if ((kingdom.usdtBalance ?? 0) < VIP_PRICE_USDT) {
-      throw new BadRequestException(`נדרש ${VIP_PRICE_USDT} USDT. יתרתך: ${(kingdom.usdtBalance ?? 0).toFixed(4)} USDT`);
+    if ((kingdom.usdtBalance ?? 0) < VIP_PRICE_USDT_TON) {
+      throw new BadRequestException(`נדרש ${VIP_PRICE_USDT_TON} USDT. יתרתך: ${(kingdom.usdtBalance ?? 0).toFixed(4)} USDT`);
     }
-    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance ?? 0) - VIP_PRICE_USDT).toFixed(6));
-    const expiresAt = new Date(Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + VIP_DURATION_DAYS * 86_400_000);
-    kingdom.vipExpiresAt = expiresAt;
-    await this.kingdomRepo.save(kingdom);
+
+    // Atomic deduct to prevent double-spend
+    const result = await this.kingdomRepo
+      .createQueryBuilder()
+      .update()
+      .set({ usdtBalance: () => `usdt_balance - ${VIP_PRICE_USDT_TON}` })
+      .where('id = :id AND usdt_balance >= :price', { id: kingdom.id, price: VIP_PRICE_USDT_TON })
+      .execute();
+
+    if (!result.affected || result.affected === 0) {
+      throw new BadRequestException(`נדרש ${VIP_PRICE_USDT_TON} USDT. יתרתך: ${(kingdom.usdtBalance ?? 0).toFixed(4)} USDT`);
+    }
+
+    const expiresAt = new Date(
+      Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + VIP_DURATION_DAYS * 86_400_000,
+    );
+    await this.kingdomRepo.update({ id: kingdom.id }, { vipExpiresAt: expiresAt });
     vipStore.set(userId, expiresAt);
     return { success: true, expiresAt, durationDays: VIP_DURATION_DAYS };
   }
@@ -62,9 +91,10 @@ export class VipService {
   getPaymentInfo() {
     return {
       walletAddress: PAYMENT_WALLET_ADDRESS,
-      amount: VIP_PRICE_USDT,
-      currency: 'USDT (TRC20)',
-      note: 'שלח בדיוק את הסכום. לאחר שליחה הכנס את hash הטרנזקציה.',
+      amount: VIP_PRICE_USDT_TON,
+      currency: 'USDT-TON',
+      network: 'TON',
+      note: `שלח בדיוק ${VIP_PRICE_USDT_TON} USDT על רשת TON. אחרי השליחה הכנס את hash הטרנזקציה.`,
     };
   }
 

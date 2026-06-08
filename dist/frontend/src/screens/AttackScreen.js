@@ -20,7 +20,13 @@ function AttackScreen() {
     const [history, setHistory] = (0, react_1.useState)([]);
     const [showHistory, setShowHistory] = (0, react_1.useState)(false);
     const t = (0, useT_1.useT)();
-    (0, react_1.useEffect)(() => { loadTargets(); loadHistory(); }, []);
+    const cancelMarchRef = (0, react_1.useRef)(false);
+    (0, react_1.useEffect)(() => {
+        loadTargets();
+        loadHistory();
+        cancelMarchRef.current = false;
+        return () => { cancelMarchRef.current = true; };
+    }, []);
     async function loadHistory() {
         try {
             setHistory(await client_1.api.get('/combat/history'));
@@ -40,12 +46,18 @@ function AttackScreen() {
     async function attack(profile) {
         setAttacking(profile.id);
         setReport(null);
+        cancelMarchRef.current = false;
         try {
             const marchSecs = profile.marchSeconds || 5;
             setMarchCountdown(marchSecs);
-            await new Promise(res => {
+            await new Promise((res, rej) => {
                 let remaining = marchSecs;
                 const tick = setInterval(() => {
+                    if (cancelMarchRef.current) {
+                        clearInterval(tick);
+                        rej(new Error('CANCELLED'));
+                        return;
+                    }
                     remaining -= 1;
                     setMarchCountdown(remaining);
                     if (remaining <= 0) {
@@ -63,7 +75,9 @@ function AttackScreen() {
             setTargets(prev => prev.filter(t => t.id !== profile.id));
         }
         catch (e) {
-            alert(e.response?.data?.message || t('error'));
+            if (e?.message !== 'CANCELLED') {
+                alert(e.response?.data?.message || t('error'));
+            }
         }
         finally {
             setAttacking(null);
@@ -128,22 +142,32 @@ function AttackScreen() {
                     borderRadius: 12, padding: '14px 28px', textAlign: 'center',
                 }}>
               <div style={{ fontSize: 13, color: '#a0845a', marginBottom: 8 }}>{t('loot_label')}</div>
-              <div style={{ display: 'flex', gap: 20, fontSize: 16, fontWeight: 700 }}>
+              <div style={{ display: 'flex', gap: 16, fontSize: 16, fontWeight: 700, flexWrap: 'wrap', justifyContent: 'center' }}>
                 <span>💰 {(0, format_1.fmt)(report.loot.gold)}</span>
                 <span>🪵 {(0, format_1.fmt)(report.loot.wood)}</span>
                 <span>🪨 {(0, format_1.fmt)(report.loot.stone)}</span>
+                {(report.loot.usdt ?? 0) > 0 && (<span style={{ color: '#27ae60' }}>💵 {report.loot.usdt.toFixed(4)} USDT</span>)}
               </div>
             </div>)}
 
-          {report.attackerLosses && Object.values(report.attackerLosses).some(v => v > 0) && (<div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 12, padding: '12px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 6 }}>{t('your_losses')}</div>
-              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', fontSize: 13 }}>
+          
+          {report.attackerLosses && Object.values(report.attackerLosses).some(v => v > 0) && (<div style={{ background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', width: '100%', maxWidth: 360 }}>
+              <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 5 }}>⚔️ {t('your_losses')}</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', fontSize: 12 }}>
                 {Object.entries(report.attackerLosses).filter(([, v]) => v > 0).map(([type, v]) => (<span key={type} style={{ color: '#e74c3c' }}>-{(0, format_1.fmt)(v)} {t('u_' + type)}</span>))}
               </div>
             </div>)}
 
+          
+          {report.defenderLosses && Object.values(report.defenderLosses).some(v => v > 0) && (<div style={{ background: 'rgba(39,174,96,0.08)', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', width: '100%', maxWidth: 360 }}>
+              <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 5 }}>🛡️ {t('enemy_losses')}</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', fontSize: 12 }}>
+                {Object.entries(report.defenderLosses).filter(([, v]) => v > 0).map(([type, v]) => (<span key={type} style={{ color: '#27ae60' }}>-{(0, format_1.fmt)(v)} {t('u_' + type)}</span>))}
+              </div>
+            </div>)}
+
           {report.buildingDamaged && (<div style={{ background: 'rgba(230,126,34,0.12)', border: '1px solid rgba(230,126,34,0.4)', borderRadius: 12, padding: '12px 20px', textAlign: 'center', color: '#e67e22', fontWeight: 700, fontSize: 14 }}>
-              {t('building_damaged', { name: t('b_' + report.buildingDamaged.type), n: report.buildingDamaged.newLevel })}
+              💥 {t('building_damaged', { name: t('b_' + report.buildingDamaged.type), n: report.buildingDamaged.newLevel })}
             </div>)}
 
           <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>

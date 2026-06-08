@@ -155,6 +155,7 @@ declare const he: {
     double_attack_speed_active: string;
     added_to_balance: string;
     ads_limit: string;
+    ad_not_completed: string;
     usdt_section: string;
     available_balance: string;
     to_withdraw: string;
@@ -216,6 +217,14 @@ declare const he: {
     ref_bonus_per_friend: string;
     ref_friends_count: string;
     ref_copy_link: string;
+    ref_active_note: string;
+    pending_rewards: string;
+    claim_all_rewards: string;
+    reward_structure: string;
+    every: string;
+    rewards_cumulative: string;
+    bonus: string;
+    claimed: string;
     attack_title: string;
     choose_kingdom: string;
     scanning: string;
@@ -401,6 +410,13 @@ declare const he: {
     friends_invited: string;
     ref_per_friend: string;
     ref_gems_received: string;
+    enemy_losses: string;
+    repair_started: string;
+    repairing_now: string;
+    repair_cost: string;
+    repair_time: string;
+    repair_done_in: string;
+    minutes: string;
 };
 export declare const TRANSLATIONS: {
     readonly he: {
@@ -553,6 +569,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -614,6 +631,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -799,6 +824,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly en: {
         nav_home: string;
@@ -950,6 +982,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -1011,6 +1044,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -1196,6 +1237,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly es: {
         nav_home: string;
@@ -1347,6 +1395,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -1408,6 +1457,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -1593,6 +1650,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly fr: {
         nav_home: string;
@@ -1744,6 +1808,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -1805,6 +1870,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -1990,6 +2063,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly de: {
         nav_home: string;
@@ -2141,6 +2221,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -2202,6 +2283,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -2387,6 +2476,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly ru: {
         nav_home: string;
@@ -2538,6 +2634,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -2599,6 +2696,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -2784,6 +2889,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly pt: {
         nav_home: string;
@@ -2935,6 +3047,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -2996,6 +3109,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -3181,6 +3302,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
     readonly ar: {
         nav_home: string;
@@ -3332,6 +3460,7 @@ export declare const TRANSLATIONS: {
         double_attack_speed_active: string;
         added_to_balance: string;
         ads_limit: string;
+        ad_not_completed: string;
         usdt_section: string;
         available_balance: string;
         to_withdraw: string;
@@ -3393,6 +3522,14 @@ export declare const TRANSLATIONS: {
         ref_bonus_per_friend: string;
         ref_friends_count: string;
         ref_copy_link: string;
+        ref_active_note: string;
+        pending_rewards: string;
+        claim_all_rewards: string;
+        reward_structure: string;
+        every: string;
+        rewards_cumulative: string;
+        bonus: string;
+        claimed: string;
         attack_title: string;
         choose_kingdom: string;
         scanning: string;
@@ -3578,6 +3715,13 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        enemy_losses: string;
+        repair_started: string;
+        repairing_now: string;
+        repair_cost: string;
+        repair_time: string;
+        repair_done_in: string;
+        minutes: string;
     };
 };
 export type TKey = keyof typeof he;

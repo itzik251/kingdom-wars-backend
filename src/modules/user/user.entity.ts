@@ -41,4 +41,7 @@ export class User {
 
   @Column({ name: 'claimed_referral_milestones', type: 'simple-array', default: '' })
   claimedReferralMilestones: number[];
+
+  @Column({ name: 'referral_claimed_count', default: 0 })
+  referralClaimedCount: number;
 }

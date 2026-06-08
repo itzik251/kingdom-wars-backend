@@ -32,9 +32,7 @@ export class KingdomService {
     const tickBuildings: { type: string; level: number }[] = (updated as any).__completedBuildings || [];
     const tickUnits: { type: string; count: number }[]     = (updated as any).__completedUnits     || [];
 
-    // Send push notifications for each completed building/unit (one per item)
-    if (tickBuildings.length > 0) this.sendBuildDoneNotifsRaw(userId, tickBuildings).catch(() => {});
-    if (tickUnits.length > 0)    this.sendTrainingDoneNotifsRaw(userId, tickUnits).catch(() => {});
+    // NOTE: notifications are already sent by economyService.tickKingdom — no duplicate needed here
 
     const [buildings, units] = await Promise.all([
       this.buildingRepo.find({ where: { kingdom: { id: kingdom.id } } }),
@@ -62,7 +60,8 @@ export class KingdomService {
     ) {
       updated.shieldExpiredNotifiedAt = new Date(updated.shieldUntil);
       await this.kingdomRepo.save(updated);
-      this.notifService.create(userId, 'shield_expired', {}).catch(() => {});
+      const shieldPayload = await this.getUserPayload(userId);
+      this.notifService.create(userId, 'shield_expired', shieldPayload).catch(() => {});
     }
 
     const productionRates = this.economyService.getProductionRates(buildings, updated);
@@ -116,8 +115,10 @@ export class KingdomService {
   }
 
   async requestWithdrawal(kingdomId: string, walletAddress: string) {
-    if (!walletAddress || walletAddress.trim().length < 10) {
-      throw new BadRequestException('כתובת ארנק לא תקינה');
+    const addr = walletAddress?.trim() || '';
+    // Validate TON address format: UQ.../EQ... (48 chars) or raw hex
+    if (!addr || !(/^[UE]Q[A-Za-z0-9_-]{46}$/.test(addr) || /^[0-9a-fA-F]{64}$/.test(addr))) {
+      throw new BadRequestException('כתובת ארנק TON לא תקינה — חייבת להתחיל ב-UQ או EQ');
     }
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const MIN_WITHDRAW = 20;

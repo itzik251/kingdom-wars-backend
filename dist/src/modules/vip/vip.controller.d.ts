@@ -8,7 +8,10 @@ export declare class VipController {
     getStatus(req: any): Promise<{
         isVip: boolean;
         expiresAt: Date;
-        priceToN: number;
+        priceUsdt: number;
+        currency: string;
+        gameWallet: string;
+        usdtBalance: number;
     }>;
     activate(req: any, dto: ActivateDto): Promise<{
         success: boolean;
@@ -24,12 +27,14 @@ export declare class VipController {
         walletAddress: string;
         amount: number;
         currency: string;
+        network: string;
         note: string;
     };
     getInvoice(): {
         walletAddress: string;
         amount: number;
         currency: string;
+        network: string;
         note: string;
     };
 }

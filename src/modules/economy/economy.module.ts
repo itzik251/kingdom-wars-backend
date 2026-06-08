@@ -4,10 +4,11 @@ import { EconomyService } from './economy.service';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
+import { User } from '../user/user.entity';
 import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit]), forwardRef(() => NotificationModule)],
+  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), forwardRef(() => NotificationModule)],
   providers: [EconomyService],
   exports: [EconomyService],
 })

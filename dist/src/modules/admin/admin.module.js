@@ -10,10 +10,11 @@ exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const admin_controller_1 = require("./admin.controller");
-const tron_service_1 = require("./tron.service");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const notification_module_1 = require("../notifications/notification.module");
+const ton_module_1 = require("../ton/ton.module");
+const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -22,9 +23,10 @@ exports.AdminModule = AdminModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, kingdom_entity_1.Kingdom]),
             notification_module_1.NotificationModule,
+            ton_module_1.TonModule,
         ],
         controllers: [admin_controller_1.AdminController],
-        providers: [tron_service_1.TronService],
+        providers: [cryptobot_service_1.CryptoBotService],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map

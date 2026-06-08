@@ -50,6 +50,14 @@ export class BuildingController {
     return this.buildingService.buildNew(kingdom.id, dto.type);
   }
 
+  @Get('repair-cost/:id')
+  async repairCost(@Request() req, @Param('id') buildingId: string) {
+    const { buildings } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    const building = (buildings as any[]).find((b: any) => b.id === buildingId);
+    if (!building) return { cost: { gold: 0, wood: 0, stone: 0 }, repairTimeSeconds: 0 };
+    return this.buildingService.getRepairCost(building.type, building.level);
+  }
+
   @Post('repair/:id')
   async repair(@Request() req, @Param('id') buildingId: string) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);

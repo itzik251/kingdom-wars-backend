@@ -30,8 +30,8 @@
   .header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #111827; border-bottom: 1px solid #1e2a3a; margin: -16px -16px 20px; }
   .header h1 { font-size: 18px; color: #f4d03f; }
   .logout { background: none; border: 1px solid #444; color: #888; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
-  .stat-card { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; padding: 14px; text-align: center; }
+  .stats-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: stretch; }
+  .stat-card { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; padding: 14px; text-align: center; min-width: fit-content; }
   .stat-card .val { font-size: 26px; font-weight: 900; color: #f4d03f; }
   .stat-card .lbl { font-size: 11px; color: #666; margin-top: 4px; }
   .section { background: #111827; border: 1px solid #1e2a3a; border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
@@ -93,13 +93,14 @@
 
   <!-- Wallet Section -->
   <div class="section" style="margin-bottom:18px;">
-    <div class="section-header">💳 ארנק המשחק (USDT TRC20)</div>
+    <div class="section-header">🔷 ארנק המשחק (USDT-TON)</div>
     <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
-      <div style="font-size:11px;color:#666;">כתובת הארנק — לכאן מגיעים תשלומי VIP ומכאן מבוצעות משיכות.</div>
+      <div style="font-size:11px;color:#666;">כתובת ארנק TON — לכאן מגיעים תשלומי VIP (USDT-TON) ומכאן מבוצעות משיכות.</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <input type="text" id="walletAddr" placeholder="T..." style="flex:1;min-width:200px;margin:0;font-family:monospace;font-size:12px;"/>
+        <input type="text" id="walletAddr" placeholder="UQ... או EQ..." style="flex:1;min-width:200px;margin:0;font-family:monospace;font-size:12px;"/>
         <button class="btn-sm btn-success" onclick="saveWallet()">💾 שמור כתובת</button>
       </div>
+      <div style="font-size:10px;color:#555;">💡 כתובת TON מתחילה ב-UQ או EQ (48 תווים)</div>
     </div>
   </div>
 
@@ -139,12 +140,13 @@
           <th>🌾</th>
           <th>💵 USDT</th>
           <th>VIP</th>
+          <th>תקנון</th>
           <th>הפניות</th>
           <th>כניסה</th>
           <th>פעולות</th>
         </tr>
       </thead>
-      <tbody id="usersTable"><tr><td colspan="15" class="loading" style="text-align:center;padding:30px;color:#666">טוען...</td></tr></tbody>
+      <tbody id="usersTable"><tr><td colspan="16" class="loading" style="text-align:center;padding:30px;color:#666">טוען...</td></tr></tbody>
     </table>
     </div>
   </div>
@@ -208,9 +210,12 @@ async function loadWithdrawals() {
           <td style="padding:8px 10px;border-bottom:1px solid #0d1520;color:#27ae60;font-weight:700">$${w.amount.toFixed(4)} USDT</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0d1520;font-family:monospace;font-size:10px;color:#a0845a;word-break:break-all">${w.wallet}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0d1520">
-            <div style="display:flex;gap:6px">
-              <button class="btn-sm btn-success" onclick="approveWithdrawal('${w.kingdomId}','${w.username}',${w.amount})">✅ אשר</button>
-              <button class="btn-sm btn-danger" onclick="rejectWithdrawal('${w.kingdomId}','${w.username}')">❌ דחה</button>
+            <div style="display:flex;gap:6px;flex-direction:column">
+              <button class="btn-sm" style="background:#0088cc;color:#fff;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11px" onclick="copyAndOpenWallet('${w.wallet}',${w.amount})">🔷 העתק + פתח @wallet</button>
+              <div style="display:flex;gap:4px">
+                <button class="btn-sm btn-success" onclick="approveWithdrawal('${w.kingdomId}','${w.username}',${w.amount},'${w.wallet}')">✅ סימון כנשלח</button>
+                <button class="btn-sm btn-danger" onclick="rejectWithdrawal('${w.kingdomId}','${w.username}')">❌ דחה</button>
+              </div>
             </div>
           </td>
         </tr>`).join('')}
@@ -221,9 +226,17 @@ async function loadWithdrawals() {
   }
 }
 
-async function approveWithdrawal(kingdomId, name, amount) {
-  if (!confirm(`לשלוח $${amount.toFixed(4)} USDT ל-${name}?\n\nהמערכת תבצע העברה בלוקצ'יין אוטומטית.\n⚠️ ודא שיש TRX לעמלות בארנק המשחק!`)) return;
-  showToast('⏳ שולח USDT בבלוקצ\'יין...');
+function copyAndOpenWallet(tonAddress, amount) {
+  navigator.clipboard?.writeText(tonAddress).catch(() => {});
+  showToast(`📋 הועתק: ${tonAddress.slice(0,12)}... | פתח @wallet ושלח ${amount} USDT`);
+  setTimeout(() => {
+    window.open('https://t.me/wallet', '_blank');
+  }, 800);
+}
+
+async function approveWithdrawal(kingdomId, name, amount, wallet) {
+  if (!confirm(`✅ אישור שליחת $${amount.toFixed(4)} USDT-TON\n\nכתובת: ${wallet}\n\n⚠️ ודא ששלחת ידנית מ-@wallet לפני אישור!`)) return;
+  showToast('⏳ מעדכן סטטוס...');
   const r = await fetch(API + '/withdrawals/' + kingdomId + '/approve', { method: 'POST', headers: h() });
   const d = await r.json();
   if (d.success) {
@@ -262,7 +275,8 @@ function renderStats(data) {
     <div class="stat-card"><div class="val" style="color:#27ae60">$${data.totalUsdtInGame}</div><div class="lbl">💵 USDT בשחקנים</div></div>
     <div class="stat-card"><div class="val" style="color:#f4d03f">${data.vipCount || 0}</div><div class="lbl">👑 VIP פעילים</div></div>
     <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות</div></div>
-    <div class="stat-card" id="walletBalanceCard"><div class="val" style="color:#3498db" id="walletUsdtVal">...</div><div class="lbl">💳 ארנק USDT</div></div>
+    <div class="stat-card" id="walletBalanceCard"><div class="val" style="color:#0088cc" id="walletUsdtVal">...</div><div class="lbl">💳 CryptoBot USDT</div></div>
+    <div class="stat-card"><div class="val" style="color:#5bc8f5" id="walletTonVal">...</div><div class="lbl">💎 CryptoBot TON</div></div>
   `;
   // Update wallet display
   if (data.gameWalletAddress !== undefined) {
@@ -320,6 +334,7 @@ function renderUsers(users) {
       <td style="color:#90ee90">${u.food?.toLocaleString()}</td>
       <td style="color:${parseFloat(u.usdtBalance) > 0 ? '#27ae60' : '#555'}">$${u.usdtBalance}</td>
       <td>${vipBadge}</td>
+      <td>${u.termsAccepted ? '<span class="badge badge-green">✅</span>' : '<span class="badge badge-red">❌</span>'}</td>
       <td><span style="color:#27ae60">${u.referralsActive}</span>/<span style="color:#666">${u.referralsTotal}</span></td>
       <td style="color:#555;font-size:11px">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('he') : '—'}</td>
       <td>
@@ -337,7 +352,8 @@ function renderUsers(users) {
             <button class="btn-sm btn-success" onclick="giveResource('${u.telegramId}','${u.name||'?'}')">➕ תן</button>
             <button class="btn-sm" style="background:#2c1a00;color:#e67e22;border:1px solid #e67e22" onclick="takeResource('${u.telegramId}','${u.name||'?'}')">➖ קח</button>
           </div>
-          <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 VIP</button>
+          <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 תן VIP</button>
+          <button class="btn-sm btn-purple" onclick="removeVip('${u.telegramId}','${u.name||'?'}')">👑 הסר VIP</button>
           <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫 חסום</button>
           <button class="btn-sm" style="background:#1a0a0a;color:#e74c3c;border:1px solid #e74c3c" onclick="deleteUser('${u.telegramId}','${u.name||'?'}')">🗑️ מחק</button>
         </div>
@@ -383,6 +399,14 @@ async function giveResource(telegramId, name) {
   else showToast('❌ שגיאה: ' + JSON.stringify(d));
 }
 
+async function removeVip(telegramId, name) {
+  if (!confirm('להסיר VIP מ-' + name + '?')) return;
+  const r = await fetch(API + '/remove-vip/' + telegramId, { method: 'POST', headers: h() });
+  const d = await r.json();
+  if (d.success) { showToast('✅ VIP הוסר מ-' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+}
+
 async function giveVip(telegramId, name) {
   if (!confirm('לתת VIP חודש חינם ל-' + name + '?')) return;
   const r = await fetch(API + '/give-vip/' + telegramId, {
@@ -424,10 +448,11 @@ async function loadWalletBalance() {
     const r = await fetch(API + '/wallet/balance', { headers: h() });
     const d = await r.json();
     const usdtEl = document.getElementById('walletUsdtVal');
-    const trxEl  = document.getElementById('walletTrxVal');
+    const tonEl  = document.getElementById('walletTonVal');
     if (!usdtEl) return;
-    if (d.error) { usdtEl.textContent = '—'; return; }
-    usdtEl.textContent = '$' + (d.usdtBalance ?? 0).toFixed(2);
+    if (d.error) { usdtEl.textContent = '—'; if (tonEl) tonEl.textContent = '—'; return; }
+    usdtEl.textContent = '$' + (d.usdtBalance ?? 0).toFixed(2) + ' USDT';
+    if (tonEl) tonEl.textContent = (d.tonBalance ?? 0).toFixed(3) + ' TON';
   } catch {}
 }
 

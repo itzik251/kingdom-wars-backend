@@ -170,10 +170,10 @@ export class NotificationService {
   private recentSends = new Map<string, number>();
 
   private async sendTelegram(userId: string, type: string, payload: any) {
-    // Dedup: skip if same user+type was sent within 10 seconds
+    // Dedup: skip if same user+type was sent within 5 minutes (matches cron interval)
     const key = `${userId}:${type}`;
     const lastSent = this.recentSends.get(key) ?? 0;
-    if (Date.now() - lastSent < 10_000) return;
+    if (Date.now() - lastSent < 300_000) return;
     this.recentSends.set(key, Date.now());
 
     const botToken = this.config.get('TELEGRAM_BOT_TOKEN');

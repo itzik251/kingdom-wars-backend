@@ -7,7 +7,75 @@ const gameStore_1 = require("../store/gameStore");
 const format_1 = require("../utils/format");
 const Countdown_1 = require("../components/Countdown");
 const useT_1 = require("../i18n/useT");
+const USDT_JETTON_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
+const VIP_PRICE_USDT = 5;
 const REWARD_AD_BLOCK_ID = '34207';
+function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
+    const t = (0, useT_1.useT)();
+    const [pendingInvoiceId, setPendingInvoiceId] = (0, react_1.useState)(null);
+    async function openCryptoBotPayment() {
+        onLoading(true);
+        try {
+            const invoice = await client_1.api.post('/cryptobot/create-vip-invoice');
+            setPendingInvoiceId(invoice.invoiceId);
+            const payUrl = invoice.payUrl;
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.openTelegramLink(payUrl);
+            }
+            else {
+                window.open(payUrl, '_blank');
+            }
+            let attempts = 0;
+            const poll = setInterval(async () => {
+                attempts++;
+                if (attempts > 100) {
+                    clearInterval(poll);
+                    onLoading(false);
+                    return;
+                }
+                try {
+                    const result = await client_1.api.post('/cryptobot/check-vip-payment', { invoiceId: invoice.invoiceId });
+                    if (result.paid) {
+                        clearInterval(poll);
+                        showMsg('👑 ' + t('vip_activated_usdt'));
+                        onSuccess();
+                        onLoading(false);
+                        setPendingInvoiceId(null);
+                    }
+                }
+                catch { }
+            }, 3000);
+        }
+        catch (e) {
+            showMsg(e?.response?.data?.message || t('error'), false);
+            onLoading(false);
+        }
+    }
+    async function payWithBalance() {
+        onLoading(true);
+        try {
+            await client_1.api.post('/vip/purchase-with-usdt');
+            showMsg('👑 ' + t('vip_activated_usdt'));
+            onSuccess();
+        }
+        catch (e) {
+            showMsg(e.response?.data?.message || t('error'), false);
+        }
+        finally {
+            onLoading(false);
+        }
+    }
+    return (<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      
+      <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 800, borderRadius: 10, cursor: 'pointer' }} disabled={loading} onClick={openCryptoBotPayment}>
+        {loading ? '...' : `💎 ${VIP_PRICE_USDT} USDT · @CryptoBot`}
+      </button>
+      
+      <button className="btn" style={{ fontSize: 11, padding: '7px 10px', background: 'rgba(39,174,96,0.2)', border: '1px solid rgba(39,174,96,0.4)', color: '#27ae60', borderRadius: 10, cursor: 'pointer' }} disabled={loading} onClick={payWithBalance}>
+        💵 {t('vip_pay_usdt_balance')}
+      </button>
+    </div>);
+}
 function ReferralCard() {
     const [referral, setReferral] = (0, react_1.useState)(null);
     const [copied, setCopied] = (0, react_1.useState)(false);
@@ -96,6 +164,8 @@ function ReferralCard() {
     </div>);
 }
 function UsdtBalanceSection() {
+    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
+    const storeBalance = kingdom?.usdtBalance ?? 0;
     const [balance, setBalance] = (0, react_1.useState)(null);
     const [withdrawalStatus, setWithdrawalStatus] = (0, react_1.useState)('none');
     const [withdrawalPending, setWithdrawalPending] = (0, react_1.useState)(0);
@@ -105,6 +175,7 @@ function UsdtBalanceSection() {
     const [submitting, setSubmitting] = (0, react_1.useState)(false);
     const [msg, setMsg] = (0, react_1.useState)('');
     const t = (0, useT_1.useT)();
+    const bal = balance ?? storeBalance;
     async function load() {
         try {
             const r = await client_1.api.get('/kingdom/usdt-balance');
@@ -113,11 +184,14 @@ function UsdtBalanceSection() {
             setWithdrawalPending(r.withdrawalPending ?? 0);
             setWithdrawalWallet(r.withdrawalWallet ?? '');
         }
-        catch {
-            setBalance(0);
-        }
+        catch { }
     }
-    (0, react_1.useEffect)(() => { load(); }, []);
+    (0, react_1.useEffect)(() => { setBalance(storeBalance); }, [storeBalance]);
+    (0, react_1.useEffect)(() => {
+        load();
+        window.addEventListener('usdt-balance-refresh', load);
+        return () => window.removeEventListener('usdt-balance-refresh', load);
+    }, []);
     async function submitWithdrawal() {
         if (!walletInput.trim() || walletInput.trim().length < 10) {
             setMsg('❌ ' + t('invalid_wallet'));
@@ -138,7 +212,6 @@ function UsdtBalanceSection() {
             setTimeout(() => setMsg(''), 6000);
         }
     }
-    const bal = balance ?? 0;
     const isPending = withdrawalStatus === 'pending';
     const isApproved = withdrawalStatus === 'approved';
     return (<div style={{ marginBottom: 20 }}>
@@ -248,29 +321,65 @@ function ShopScreen() {
         }
     }
     async function watchAd(type) {
+        if (loading)
+            return;
         setLoading(type);
         try {
-            const AdController = window.Adsgram?.init({ blockId: REWARD_AD_BLOCK_ID });
-            if (AdController) {
-                const result = await AdController.show();
-                if (!result?.done) {
-                    showMsg(t('error'), false);
+            const Adsgram = window.Adsgram;
+            if (Adsgram) {
+                let AdController;
+                try {
+                    AdController = Adsgram.init({ blockId: REWARD_AD_BLOCK_ID });
+                }
+                catch (initErr) {
+                    console.error('[AdsGram] init error:', initErr);
+                    showMsg(`📺 Ad init error: ${initErr?.message || 'unknown'}`, false);
                     return;
                 }
+                const showPromise = AdController.show();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AD_TIMEOUT')), 30_000));
+                try {
+                    const result = await Promise.race([showPromise, timeoutPromise]);
+                    console.log('[AdsGram] show result:', result);
+                    if (!result?.done) {
+                        showMsg('📺 ' + t('ad_not_completed'), false);
+                        return;
+                    }
+                }
+                catch (adErr) {
+                    console.error('[AdsGram] show error:', adErr);
+                    const desc = adErr?.description || adErr?.message || '';
+                    if (desc.toLowerCase().includes('telegram') || desc.toLowerCase().includes('launch parameters')) {
+                        console.warn('[AdsGram] Not in Telegram context — granting reward in dev mode');
+                    }
+                    else if (adErr?.message === 'AD_TIMEOUT') {
+                        showMsg('📺 ' + t('ad_not_completed'), false);
+                        return;
+                    }
+                    else {
+                        showMsg(desc ? `📺 ${desc}` : '📺 ' + t('ad_not_completed'), false);
+                        return;
+                    }
+                }
+            }
+            else {
+                console.warn('[AdsGram] SDK not loaded, granting reward in dev mode');
             }
             const reward = await client_1.api.post('/ads/reward', { type });
+            const rewardTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const msgs = {
-                double_production: `🚀 ${t('double_prod')} — ${t('double_prod_active', { time: new Date(reward.boostUntil).toLocaleTimeString() })}`,
-                double_attack_speed: `⚡ ${t('double_attack_speed_active', { time: new Date(reward.boostUntil).toLocaleTimeString() })}`,
+                double_production: `🚀 ${t('double_prod')} — ${t('double_prod_active', { time: rewardTime(reward.boostUntil) })}`,
+                double_attack_speed: `⚡ ${t('double_attack_speed_active', { time: rewardTime(reward.boostUntil) })}`,
                 usdt_bonus: `💵 +0.0001 USDT ${t('added_to_balance')}`,
                 gems: `💎 +10 Gems ${t('added_to_balance')}`,
                 gold_bonus: `💰 +500 ${t('gold')} ${t('added_to_balance')}`,
-                wood_bonus: `🪵 +500 ${t('wood')} ${t('added_to_balance')}`,
-                stone_bonus: `🪨 +500 ${t('stone')} ${t('added_to_balance')}`,
-                food_bonus: `🌾 +500 ${t('food')} ${t('added_to_balance')}`,
+                wood_bonus: `🪵 +400 ${t('wood')} ${t('added_to_balance')}`,
+                stone_bonus: `🪨 +300 ${t('stone')} ${t('added_to_balance')}`,
+                food_bonus: `🌾 +200 ${t('food')} ${t('added_to_balance')}`,
             };
-            showMsg(msgs[type] || t('confirm'));
+            showMsg(msgs[type] || '✅ ' + t('confirm'));
             await Promise.all([load(), refresh()]);
+            window.dispatchEvent(new Event('usdt-balance-refresh'));
         }
         catch (e) {
             showMsg(e.response?.data?.message || t('error'), false);
@@ -325,39 +434,7 @@ function ShopScreen() {
             </div>
             {isVip
             ? <div style={{ background: 'linear-gradient(135deg,#b8860b,#f4d03f)', borderRadius: 10, padding: '6px 14px', fontSize: 12, fontWeight: 800, color: '#1a0a00' }}>{t('vip_active')}</div>
-            : <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px' }} disabled={loading === 'action'} onClick={async () => {
-                    setLoading('action');
-                    try {
-                        await client_1.api.post('/vip/purchase-with-usdt');
-                        showMsg(t('vip_activated_usdt'));
-                        await Promise.all([load(), refresh()]);
-                    }
-                    catch (e) {
-                        showMsg(e.response?.data?.message || t('error'), false);
-                    }
-                    finally {
-                        setLoading(null);
-                    }
-                }}>
-                    💵 {t('vip_pay_usdt_balance')}
-                  </button>
-                  <button className="btn" style={{ fontSize: 12, padding: '8px 12px', background: 'rgba(52,152,219,0.2)', border: '1px solid rgba(52,152,219,0.4)', color: '#3498db' }} disabled={loading === 'action'} onClick={async () => {
-                    setLoading('action');
-                    try {
-                        const info = await client_1.api.get('/vip/payment-info');
-                        showMsg(`📋 ${t('vip_wallet_send')}: ${info.walletAddress} · ${info.amount} ${info.currency}`);
-                    }
-                    catch (e) {
-                        showMsg(e.response?.data?.message || t('error'), false);
-                    }
-                    finally {
-                        setLoading(null);
-                    }
-                }}>
-                    💳 {t('vip_pay_wallet')}
-                  </button>
-                </div>}
+            : <VipPaymentButtons loading={loading === 'action'} onLoading={(v) => setLoading(v ? 'action' : null)} showMsg={showMsg} onSuccess={() => { load(); refresh(); window.dispatchEvent(new Event('usdt-balance-refresh')); }}/>}
           </div>
 
           

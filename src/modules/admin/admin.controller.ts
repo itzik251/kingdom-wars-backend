@@ -8,7 +8,8 @@ import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
-import { TronService } from './tron.service';
+import { TonService } from '../ton/ton.service';
+import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 
 const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
@@ -22,7 +23,8 @@ export class AdminController {
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     private config: ConfigService,
     private notifService: NotificationService,
-    private tronService: TronService,
+    private tonService: TonService,
+    private cryptoBotService: CryptoBotService,
   ) {}
 
   @Get()
@@ -131,7 +133,7 @@ export class AdminController {
   @Post('give-gems/:telegramId')
   async giveGems(@Headers() headers: any, @Param('telegramId') telegramId: string, @Body() body: { gems: number }) {
     this.guard(headers);
-    return this.giveResource(telegramId, 'gems', body.gems);
+    return this.giveResource(telegramId, 'gems', body.gems, headers);
   }
 
   @Post('take-resource/:telegramId')
@@ -139,9 +141,9 @@ export class AdminController {
     @Param('telegramId') telegramId: string,
     @Body('type') type: ResourceType,
     @Body('amount') amount: number,
-    @Headers() headers?: any,
+    @Headers() headers: any,
   ) {
-    if (headers) this.guard(headers);
+    this.guard(headers);
     const user = await this.userRepo.findOne({ where: { telegramId } });
     if (!user) return { error: 'User not found' };
     const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
@@ -163,9 +165,9 @@ export class AdminController {
     @Param('telegramId') telegramId: string,
     @Body('type') type: ResourceType,
     @Body('amount') amount: number,
-    @Headers() headers?: any,
+    @Headers() headers: any,
   ) {
-    if (headers) this.guard(headers);
+    this.guard(headers);
     const user = await this.userRepo.findOne({ where: { telegramId } });
     if (!user) return { error: 'User not found' };
     const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
@@ -193,7 +195,7 @@ export class AdminController {
     else if (type === 'wood')  { kingdom.wood  = Math.min(kingdom.maxWood,  Math.max(0, (kingdom.wood  || 0) + amount)); }
     else if (type === 'stone') { kingdom.stone = Math.min(kingdom.maxStone, Math.max(0, (kingdom.stone || 0) + amount)); }
     else if (type === 'food')  { kingdom.food  = Math.min(kingdom.maxFood,  Math.max(0, (kingdom.food  || 0) + amount)); }
-    else if (type === 'usdt')  { kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) + amount).toFixed(6)); }
+    else if (type === 'usdt')  { kingdom.usdtBalance = parseFloat(Math.max(0, (kingdom.usdtBalance || 0) + amount).toFixed(6)); }
 
     await this.kingdomRepo.save(kingdom);
 
@@ -222,13 +224,28 @@ export class AdminController {
   @Get('wallet/balance')
   async getWalletBalance(@Headers() headers: any) {
     this.guard(headers);
+    // Primary: CryptoBot balance (no wallet address needed)
+    const cryptoBalance = await this.cryptoBotService.getBalance();
+    const result: any = {
+      usdtBalance: parseFloat(cryptoBalance['USDT'] || '0'),
+      tonBalance: parseFloat(cryptoBalance['TON'] || '0'),
+      source: 'CryptoBot',
+      network: 'TON/CryptoBot',
+    };
+
+    // Secondary: on-chain TON wallet (if configured)
     const cfg = this.getWalletConfig();
-    if (!cfg.address) return { error: 'לא הוגדרה כתובת ארנק' };
-    const [usdtBalance, trxBalance] = await Promise.all([
-      this.tronService.getUsdtBalance(cfg.address),
-      this.tronService.getTrxBalance(cfg.address),
-    ]);
-    return { address: cfg.address, usdtBalance, trxBalance };
+    if (cfg.address && this.tonService.isValidAddress(cfg.address)) {
+      const [chainUsdt, chainTon] = await Promise.all([
+        this.tonService.getUsdtBalance(cfg.address),
+        this.tonService.getTonBalance(cfg.address),
+      ]);
+      result.chainAddress = cfg.address;
+      result.chainUsdtBalance = chainUsdt;
+      result.chainTonBalance = chainTon;
+    }
+
+    return result;
   }
 
   @Get('withdrawals')
@@ -256,18 +273,22 @@ export class AdminController {
     this.guard(headers);
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
     if (!kingdom) return { error: 'Not found' };
-    if (kingdom.withdrawalStatus !== 'pending') return { error: 'Not pending' };
+    if (kingdom.withdrawalStatus !== 'pending' && kingdom.withdrawalStatus !== 'processing') return { error: 'Not pending' };
+    if (kingdom.withdrawalStatus === 'processing') return { error: 'Already being processed' };
 
     const amount = kingdom.withdrawalPending;
     const wallet = kingdom.withdrawalWallet;
 
-    // Execute actual blockchain transfer
-    const txResult = await this.tronService.sendUsdt(wallet, amount);
-    if (txResult.error) {
-      return { error: txResult.error, hint: 'ודא שמפתח GAME_WALLET_PRIVATE_KEY מוגדר ושיש מספיק TRX לעמלות' };
-    }
+    // Lock the row immediately to prevent double-send on concurrent approval clicks
+    kingdom.withdrawalStatus = 'processing';
+    await this.kingdomRepo.save(kingdom);
 
-    // Update DB only after successful transfer
+    // ⚠️ MANUAL TRANSFER REQUIRED:
+    // Admin must manually send ${amount} USDT-TON from @wallet to: ${wallet}
+    // After sending, click Approve to mark as done in DB.
+    // (Automated transfer removed to avoid CryptoBot $3.5 fee)
+
+    // Mark as approved + deduct balance (admin confirmed manual send)
     kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
     kingdom.withdrawalPending = 0;
     kingdom.withdrawalStatus = 'approved';
@@ -281,7 +302,7 @@ export class AdminController {
       }).catch(() => {});
     }
 
-    return { success: true, amount, wallet, txId: txResult.txId };
+    return { success: true, amount, wallet, note: `שלח ידנית ${amount} USDT-TON ל: ${wallet}` };
   }
 
   @Post('withdrawals/:kingdomId/reject')
@@ -308,30 +329,70 @@ export class AdminController {
   @Post('give-vip/:telegramId')
   async giveVip(@Headers() headers: any, @Param('telegramId') telegramId: string, @Body() body: { days?: number }) {
     this.guard(headers);
-    return this.giveResource(telegramId, 'vip', body.days || VIP_DURATION_DAYS);
+    return this.giveResource(telegramId, 'vip', body.days || VIP_DURATION_DAYS, headers);
+  }
+
+  @Post('remove-vip/:telegramId')
+  async removeVip(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+    if (!kingdom) return { error: 'Kingdom not found' };
+    kingdom.vipExpiresAt = null;
+    await this.kingdomRepo.save(kingdom);
+    return { success: true };
   }
 
   @Get('users')
   async listUsers(@Headers() headers: any) {
     this.guard(headers);
-    const users = await this.userRepo.find({
-      order: { createdAt: 'DESC' },
-      take: 100,
-    });
 
-    const result = [];
-    for (const u of users) {
-      const k = await this.kingdomRepo.findOne({ where: { user: { id: u.id } } });
+    // Fetch users + kingdoms + referral counts in 4 queries instead of ~2000
+    const users = await this.userRepo.find({ order: { createdAt: 'DESC' }, take: 100 });
+    const userIds = users.map(u => u.id);
 
-      // Count referrals: total invited + active (score > 0)
-      const referredUsers = await this.userRepo.find({ where: { referredBy: { id: u.id } } });
-      let activeReferrals = 0;
-      for (const ru of referredUsers) {
-        const rk = await this.kingdomRepo.findOne({ where: { user: { id: ru.id } } });
-        if (rk && rk.score > 0) activeReferrals++;
-      }
+    const kingdoms = userIds.length
+      ? await this.kingdomRepo
+          .createQueryBuilder('k')
+          .select(['k', 'u.id'])
+          .innerJoin('k.user', 'u')
+          .where('u.id IN (:...ids)', { ids: userIds })
+          .getMany()
+      : [];
+    // After the join, kingdom.user.id is populated
+    const kingdomMap = new Map(kingdoms.map(k => [k.user?.id, k]));
 
-      result.push({
+    // Total referral count per user (one query)
+    const totalRefRows = userIds.length
+      ? await this.userRepo
+          .createQueryBuilder('u')
+          .select('u.referredBy', 'referrerId')
+          .addSelect('COUNT(*)', 'cnt')
+          .where('u.referredBy IN (:...ids)', { ids: userIds })
+          .groupBy('u.referredBy')
+          .getRawMany()
+      : [];
+    const totalRefMap = new Map(totalRefRows.map((r: any) => [r.referrerId, parseInt(r.cnt)]));
+
+    // Active referral count per user (one query — kingdoms with score > 0)
+    const activeRefRows = userIds.length
+      ? await this.kingdomRepo
+          .createQueryBuilder('k')
+          .innerJoin('k.user', 'u')
+          .select('u.referredBy', 'referrerId')
+          .addSelect('COUNT(*)', 'cnt')
+          .where('u.referredBy IN (:...ids)', { ids: userIds })
+          .andWhere('k.score > 0')
+          .groupBy('u.referredBy')
+          .getRawMany()
+      : [];
+    const activeRefMap = new Map(activeRefRows.map((r: any) => [r.referrerId, parseInt(r.cnt)]));
+
+    const now = new Date();
+    return users.map(u => {
+      const k = kingdomMap.get(u.id);
+      return {
         telegramId: u.telegramId,
         name: u.firstName || u.username,
         username: u.username || '',
@@ -347,12 +408,11 @@ export class AdminController {
         stone: k?.stone ?? 0,
         food: k?.food ?? 0,
         usdtBalance: (k?.usdtBalance ?? 0).toFixed(4),
-        isVip: !!(k?.vipExpiresAt && new Date() < new Date(k.vipExpiresAt)),
+        isVip: !!(k?.vipExpiresAt && now < new Date(k.vipExpiresAt)),
         vipUntil: k?.vipExpiresAt ?? null,
-        referralsTotal: referredUsers.length,
-        referralsActive: activeReferrals,
-      });
-    }
-    return result;
+        referralsTotal: totalRefMap.get(u.id) ?? 0,
+        referralsActive: activeRefMap.get(u.id) ?? 0,
+      };
+    });
   }
 }

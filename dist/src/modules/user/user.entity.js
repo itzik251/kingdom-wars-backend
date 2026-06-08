@@ -63,6 +63,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'claimed_referral_milestones', type: 'simple-array', default: '' }),
     __metadata("design:type", Array)
 ], User.prototype, "claimedReferralMilestones", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'referral_claimed_count', default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "referralClaimedCount", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

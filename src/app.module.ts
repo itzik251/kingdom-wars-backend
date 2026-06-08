@@ -18,6 +18,7 @@ import { VipModule } from './modules/vip/vip.module';
 import { AdsModule } from './modules/ads/ads.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { CryptoBotFullModule } from './modules/cryptobot/cryptobot.full.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { AdminModule } from './modules/admin/admin.module';
     AdsModule,
     TelegramModule,
     AdminModule,
+    CryptoBotFullModule,
   ],
 })
 export class AppModule {}

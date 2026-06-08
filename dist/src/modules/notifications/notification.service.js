@@ -166,7 +166,7 @@ let NotificationService = class NotificationService {
     async sendTelegram(userId, type, payload) {
         const key = `${userId}:${type}`;
         const lastSent = this.recentSends.get(key) ?? 0;
-        if (Date.now() - lastSent < 10_000)
+        if (Date.now() - lastSent < 300_000)
             return;
         this.recentSends.set(key, Date.now());
         const botToken = this.config.get('TELEGRAM_BOT_TOKEN');

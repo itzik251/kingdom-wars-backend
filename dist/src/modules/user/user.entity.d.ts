@@ -11,4 +11,5 @@ export declare class User {
     language: string;
     termsAcceptedAt: Date;
     claimedReferralMilestones: number[];
+    referralClaimedCount: number;
 }

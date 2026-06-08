@@ -13,13 +13,14 @@ const economy_service_1 = require("./economy.service");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const building_entity_1 = require("../building/building.entity");
 const unit_entity_1 = require("../units/unit.entity");
+const user_entity_1 = require("../user/user.entity");
 const notification_module_1 = require("../notifications/notification.module");
 let EconomyModule = class EconomyModule {
 };
 exports.EconomyModule = EconomyModule;
 exports.EconomyModule = EconomyModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom, building_entity_1.Building, unit_entity_1.Unit]), (0, common_1.forwardRef)(() => notification_module_1.NotificationModule)],
+        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom, building_entity_1.Building, unit_entity_1.Unit, user_entity_1.User]), (0, common_1.forwardRef)(() => notification_module_1.NotificationModule)],
         providers: [economy_service_1.EconomyService],
         exports: [economy_service_1.EconomyService],
     })

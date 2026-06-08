@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VIP_GAME_PRODUCTION_MULTIPLIER = exports.PAYMENT_WALLET_ADDRESS = exports.VIP_DURATION_DAYS = exports.VIP_PRICE_USDT = exports.VIP_PRICE_TON = exports.VIP_BUILD_TIME_REDUCTION = exports.INITIAL_UNITS = exports.INITIAL_BUILDINGS = exports.WEAK_PLAYER_RESOURCE_BONUS = exports.SNOWBALL_LOOT_PENALTY = exports.SNOWBALL_SCORE_RATIO = exports.POST_ATTACK_SHIELD_HOURS = exports.NEWBIE_SHIELD_HOURS = exports.WALL_DEFENSE_BONUS_PER_LEVEL = exports.DEFENDER_LOSS_MAX = exports.LOOT_PERCENTAGE = exports.COMBAT_RANDOM_MAX = exports.COMBAT_RANDOM_MIN = exports.UNIT_STATS = exports.TOWN_HALL_GATES = exports.MAX_BUILDING_LEVEL = exports.BUILD_TIME_MULTIPLIER = exports.BUILDING_BASE_TIMES = exports.UPGRADE_COST_MULTIPLIER = exports.BUILDING_BASE_COSTS = exports.PRODUCTION_MULTIPLIER = exports.BASE_PRODUCTION = void 0;
+exports.VIP_PRICE_USDT = exports.VIP_PRICE_TON = exports.VIP_GAME_PRODUCTION_MULTIPLIER = exports.PAYMENT_WALLET_ADDRESS = exports.VIP_DURATION_DAYS = exports.VIP_PRICE_USDT_TON = exports.VIP_BUILD_TIME_REDUCTION = exports.INITIAL_UNITS = exports.INITIAL_BUILDINGS = exports.WEAK_PLAYER_RESOURCE_BONUS = exports.SNOWBALL_LOOT_PENALTY = exports.SNOWBALL_SCORE_RATIO = exports.POST_ATTACK_SHIELD_HOURS = exports.NEWBIE_SHIELD_HOURS = exports.WALL_DEFENSE_BONUS_PER_LEVEL = exports.DEFENDER_LOSS_MAX = exports.LOOT_PERCENTAGE = exports.COMBAT_RANDOM_MAX = exports.COMBAT_RANDOM_MIN = exports.UNIT_STATS = exports.TOWN_HALL_GATES = exports.MAX_BUILDING_LEVEL = exports.BUILD_TIME_MULTIPLIER = exports.BUILDING_BASE_TIMES = exports.UPGRADE_COST_MULTIPLIER = exports.BUILDING_BASE_COSTS = exports.PRODUCTION_MULTIPLIER = exports.BASE_PRODUCTION = void 0;
 const building_entity_1 = require("../modules/building/building.entity");
 const unit_entity_1 = require("../modules/units/unit.entity");
 exports.BASE_PRODUCTION = {
@@ -79,9 +79,10 @@ exports.INITIAL_BUILDINGS = [
 ];
 exports.INITIAL_UNITS = Object.values(unit_entity_1.UnitType);
 exports.VIP_BUILD_TIME_REDUCTION = 0.30;
-exports.VIP_PRICE_TON = 5;
-exports.VIP_PRICE_USDT = 5;
+exports.VIP_PRICE_USDT_TON = 5;
 exports.VIP_DURATION_DAYS = 30;
-exports.PAYMENT_WALLET_ADDRESS = 'TYourTRC20WalletAddressHere';
+exports.PAYMENT_WALLET_ADDRESS = process.env.GAME_WALLET_ADDRESS || 'YOUR_TON_WALLET_ADDRESS_HERE';
 exports.VIP_GAME_PRODUCTION_MULTIPLIER = 1.5;
+exports.VIP_PRICE_TON = exports.VIP_PRICE_USDT_TON;
+exports.VIP_PRICE_USDT = exports.VIP_PRICE_USDT_TON;
 //# sourceMappingURL=game.constants.js.map

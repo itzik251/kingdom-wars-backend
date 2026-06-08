@@ -30,6 +30,9 @@ let Building = class Building {
     get isUpgrading() {
         return this.upgradeEndsAt && new Date() < new Date(this.upgradeEndsAt);
     }
+    get isRepairing() {
+        return this.repairEndsAt && new Date() < new Date(this.repairEndsAt);
+    }
 };
 exports.Building = Building;
 __decorate([
@@ -61,6 +64,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'needs_repair', default: false }),
     __metadata("design:type", Boolean)
 ], Building.prototype, "needsRepair", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'repair_ends_at', nullable: true }),
+    __metadata("design:type", Date)
+], Building.prototype, "repairEndsAt", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)

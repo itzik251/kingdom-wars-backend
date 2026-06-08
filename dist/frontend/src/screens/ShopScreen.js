@@ -2,52 +2,111 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ShopScreen;
 const react_1 = require("react");
+const ui_react_1 = require("@tonconnect/ui-react");
 const client_1 = require("../api/client");
 const gameStore_1 = require("../store/gameStore");
 const format_1 = require("../utils/format");
 const Countdown_1 = require("../components/Countdown");
 const useT_1 = require("../i18n/useT");
+const core_1 = require("@ton/core");
 const USDT_JETTON_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
+const GAME_WALLET = 'UQBQeWT7nw0KjeKmSbxsmqqgDRh61H-_ZamVc3_I5S1jNX0T';
 const VIP_PRICE_USDT = 5;
+const TONCENTER = 'https://toncenter.com/api/v3';
 const REWARD_AD_BLOCK_ID = '34207';
+async function getJettonWalletAddr(ownerAddress) {
+    try {
+        const res = await fetch(`${TONCENTER}/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&jetton_address=${USDT_JETTON_MASTER}&limit=1`);
+        const json = await res.json();
+        return json?.jetton_wallets?.[0]?.address || null;
+    }
+    catch {
+        return null;
+    }
+}
+function buildUsdtTransferBody(destinationAddress, senderAddress, nanoUsdt) {
+    return (0, core_1.beginCell)()
+        .storeUint(0xf8a7ea5, 32)
+        .storeUint(0, 64)
+        .storeCoins(nanoUsdt)
+        .storeAddress(core_1.Address.parse(destinationAddress))
+        .storeAddress(core_1.Address.parse(senderAddress))
+        .storeBit(false)
+        .storeCoins((0, core_1.toNano)('0.01'))
+        .storeBit(false)
+        .endCell();
+}
 function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
     const t = (0, useT_1.useT)();
-    const [pendingInvoiceId, setPendingInvoiceId] = (0, react_1.useState)(null);
-    async function openCryptoBotPayment() {
+    const [tonConnectUI] = (0, ui_react_1.useTonConnectUI)();
+    const wallet = (0, ui_react_1.useTonWallet)();
+    const [polling, setPolling] = (0, react_1.useState)(false);
+    async function payWithTonWallet() {
         onLoading(true);
         try {
-            const invoice = await client_1.api.post('/cryptobot/create-vip-invoice');
-            setPendingInvoiceId(invoice.invoiceId);
-            const payUrl = invoice.payUrl;
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.openTelegramLink(payUrl);
+            if (!wallet) {
+                await tonConnectUI.openModal();
+                onLoading(false);
+                return;
             }
-            else {
-                window.open(payUrl, '_blank');
+            const senderAddr = wallet.account.address;
+            const senderFriendly = core_1.Address.parseRaw(senderAddr).toString({ bounceable: false });
+            const jettonWallet = await getJettonWalletAddr(senderFriendly);
+            if (!jettonWallet) {
+                showMsg('❌ ' + t('wallet_no_usdt'), false);
+                onLoading(false);
+                return;
             }
+            const nanoUsdt = BigInt(VIP_PRICE_USDT * 1_000_000);
+            const body = buildUsdtTransferBody(GAME_WALLET, senderFriendly, nanoUsdt);
+            const result = await tonConnectUI.sendTransaction({
+                validUntil: Math.floor(Date.now() / 1000) + 600,
+                messages: [{
+                        address: jettonWallet,
+                        amount: (0, core_1.toNano)('0.05').toString(),
+                        payload: body.toBoc().toString('base64'),
+                    }],
+            });
+            showMsg('⏳ ' + t('vip_tx_sent'), true);
+            setPolling(true);
+            const txHash = result.boc.replace(/[+/=]/g, c => c === '+' ? '-' : c === '/' ? '_' : '').slice(0, 44);
             let attempts = 0;
             const poll = setInterval(async () => {
                 attempts++;
-                if (attempts > 100) {
+                if (attempts > 30) {
                     clearInterval(poll);
+                    setPolling(false);
+                    try {
+                        await client_1.api.post('/vip/activate', { tonTxHash: txHash });
+                        showMsg('👑 ' + t('vip_activated_usdt'), true);
+                        onSuccess();
+                    }
+                    catch (e) {
+                        showMsg(e.response?.data?.message || t('vip_tx_verify_pending'), false);
+                    }
                     onLoading(false);
                     return;
                 }
                 try {
-                    const result = await client_1.api.post('/cryptobot/check-vip-payment', { invoiceId: invoice.invoiceId });
-                    if (result.paid) {
+                    const r = await client_1.api.post('/vip/activate', { tonTxHash: txHash });
+                    if (r.success) {
                         clearInterval(poll);
-                        showMsg('👑 ' + t('vip_activated_usdt'));
+                        setPolling(false);
+                        showMsg('👑 ' + t('vip_activated_usdt'), true);
                         onSuccess();
                         onLoading(false);
-                        setPendingInvoiceId(null);
                     }
                 }
                 catch { }
-            }, 3000);
+            }, 4000);
         }
         catch (e) {
-            showMsg(e?.response?.data?.message || t('error'), false);
+            if (e?.message?.includes('User rejects') || e?.message?.includes('cancel')) {
+                showMsg(t('payment_cancelled'), false);
+            }
+            else {
+                showMsg(e?.message || t('error'), false);
+            }
             onLoading(false);
         }
     }
@@ -67,13 +126,17 @@ function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
     }
     return (<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       
-      <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 800, borderRadius: 10, cursor: 'pointer' }} disabled={loading} onClick={openCryptoBotPayment}>
-        {loading ? '...' : `💎 ${VIP_PRICE_USDT} USDT · @CryptoBot`}
+      <button style={{ fontSize: 12, padding: '9px 12px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 800, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={payWithTonWallet}>
+        {loading && polling ? '⏳ ' + t('vip_verifying') : wallet ? `💎 ${VIP_PRICE_USDT} USDT · ${t('pay_with_wallet')}` : `🔗 ${t('connect_wallet_pay')}`}
       </button>
       
-      <button className="btn" style={{ fontSize: 11, padding: '7px 10px', background: 'rgba(39,174,96,0.2)', border: '1px solid rgba(39,174,96,0.4)', color: '#27ae60', borderRadius: 10, cursor: 'pointer' }} disabled={loading} onClick={payWithBalance}>
+      <button style={{ fontSize: 11, padding: '7px 10px', background: 'rgba(39,174,96,0.2)', border: '1px solid rgba(39,174,96,0.4)', color: '#27ae60', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={payWithBalance}>
         💵 {t('vip_pay_usdt_balance')}
       </button>
+      {wallet && (<div style={{ fontSize: 9, color: '#555', textAlign: 'center' }}>
+          {t('wallet_connected')}: {wallet.account.address.slice(0, 8)}...{wallet.account.address.slice(-6)}
+          <button onClick={() => tonConnectUI.disconnect()} style={{ background: 'none', border: 'none', color: '#e74c3c', fontSize: 9, cursor: 'pointer', marginLeft: 4 }}>✕</button>
+        </div>)}
     </div>);
 }
 function ReferralCard() {

@@ -114,6 +114,10 @@ function AppInner() {
             const urlStartapp = params.get('startapp') || params.get('ref') || '';
             const rawRef = startParam || urlStartapp;
             const ref = rawRef.startsWith('ref_') ? rawRef.slice(4) : (rawRef || undefined);
+            if (rawRef === 'tab_leaderboard') {
+                const { setActiveScreen } = gameStore_1.useGameStore.getState();
+                setTimeout(() => setActiveScreen('leaderboard'), 500);
+            }
             client_1.api.post('/auth/login', { initData: tg.initData, referralCode: ref })
                 .then(({ token, dailyBonus, termsAccepted, isNewUser }) => {
                 setToken(token);

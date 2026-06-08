@@ -20,6 +20,16 @@ export class KingdomService {
   ) {}
 
   async getKingdomByUser(userId: string) {
+    // Update lastLogin at most once per 10 minutes (non-blocking)
+    this.userRepo.findOne({ where: { id: userId } }).then(user => {
+      if (!user) return;
+      const now = new Date();
+      const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;
+      if (!lastLogin || now.getTime() - lastLogin.getTime() > 10 * 60 * 1000) {
+        this.userRepo.update({ id: userId }, { lastLogin: now }).catch(() => {});
+      }
+    }).catch(() => {});
+
     const kingdom = await this.kingdomRepo.findOne({
       where: { user: { id: userId } },
     });

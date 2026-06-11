@@ -16,6 +16,7 @@ exports.UnitsController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const antibot_guard_1 = require("../antibot/antibot.guard");
 const units_service_1 = require("./units.service");
 const unit_entity_1 = require("./unit.entity");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
@@ -47,6 +48,8 @@ let UnitsController = class UnitsController {
 exports.UnitsController = UnitsController;
 __decorate([
     (0, common_1.Post)('train'),
+    (0, common_1.UseGuards)(antibot_guard_1.AntiBotGuard),
+    (0, antibot_guard_1.AntiBotAction)('units_train'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

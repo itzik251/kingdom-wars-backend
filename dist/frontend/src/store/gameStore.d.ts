@@ -36,6 +36,8 @@ export interface Kingdom extends Resources {
     workers: number;
     maxWorkers: number;
     usdtBalance?: number;
+    attackSpeedBoostUntil?: string | null;
+    productionBoostUntil?: string | null;
 }
 interface GameState {
     token: string | null;

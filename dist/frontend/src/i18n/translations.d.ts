@@ -130,6 +130,7 @@ declare const he: {
     withdrawal_note: string;
     invalid_wallet: string;
     vip_usdt_raid_note: string;
+    vip_no_ads: string;
     vip_prod_x15: string;
     vip_usdt_raid: string;
     too_weak_to_attack: string;
@@ -410,6 +411,10 @@ declare const he: {
     friends_invited: string;
     ref_per_friend: string;
     ref_gems_received: string;
+    ton_wallet: string;
+    connect_wallet: string;
+    disconnect_wallet: string;
+    connect_wallet_to_pay_vip: string;
     pay_with_wallet: string;
     connect_wallet_pay: string;
     wallet_connected: string;
@@ -552,6 +557,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -832,6 +838,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -973,6 +983,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -1253,6 +1264,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -1394,6 +1409,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -1674,6 +1690,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -1815,6 +1835,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -2095,6 +2116,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -2236,6 +2261,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -2516,6 +2542,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -2657,6 +2687,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -2937,6 +2968,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -3078,6 +3113,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -3358,6 +3394,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;
@@ -3499,6 +3539,7 @@ export declare const TRANSLATIONS: {
         withdrawal_note: string;
         invalid_wallet: string;
         vip_usdt_raid_note: string;
+        vip_no_ads: string;
         vip_prod_x15: string;
         vip_usdt_raid: string;
         too_weak_to_attack: string;
@@ -3779,6 +3820,10 @@ export declare const TRANSLATIONS: {
         friends_invited: string;
         ref_per_friend: string;
         ref_gems_received: string;
+        ton_wallet: string;
+        connect_wallet: string;
+        disconnect_wallet: string;
+        connect_wallet_to_pay_vip: string;
         pay_with_wallet: string;
         connect_wallet_pay: string;
         wallet_connected: string;

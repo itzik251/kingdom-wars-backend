@@ -151,7 +151,10 @@ function AppInner() {
     (0, react_1.useEffect)(() => {
         if (token) {
             loadKingdom();
-            setTimeout(() => showInterstitial(!!kingdom?.isVip), 2000);
+            setTimeout(() => {
+                const { kingdom: k } = gameStore_1.useGameStore.getState();
+                showInterstitial(!!k?.isVip);
+            }, 3000);
             lastInterstitialRef.current = Date.now();
         }
     }, [token]);

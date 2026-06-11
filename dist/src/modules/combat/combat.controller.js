@@ -16,6 +16,7 @@ exports.CombatController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const antibot_guard_1 = require("../antibot/antibot.guard");
 const combat_service_1 = require("./combat.service");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
 const quest_service_1 = require("../quest/quest.service");
@@ -33,7 +34,7 @@ let CombatController = class CombatController {
     }
     async attack(req, dto) {
         const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
-        const report = await this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId);
+        const report = await this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId, dto.heroType, dto.squad);
         const kid = myKingdom.kingdom.id;
         await Promise.all([
             this.questService.incrementQuest(kid, 'perform_attack', 1),
@@ -58,6 +59,8 @@ let CombatController = class CombatController {
 exports.CombatController = CombatController;
 __decorate([
     (0, common_1.Post)('attack'),
+    (0, common_1.UseGuards)(antibot_guard_1.AntiBotGuard),
+    (0, antibot_guard_1.AntiBotAction)('combat_attack'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

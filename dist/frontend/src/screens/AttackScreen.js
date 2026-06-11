@@ -10,6 +10,8 @@ const useT_1 = require("../i18n/useT");
 const KINGDOM_AVATARS = ['🏰', '🗺️', '⚔️', '🏯', '🛡️', '👑', '🌋', '🏔️', '🗡️', '⚡'];
 function AttackScreen() {
     const { refresh, kingdom } = (0, gameStore_1.useGameStore)();
+    const attackBoostActive = !!(kingdom?.attackSpeedBoostUntil &&
+        new Date() < new Date(kingdom.attackSpeedBoostUntil));
     const [targets, setTargets] = (0, react_1.useState)([]);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [attacking, setAttacking] = (0, react_1.useState)(null);
@@ -44,11 +46,14 @@ function AttackScreen() {
         }
     }
     async function attack(profile) {
+        if (attacking)
+            return;
         setAttacking(profile.id);
         setReport(null);
         cancelMarchRef.current = false;
         try {
-            const marchSecs = profile.marchSeconds || 5;
+            const baseMarch = profile.marchSeconds || 5;
+            const marchSecs = attackBoostActive ? Math.max(1, Math.ceil(baseMarch / 2)) : baseMarch;
             setMarchCountdown(marchSecs);
             await new Promise((res, rej) => {
                 let remaining = marchSecs;
@@ -268,13 +273,16 @@ function AttackScreen() {
                     <span>🏆 {(0, format_1.fmt)(tgt.score)}</span>
                   </div>
                 </div>
-                <button onClick={() => setProfileId(tgt.id)} disabled={!!attacking} style={{
-                    background: 'linear-gradient(135deg, #c0392b, #e74c3c)',
+                <button onClick={() => setProfileId(tgt.id)} style={{
+                    background: attacking === tgt.id
+                        ? 'linear-gradient(135deg,#b8860b,#f4d03f)'
+                        : 'linear-gradient(135deg,#c0392b,#e74c3c)',
                     border: 'none', borderRadius: 10, padding: '10px 16px',
-                    color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                    color: attacking === tgt.id ? '#000' : 'white',
+                    fontWeight: 700, fontSize: 14, cursor: 'pointer',
                     boxShadow: '0 3px 10px rgba(231,76,60,0.4)',
                 }}>
-                  {attacking === tgt.id ? '💥' : t('check_btn')}
+                  {attacking === tgt.id ? `⚔️ ${marchCountdown}s` : t('check_btn')}
                 </button>
               </div>))}
           </div>

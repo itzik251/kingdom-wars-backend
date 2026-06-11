@@ -1,6 +1,7 @@
 import { Controller, Post, Body, UseGuards, Request, Get, Query, Param } from '@nestjs/common';
 import { IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AntiBotGuard, AntiBotAction } from '../antibot/antibot.guard';
 import { CombatService } from './combat.service';
 import { KingdomService } from '../kingdom/kingdom.service';
 import { QuestService } from '../quest/quest.service';
@@ -8,6 +9,12 @@ import { QuestService } from '../quest/quest.service';
 class AttackDto {
   @IsUUID()
   defenderKingdomId: string;
+
+  // Optional hero commander (paladin/dragon_rider/ragnar/titan)
+  heroType?: string;
+
+  // Optional squad — if omitted, uses full army
+  squad?: Record<string, number>;
 }
 
 @Controller('combat')
@@ -20,9 +27,11 @@ export class CombatController {
   ) {}
 
   @Post('attack')
+  @UseGuards(AntiBotGuard)
+  @AntiBotAction('combat_attack')
   async attack(@Request() req, @Body() dto: AttackDto) {
     const myKingdom = await this.kingdomService.getKingdomByUser(req.user.userId);
-    const report = await this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId);
+    const report = await this.combatService.attack(myKingdom.kingdom.id, dto.defenderKingdomId, dto.heroType, dto.squad);
 
     const kid = myKingdom.kingdom.id;
     await Promise.all([

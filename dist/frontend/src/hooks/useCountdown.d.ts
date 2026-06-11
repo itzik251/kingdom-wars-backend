@@ -1,1 +1,1 @@
-export declare function useCountdown(endsAt: string | null | undefined): string;
+export declare function useCountdown(endsAt: string | null | undefined, onEnd?: () => void): string;

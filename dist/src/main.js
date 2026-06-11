@@ -8,7 +8,22 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.setGlobalPrefix('api');
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
-    app.enableCors({ origin: '*', credentials: true });
+    const allowedOrigins = [
+        'https://kingdomwars.cloud',
+        'https://www.kingdomwars.cloud',
+        ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
+    ];
+    app.enableCors({
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            }
+            else {
+                callback(null, false);
+            }
+        },
+        credentials: true,
+    });
     app.useStaticAssets((0, path_1.join)(__dirname, '..', 'public'), {
         setHeaders: (res, path) => {
             if (path.endsWith('index.html')) {

@@ -10,13 +10,6 @@ export declare class AdsController {
     constructor(adsService: AdsService, kingdomService: KingdomService);
     getStatus(req: any): Promise<{
         boostActive: boolean;
-        boostUntil: any;
-        adsWatchedToday: number;
-        adsRemainingToday: number;
-        attackBoostActive?: undefined;
-        attackBoostUntil?: undefined;
-    } | {
-        boostActive: boolean;
         boostUntil: Date;
         attackBoostActive: boolean;
         attackBoostUntil: Date;

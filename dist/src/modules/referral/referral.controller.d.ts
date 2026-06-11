@@ -6,6 +6,7 @@ export declare class ReferralController {
         referralCode: string;
         link: string;
         referredCount: number;
+        totalReferredCount: number;
         claimedCount: number;
         pendingRewards: {
             gems: number;

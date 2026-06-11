@@ -58,6 +58,8 @@ exports.UNIT_STATS = {
     [unit_entity_1.UnitType.ELITE_GUARD]: { goldCost: 500, foodCost: 80, upkeep: 8, attackPower: 25, defensePower: 20, trainingTime: 600, requiredBarracksLevel: 8 },
     [unit_entity_1.UnitType.PALADIN]: { goldCost: 0, gemsCost: 100, foodCost: 0, upkeep: 5, attackPower: 80, defensePower: 60, trainingTime: 300, requiredBarracksLevel: 3, requiresVip: true },
     [unit_entity_1.UnitType.DRAGON_RIDER]: { goldCost: 0, gemsCost: 300, foodCost: 0, upkeep: 15, attackPower: 250, defensePower: 150, trainingTime: 600, requiredBarracksLevel: 5, requiresVip: true },
+    [unit_entity_1.UnitType.RAGNAR]: { goldCost: 0, gemsCost: 200, foodCost: 0, upkeep: 20, attackPower: 400, defensePower: 300, trainingTime: 900, requiredBarracksLevel: 3, requiresReferralHero: true },
+    [unit_entity_1.UnitType.TITAN]: { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 0, attackPower: 800, defensePower: 600, trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
 };
 exports.COMBAT_RANDOM_MIN = 0.85;
 exports.COMBAT_RANDOM_MAX = 1.15;

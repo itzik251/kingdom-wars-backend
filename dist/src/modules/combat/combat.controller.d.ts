@@ -3,6 +3,8 @@ import { KingdomService } from '../kingdom/kingdom.service';
 import { QuestService } from '../quest/quest.service';
 declare class AttackDto {
     defenderKingdomId: string;
+    heroType?: string;
+    squad?: Record<string, number>;
 }
 export declare class CombatController {
     private combatService;

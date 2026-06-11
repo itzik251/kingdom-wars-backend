@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Kingdom } from '../kingdom/kingdom.entity';
-import { Unit } from '../units/unit.entity';
+import { Unit, UnitType, HERO_TYPES } from '../units/unit.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { User } from '../user/user.entity';
 import { EconomyService } from '../economy/economy.service';
@@ -29,6 +29,8 @@ export interface BattleReport {
   winStreak?: number;
   streakBonus?: number;
   buildingDamaged?: { type: string; newLevel: number };
+  heroType?: string;
+  squadSize?: number;
 }
 
 @Injectable()
@@ -42,7 +44,12 @@ export class CombatService {
     private notifService: NotificationService,
   ) {}
 
-  async attack(attackerKingdomId: string, defenderKingdomId: string): Promise<BattleReport> {
+  async attack(
+    attackerKingdomId: string,
+    defenderKingdomId: string,
+    heroType?: string,
+    squadInput?: Record<string, number>,
+  ): Promise<BattleReport> {
     if (attackerKingdomId === defenderKingdomId) {
       throw new BadRequestException('Cannot attack yourself');
     }
@@ -76,31 +83,58 @@ export class CombatService {
       this.economyService.tickKingdom(defenderKingdomId),
     ]);
 
-    const [attackerUnits, defenderUnits, defenderBuildings] = await Promise.all([
+    const [allAttackerUnits, defenderUnits, defenderBuildings] = await Promise.all([
       this.unitRepo.find({ where: { kingdom: { id: attackerKingdomId } } }),
       this.unitRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
       this.buildingRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
     ]);
 
     const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
+
+    // Validate hero commander if provided
+    if (heroType) {
+      const heroUnit = allAttackerUnits.find(u => u.type === heroType);
+      if (!heroUnit || heroUnit.count < 1) throw new BadRequestException(`Hero ${heroType} not available`);
+    }
+
+    // Build the attacking squad — temporarily cap unit counts to what was deployed
+    const originalCounts = new Map(allAttackerUnits.map(u => [u.type, u.count]));
+    if (squadInput && Object.keys(squadInput).length > 0) {
+      for (const unit of allAttackerUnits) {
+        const requested = squadInput[unit.type] ?? 0;
+        if (requested > unit.count) throw new BadRequestException(`Not enough ${unit.type}`);
+        unit.count = requested;
+      }
+
+      // Minimum squad size: 10 non-hero soldiers, UNLESS Titan is the sole hero
+      const soldierCount = allAttackerUnits
+        .filter(u => !HERO_TYPES.has(u.type))
+        .reduce((s, u) => s + u.count, 0);
+      const isTitanAlone = heroType === UnitType.TITAN && soldierCount === 0;
+      if (!isTitanAlone && soldierCount < 10) {
+        // Restore counts before throwing
+        for (const unit of allAttackerUnits) unit.count = originalCounts.get(unit.type) ?? unit.count;
+        throw new BadRequestException('Minimum 10 soldiers required per squad');
+      }
+    }
+
+    const attackerUnits = allAttackerUnits;
     const report = this.simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings, attackerBuildings);
-    await this.applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report);
+    if (heroType) report.heroType = heroType;
+    if (squadInput) report.squadSize = Object.values(squadInput).reduce((s, v) => s + v, 0);
+    await this.applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report, originalCounts);
 
     return report;
   }
 
   async getTargets(myKingdom: Kingdom) {
     const now = new Date();
-    // Return kingdoms near our score range, not shielded, not ourselves
+    // Show all non-shielded kingdoms — anti-snowball (10x) enforced at attack() time
     return this.kingdomRepo
       .createQueryBuilder('k')
       .leftJoinAndSelect('k.user', 'u')
       .where('k.id != :id', { id: myKingdom.id })
       .andWhere('(k.shield_until IS NULL OR k.shield_until < :now)', { now })
-      .andWhere('k.score BETWEEN :min AND :max', {
-        min: Math.max(0, myKingdom.score - 500),
-        max: myKingdom.score + 500,
-      })
       .orderBy('RANDOM()')
       .limit(20)
       .getMany();
@@ -131,7 +165,10 @@ export class CombatService {
 
     // Simulated march time: 30 seconds base + score difference factor
     const scoreDiff = Math.abs((myKingdom?.score ?? 0) - target.score);
-    const marchSeconds = 30 + Math.floor(scoreDiff / 20);
+    const baseMarch = 30 + Math.floor(scoreDiff / 20);
+    const attackBoostActive = myKingdom?.attackSpeedBoostUntil &&
+      new Date() < new Date(myKingdom.attackSpeedBoostUntil);
+    const marchSeconds = attackBoostActive ? Math.ceil(baseMarch * 0.5) : baseMarch;
 
     const winChance = myAttackPower > 0 && defPower > 0
       ? Math.round(Math.min(95, Math.max(5, (myAttackPower / (myAttackPower + defPower)) * 100)))
@@ -224,6 +261,7 @@ export class CombatService {
     attackerUnits: Unit[],
     defenderUnits: Unit[],
     report: BattleReport,
+    originalCounts?: Map<string, number>,
   ) {
     attacker.gold  = Math.min(attacker.maxGold,  attacker.gold  + report.loot.gold);
     attacker.wood  = Math.min(attacker.maxWood,  attacker.wood  + report.loot.wood);
@@ -280,7 +318,9 @@ export class CombatService {
     for (const unit of attackerUnits) {
       const losses = report.attackerLosses[unit.type] ?? 0;
       const wounded = Math.floor(losses * 0.3);
-      unit.count = Math.max(0, unit.count - (losses - wounded));
+      const deployedCount = unit.count; // already capped to squad amount
+      const nonDeployed = originalCounts ? (originalCounts.get(unit.type) ?? deployedCount) - deployedCount : 0;
+      unit.count = Math.max(0, deployedCount - (losses - wounded)) + nonDeployed;
       unit.woundedCount = (unit.woundedCount || 0) + wounded;
     }
     for (const unit of defenderUnits) {

@@ -13,6 +13,7 @@ import {
   UNIT_STATS,
   WEAK_PLAYER_RESOURCE_BONUS,
 } from '../../constants/game.constants';
+import { HERO_TYPES, HERO_SALARY_GEMS } from '../units/unit.entity';
 
 const PRODUCER_BUILDINGS: Partial<Record<BuildingType, keyof typeof BASE_PRODUCTION>> = {
   [BuildingType.GOLD_MINE]:    'gold_mine',
@@ -73,6 +74,38 @@ export class EconomyService {
 
     // Worker salary: 5 gold/hour per worker
     const workerSalary = workerCount * 5 * hoursElapsed;
+
+    // Hero salary: deduct gems daily; heroes who aren't paid leave (count--)
+    const HERO_SALARY_INTERVAL_HOURS = 24;
+    const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
+    if (heroSalaryTicks > 0) {
+      let gemsNeeded = 0;
+      for (const unit of units) {
+        if (HERO_TYPES.has(unit.type) && unit.count > 0) {
+          gemsNeeded += (HERO_SALARY_GEMS[unit.type] ?? 0) * heroSalaryTicks;
+        }
+      }
+      if (gemsNeeded > 0) {
+        if (kingdom.gems >= gemsNeeded) {
+          kingdom.gems -= gemsNeeded;
+        } else {
+          // Not enough gems — heroes leave one by one until debt is covered
+          let debt = gemsNeeded - kingdom.gems;
+          kingdom.gems = 0;
+          for (const unit of units) {
+            if (debt <= 0) break;
+            if (HERO_TYPES.has(unit.type) && unit.count > 0) {
+              const salary = (HERO_SALARY_GEMS[unit.type] ?? 0) * heroSalaryTicks;
+              if (salary > 0) {
+                unit.count = Math.max(0, unit.count - 1);
+                debt -= salary;
+              }
+            }
+          }
+          await this.unitRepo.save(units.filter(u => HERO_TYPES.has(u.type)));
+        }
+      }
+    }
 
     // Food: production - soldier upkeep
     const newFood = kingdom.food + production.food * bonus - upkeep;

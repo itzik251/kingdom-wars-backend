@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Unit = exports.UnitType = void 0;
+exports.Unit = exports.HERO_SALARY_GEMS = exports.HERO_TYPES = exports.UnitType = void 0;
 const typeorm_1 = require("typeorm");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 var UnitType;
@@ -22,7 +22,21 @@ var UnitType;
     UnitType["ELITE_GUARD"] = "elite_guard";
     UnitType["PALADIN"] = "paladin";
     UnitType["DRAGON_RIDER"] = "dragon_rider";
+    UnitType["RAGNAR"] = "ragnar";
+    UnitType["TITAN"] = "titan";
 })(UnitType || (exports.UnitType = UnitType = {}));
+exports.HERO_TYPES = new Set([
+    UnitType.PALADIN,
+    UnitType.DRAGON_RIDER,
+    UnitType.RAGNAR,
+    UnitType.TITAN,
+]);
+exports.HERO_SALARY_GEMS = {
+    [UnitType.PALADIN]: 3,
+    [UnitType.DRAGON_RIDER]: 5,
+    [UnitType.RAGNAR]: 2,
+    [UnitType.TITAN]: 4,
+};
 let Unit = class Unit {
 };
 exports.Unit = Unit;

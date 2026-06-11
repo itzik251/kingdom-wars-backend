@@ -23,6 +23,7 @@ const unit_entity_1 = require("../units/unit.entity");
 const user_entity_1 = require("../user/user.entity");
 const notification_service_1 = require("../notifications/notification.service");
 const game_constants_1 = require("../../constants/game.constants");
+const unit_entity_2 = require("../units/unit.entity");
 const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.GOLD_MINE]: 'gold_mine',
     [building_entity_1.BuildingType.LUMBER_MILL]: 'lumber_mill',
@@ -68,6 +69,37 @@ let EconomyService = class EconomyService {
         const workerProductionBonus = 1 + workerCount * 0.04;
         const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
         const workerSalary = workerCount * 5 * hoursElapsed;
+        const HERO_SALARY_INTERVAL_HOURS = 24;
+        const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
+        if (heroSalaryTicks > 0) {
+            let gemsNeeded = 0;
+            for (const unit of units) {
+                if (unit_entity_2.HERO_TYPES.has(unit.type) && unit.count > 0) {
+                    gemsNeeded += (unit_entity_2.HERO_SALARY_GEMS[unit.type] ?? 0) * heroSalaryTicks;
+                }
+            }
+            if (gemsNeeded > 0) {
+                if (kingdom.gems >= gemsNeeded) {
+                    kingdom.gems -= gemsNeeded;
+                }
+                else {
+                    let debt = gemsNeeded - kingdom.gems;
+                    kingdom.gems = 0;
+                    for (const unit of units) {
+                        if (debt <= 0)
+                            break;
+                        if (unit_entity_2.HERO_TYPES.has(unit.type) && unit.count > 0) {
+                            const salary = (unit_entity_2.HERO_SALARY_GEMS[unit.type] ?? 0) * heroSalaryTicks;
+                            if (salary > 0) {
+                                unit.count = Math.max(0, unit.count - 1);
+                                debt -= salary;
+                            }
+                        }
+                    }
+                    await this.unitRepo.save(units.filter(u => unit_entity_2.HERO_TYPES.has(u.type)));
+                }
+            }
+        }
         const newFood = kingdom.food + production.food * bonus - upkeep;
         const foodShortfall = Math.max(0, -newFood);
         kingdom.gold = Math.min(kingdom.maxGold, Math.max(0, Math.floor(kingdom.gold + production.gold * bonus - workerSalary)));

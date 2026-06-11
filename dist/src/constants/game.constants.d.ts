@@ -22,6 +22,7 @@ export interface UnitStats {
     requiredBarracksLevel: number;
     gemsCost?: number;
     requiresVip?: boolean;
+    requiresReferralHero?: boolean;
 }
 export declare const UNIT_STATS: Record<UnitType, UnitStats>;
 export declare const COMBAT_RANDOM_MIN = 0.85;

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.WalletBar = WalletBar;
 exports.default = ShopScreen;
 const react_1 = require("react");
 const ui_react_1 = require("@tonconnect/ui-react");
@@ -36,78 +37,104 @@ function buildUsdtTransferBody(destinationAddress, senderAddress, nanoUsdt) {
         .storeBit(false)
         .endCell();
 }
+function WalletBar() {
+    const [tonConnectUI] = (0, ui_react_1.useTonConnectUI)();
+    const wallet = (0, ui_react_1.useTonWallet)();
+    const t = (0, useT_1.useT)();
+    const shortAddr = wallet
+        ? core_1.Address.parseRaw(wallet.account.address).toString({ bounceable: false }).slice(0, 6) + '...' +
+            core_1.Address.parseRaw(wallet.account.address).toString({ bounceable: false }).slice(-4)
+        : null;
+    return (<div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: wallet ? 'rgba(0,136,204,0.12)' : 'rgba(0,0,0,0.25)',
+            border: `1px solid ${wallet ? 'rgba(0,136,204,0.4)' : 'rgba(255,255,255,0.08)'}`,
+            borderRadius: 12, padding: '10px 14px', marginBottom: 14,
+        }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 18 }}>💎</span>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: wallet ? '#3498db' : '#a0845a' }}>
+            {wallet ? t('wallet_connected') : t('ton_wallet')}
+          </div>
+          {wallet && (<div style={{ fontSize: 10, color: '#5d8aa8', marginTop: 1 }}>{shortAddr}</div>)}
+        </div>
+      </div>
+      {wallet ? (<button onClick={() => tonConnectUI.disconnect()} style={{ fontSize: 11, padding: '5px 10px', background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.3)', color: '#e74c3c', borderRadius: 8, cursor: 'pointer' }}>
+          {t('disconnect_wallet')}
+        </button>) : (<button onClick={() => tonConnectUI.openModal()} style={{ fontSize: 12, padding: '7px 14px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 700, borderRadius: 8, cursor: 'pointer' }}>
+          🔗 {t('connect_wallet')}
+        </button>)}
+    </div>);
+}
+async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSuccess, t, verifyEndpoint) {
+    const senderAddr = wallet.account.address;
+    const senderFriendly = core_1.Address.parseRaw(senderAddr).toString({ bounceable: false });
+    const jettonWallet = await getJettonWalletAddr(senderFriendly);
+    if (!jettonWallet) {
+        showMsg('❌ ' + t('wallet_no_usdt'), false);
+        return false;
+    }
+    const nanoUsdt = BigInt(Math.round(amountUsdt * 1_000_000));
+    const body = buildUsdtTransferBody(GAME_WALLET, senderFriendly, nanoUsdt);
+    const result = await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 600,
+        messages: [{ address: jettonWallet, amount: (0, core_1.toNano)('0.05').toString(), payload: body.toBoc().toString('base64') }],
+    });
+    showMsg('⏳ ' + t('vip_tx_sent'), true);
+    const txHash = result.boc.replace(/[+/=]/g, (c) => c === '+' ? '-' : c === '/' ? '_' : '').slice(0, 44);
+    let attempts = 0;
+    return new Promise(res => {
+        const poll = setInterval(async () => {
+            attempts++;
+            if (attempts > 30) {
+                clearInterval(poll);
+                try {
+                    await client_1.api.post(verifyEndpoint, { tonTxHash: txHash });
+                    showMsg('✅ ' + t('vip_activated_usdt'), true);
+                    onSuccess();
+                    res(true);
+                }
+                catch (e) {
+                    showMsg(e.response?.data?.message || t('vip_tx_verify_pending'), false);
+                    res(false);
+                }
+                return;
+            }
+            try {
+                const r = await client_1.api.post(verifyEndpoint, { tonTxHash: txHash });
+                if (r.success) {
+                    clearInterval(poll);
+                    showMsg('👑 ' + t('vip_activated_usdt'), true);
+                    onSuccess();
+                    res(true);
+                }
+            }
+            catch { }
+        }, 4000);
+    });
+}
 function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
     const t = (0, useT_1.useT)();
     const [tonConnectUI] = (0, ui_react_1.useTonConnectUI)();
     const wallet = (0, ui_react_1.useTonWallet)();
     const [polling, setPolling] = (0, react_1.useState)(false);
     async function payWithTonWallet() {
+        if (!wallet) {
+            tonConnectUI.openModal();
+            return;
+        }
         onLoading(true);
+        setPolling(true);
         try {
-            if (!wallet) {
-                await tonConnectUI.openModal();
-                onLoading(false);
-                return;
-            }
-            const senderAddr = wallet.account.address;
-            const senderFriendly = core_1.Address.parseRaw(senderAddr).toString({ bounceable: false });
-            const jettonWallet = await getJettonWalletAddr(senderFriendly);
-            if (!jettonWallet) {
-                showMsg('❌ ' + t('wallet_no_usdt'), false);
-                onLoading(false);
-                return;
-            }
-            const nanoUsdt = BigInt(VIP_PRICE_USDT * 1_000_000);
-            const body = buildUsdtTransferBody(GAME_WALLET, senderFriendly, nanoUsdt);
-            const result = await tonConnectUI.sendTransaction({
-                validUntil: Math.floor(Date.now() / 1000) + 600,
-                messages: [{
-                        address: jettonWallet,
-                        amount: (0, core_1.toNano)('0.05').toString(),
-                        payload: body.toBoc().toString('base64'),
-                    }],
-            });
-            showMsg('⏳ ' + t('vip_tx_sent'), true);
-            setPolling(true);
-            const txHash = result.boc.replace(/[+/=]/g, c => c === '+' ? '-' : c === '/' ? '_' : '').slice(0, 44);
-            let attempts = 0;
-            const poll = setInterval(async () => {
-                attempts++;
-                if (attempts > 30) {
-                    clearInterval(poll);
-                    setPolling(false);
-                    try {
-                        await client_1.api.post('/vip/activate', { tonTxHash: txHash });
-                        showMsg('👑 ' + t('vip_activated_usdt'), true);
-                        onSuccess();
-                    }
-                    catch (e) {
-                        showMsg(e.response?.data?.message || t('vip_tx_verify_pending'), false);
-                    }
-                    onLoading(false);
-                    return;
-                }
-                try {
-                    const r = await client_1.api.post('/vip/activate', { tonTxHash: txHash });
-                    if (r.success) {
-                        clearInterval(poll);
-                        setPolling(false);
-                        showMsg('👑 ' + t('vip_activated_usdt'), true);
-                        onSuccess();
-                        onLoading(false);
-                    }
-                }
-                catch { }
-            }, 4000);
+            await sendUsdtViaTon(tonConnectUI, wallet, VIP_PRICE_USDT, showMsg, onSuccess, t, '/vip/activate');
         }
         catch (e) {
-            if (e?.message?.includes('User rejects') || e?.message?.includes('cancel')) {
-                showMsg(t('payment_cancelled'), false);
-            }
-            else {
-                showMsg(e?.message || t('error'), false);
-            }
+            showMsg(e?.message?.includes('rejects') || e?.message?.includes('cancel') ? t('payment_cancelled') : (e?.message || t('error')), false);
+        }
+        finally {
             onLoading(false);
+            setPolling(false);
         }
     }
     async function payWithBalance() {
@@ -125,18 +152,14 @@ function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
         }
     }
     return (<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      
-      <button style={{ fontSize: 12, padding: '9px 12px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 800, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={payWithTonWallet}>
-        {loading && polling ? '⏳ ' + t('vip_verifying') : wallet ? `💎 ${VIP_PRICE_USDT} USDT · ${t('pay_with_wallet')}` : `🔗 ${t('connect_wallet_pay')}`}
-      </button>
-      
+      {wallet ? (<button style={{ fontSize: 12, padding: '9px 12px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 800, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={payWithTonWallet}>
+          {loading && polling ? '⏳ ' + t('vip_verifying') : `💎 ${VIP_PRICE_USDT} USDT`}
+        </button>) : (<div style={{ fontSize: 11, color: '#5d8aa8', textAlign: 'center', padding: '6px 0' }}>
+          🔗 {t('connect_wallet_to_pay_vip')}
+        </div>)}
       <button style={{ fontSize: 11, padding: '7px 10px', background: 'rgba(39,174,96,0.2)', border: '1px solid rgba(39,174,96,0.4)', color: '#27ae60', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={payWithBalance}>
         💵 {t('vip_pay_usdt_balance')}
       </button>
-      {wallet && (<div style={{ fontSize: 9, color: '#555', textAlign: 'center' }}>
-          {t('wallet_connected')}: {wallet.account.address.slice(0, 8)}...{wallet.account.address.slice(-6)}
-          <button onClick={() => tonConnectUI.disconnect()} style={{ background: 'none', border: 'none', color: '#e74c3c', fontSize: 9, cursor: 'pointer', marginLeft: 4 }}>✕</button>
-        </div>)}
     </div>);
 }
 function ReferralCard() {
@@ -405,24 +428,28 @@ function ShopScreen() {
                     const result = await Promise.race([showPromise, timeoutPromise]);
                     console.log('[AdsGram] show result:', result);
                     if (!result?.done) {
-                        showMsg('📺 ' + t('ad_not_completed'), false);
-                        return;
+                        const desc = (result?.description || '').toLowerCase();
+                        const userSkipped = desc.includes('skip') || desc.includes('close') || desc.includes('dismiss') || desc.includes('cancel');
+                        if (userSkipped) {
+                            showMsg('📺 ' + t('ad_not_completed'), false);
+                            return;
+                        }
+                        console.warn('[AdsGram] no ad available (done:false), granting reward. desc:', result?.description);
                     }
                 }
                 catch (adErr) {
                     console.error('[AdsGram] show error:', adErr);
-                    const desc = adErr?.description || adErr?.message || '';
-                    if (desc.toLowerCase().includes('telegram') || desc.toLowerCase().includes('launch parameters')) {
-                        console.warn('[AdsGram] Not in Telegram context — granting reward in dev mode');
-                    }
-                    else if (adErr?.message === 'AD_TIMEOUT') {
+                    const desc = (adErr?.description || adErr?.message || '').toLowerCase();
+                    if (adErr?.message === 'AD_TIMEOUT') {
                         showMsg('📺 ' + t('ad_not_completed'), false);
                         return;
                     }
-                    else {
-                        showMsg(desc ? `📺 ${desc}` : '📺 ' + t('ad_not_completed'), false);
+                    const userDismissed = desc.includes('skip') || desc.includes('close') || desc.includes('dismiss') || desc.includes('cancel');
+                    if (userDismissed) {
+                        showMsg('📺 ' + t('ad_not_completed'), false);
                         return;
                     }
+                    console.warn('[AdsGram] SDK error, granting reward:', desc);
                 }
             }
             else {
@@ -476,6 +503,9 @@ function ShopScreen() {
             }}>{msg}</div>)}
 
       
+      <WalletBar />
+
+      
       <SECTION title={t('vip_section')}>
 
         
@@ -505,6 +535,7 @@ function ShopScreen() {
             {[
             { icon: '⚡', label: t('vip_fast_build_pct') },
             { icon: '🔮', label: t('b_arcane_tower') },
+            { icon: '🚫', label: t('vip_no_ads') },
             { icon: '🏆', label: t('vip_badge_feat') },
             { icon: '💎', label: t('vip_gems_x') },
             { icon: '🚀', label: t('vip_prod_x15') },
@@ -606,8 +637,8 @@ function ShopScreen() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { type: 'double_production', icon: '🚀', label: t('double_prod'), desc: t('double_prod_desc'), boosted: ads?.boostActive, boostUntil: ads?.boostUntil },
-            { type: 'double_attack_speed', icon: '⚡', label: t('double_attack_speed'), desc: t('double_attack_speed_desc'), boosted: ads?.attackBoostActive, boostUntil: ads?.attackBoostUntil },
+            { type: 'double_production', icon: '🚀', label: t('double_prod'), desc: t('double_prod_desc'), boosted: ads?.boostActive && ads?.boostUntil && new Date(ads.boostUntil) > new Date(), boostUntil: ads?.boostUntil },
+            { type: 'double_attack_speed', icon: '⚡', label: t('double_attack_speed'), desc: t('double_attack_speed_desc'), boosted: ads?.attackBoostActive && ads?.attackBoostUntil && new Date(ads.attackBoostUntil) > new Date(), boostUntil: ads?.attackBoostUntil },
             { type: 'usdt_bonus', icon: '💵', label: '+0.0001 USDT', desc: t('instantly') },
             { type: 'gems', icon: '💎', label: '+10 Gems', desc: t('instantly') },
             { type: 'gold_bonus', icon: '💰', label: `+500 ${t('gold')}`, desc: t('instantly') },
@@ -623,7 +654,7 @@ function ShopScreen() {
               <span style={{ fontSize: 26 }}>{icon}</span>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 12 }}>{label}</div>
-                <div style={{ fontSize: 10, color: '#a0845a' }}>{boosted ? <Countdown_1.default endsAt={boostUntil}/> : desc}</div>
+                <div style={{ fontSize: 10, color: '#a0845a' }}>{boosted ? <Countdown_1.default endsAt={boostUntil} onEnd={load}/> : desc}</div>
               </div>
               <button className="btn btn-green" style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: (adsLeft === 0 || boosted) ? 0.4 : 1 }} disabled={adsLeft === 0 || loading === type || boosted} onClick={() => watchAd(type)}>
                 {loading === type ? '...' : boosted ? '✓ פעיל' : t('watch_ad')}

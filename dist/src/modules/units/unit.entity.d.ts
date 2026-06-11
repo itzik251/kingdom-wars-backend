@@ -7,8 +7,12 @@ export declare enum UnitType {
     CATAPULT = "catapult",
     ELITE_GUARD = "elite_guard",
     PALADIN = "paladin",
-    DRAGON_RIDER = "dragon_rider"
+    DRAGON_RIDER = "dragon_rider",
+    RAGNAR = "ragnar",
+    TITAN = "titan"
 }
+export declare const HERO_TYPES: Set<UnitType>;
+export declare const HERO_SALARY_GEMS: Record<string, number>;
 export declare class Unit {
     id: string;
     kingdom: Kingdom;

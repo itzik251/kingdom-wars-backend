@@ -24,16 +24,18 @@ const config_1 = require("@nestjs/config");
 const notification_service_1 = require("../notifications/notification.service");
 const ton_service_1 = require("../ton/ton.service");
 const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
+const antibot_service_1 = require("../antibot/antibot.service");
 const game_constants_1 = require("../../constants/game.constants");
 const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService) {
+    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService, antiBotService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
         this.notifService = notifService;
         this.tonService = tonService;
         this.cryptoBotService = cryptoBotService;
+        this.antiBotService = antiBotService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -48,9 +50,16 @@ let AdminController = class AdminController {
         return { address: this.config.get('GAME_WALLET_ADDRESS') || '' };
     }
     guard(headers) {
-        const secret = this.config.get('ADMIN_SECRET') || 'kw_admin_2026';
-        if (headers['x-admin-secret'] !== secret)
+        const secret = this.config.get('ADMIN_SECRET');
+        if (!secret)
+            throw new common_1.UnauthorizedException('Admin access not configured');
+        const provided = headers['x-admin-secret'] || '';
+        const crypto = require('crypto');
+        const secretBuf = Buffer.from(secret);
+        const providedBuf = Buffer.from(provided.padEnd(secret.length, '\0').slice(0, Math.max(secret.length, provided.length)));
+        if (secretBuf.length !== providedBuf.length || !crypto.timingSafeEqual(secretBuf, providedBuf)) {
             throw new common_1.UnauthorizedException('Forbidden');
+        }
     }
     async stats(headers) {
         this.guard(headers);
@@ -372,6 +381,57 @@ let AdminController = class AdminController {
             };
         });
     }
+    async getUserReferrals(headers, telegramId) {
+        this.guard(headers);
+        const referrer = await this.userRepo.findOne({ where: { telegramId } });
+        if (!referrer)
+            return [];
+        const referred = await this.userRepo.find({ where: { referredBy: { id: referrer.id } }, order: { createdAt: 'DESC' } });
+        if (!referred.length)
+            return [];
+        const kingdomRows = await this.kingdomRepo
+            .createQueryBuilder('k')
+            .innerJoin('k.user', 'u')
+            .select('u.id', 'userId')
+            .addSelect('k.score', 'score')
+            .where('u.id IN (:...ids)', { ids: referred.map(u => u.id) })
+            .getRawMany();
+        const scoreMap = new Map(kingdomRows.map((r) => [r.userId, Number(r.score ?? 0)]));
+        return referred.map(u => {
+            const score = scoreMap.get(u.id) ?? 0;
+            return {
+                telegramId: u.telegramId,
+                username: u.username || u.firstName,
+                joinedAt: u.createdAt,
+                score,
+                active: score > 0,
+            };
+        });
+    }
+    async getAntiBotStatus(headers, telegramId) {
+        this.guard(headers);
+        const user = await this.userRepo.findOne({ where: { telegramId } });
+        if (!user)
+            return { error: 'User not found' };
+        return this.antiBotService.getBanStatus(user.id);
+    }
+    async antiBotBan(headers, telegramId, body) {
+        this.guard(headers);
+        const user = await this.userRepo.findOne({ where: { telegramId } });
+        if (!user)
+            return { error: 'User not found' };
+        const hours = body.hours ?? 24;
+        await this.antiBotService.banUser(user.id, hours, body.reason || 'admin manual ban');
+        return { success: true, bannedFor: `${hours}h`, userId: user.id };
+    }
+    async antiBotUnban(headers, telegramId) {
+        this.guard(headers);
+        const user = await this.userRepo.findOne({ where: { telegramId } });
+        if (!user)
+            return { error: 'User not found' };
+        await this.antiBotService.unbanUser(user.id);
+        return { success: true };
+    }
 };
 exports.AdminController = AdminController;
 __decorate([
@@ -503,6 +563,39 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "listUsers", null);
+__decorate([
+    (0, common_1.Get)('users/:telegramId/referrals'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getUserReferrals", null);
+__decorate([
+    (0, common_1.Get)('antibot/status/:telegramId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAntiBotStatus", null);
+__decorate([
+    (0, common_1.Post)('antibot/ban/:telegramId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "antiBotBan", null);
+__decorate([
+    (0, common_1.Post)('antibot/unban/:telegramId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "antiBotUnban", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
@@ -512,6 +605,7 @@ exports.AdminController = AdminController = __decorate([
         config_1.ConfigService,
         notification_service_1.NotificationService,
         ton_service_1.TonService,
-        cryptobot_service_1.CryptoBotService])
+        cryptobot_service_1.CryptoBotService,
+        antibot_service_1.AntiBotService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

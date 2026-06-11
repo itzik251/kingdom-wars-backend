@@ -32,7 +32,7 @@ let CombatService = class CombatService {
         this.economyService = economyService;
         this.notifService = notifService;
     }
-    async attack(attackerKingdomId, defenderKingdomId) {
+    async attack(attackerKingdomId, defenderKingdomId, heroType, squadInput) {
         if (attackerKingdomId === defenderKingdomId) {
             throw new common_1.BadRequestException('Cannot attack yourself');
         }
@@ -60,14 +60,42 @@ let CombatService = class CombatService {
             this.economyService.tickKingdom(attackerKingdomId),
             this.economyService.tickKingdom(defenderKingdomId),
         ]);
-        const [attackerUnits, defenderUnits, defenderBuildings] = await Promise.all([
+        const [allAttackerUnits, defenderUnits, defenderBuildings] = await Promise.all([
             this.unitRepo.find({ where: { kingdom: { id: attackerKingdomId } } }),
             this.unitRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
             this.buildingRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
         ]);
         const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
+        if (heroType) {
+            const heroUnit = allAttackerUnits.find(u => u.type === heroType);
+            if (!heroUnit || heroUnit.count < 1)
+                throw new common_1.BadRequestException(`Hero ${heroType} not available`);
+        }
+        const originalCounts = new Map(allAttackerUnits.map(u => [u.type, u.count]));
+        if (squadInput && Object.keys(squadInput).length > 0) {
+            for (const unit of allAttackerUnits) {
+                const requested = squadInput[unit.type] ?? 0;
+                if (requested > unit.count)
+                    throw new common_1.BadRequestException(`Not enough ${unit.type}`);
+                unit.count = requested;
+            }
+            const soldierCount = allAttackerUnits
+                .filter(u => !unit_entity_1.HERO_TYPES.has(u.type))
+                .reduce((s, u) => s + u.count, 0);
+            const isTitanAlone = heroType === unit_entity_1.UnitType.TITAN && soldierCount === 0;
+            if (!isTitanAlone && soldierCount < 10) {
+                for (const unit of allAttackerUnits)
+                    unit.count = originalCounts.get(unit.type) ?? unit.count;
+                throw new common_1.BadRequestException('Minimum 10 soldiers required per squad');
+            }
+        }
+        const attackerUnits = allAttackerUnits;
         const report = this.simulate(attacker, defender, attackerUnits, defenderUnits, defenderBuildings, attackerBuildings);
-        await this.applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report);
+        if (heroType)
+            report.heroType = heroType;
+        if (squadInput)
+            report.squadSize = Object.values(squadInput).reduce((s, v) => s + v, 0);
+        await this.applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report, originalCounts);
         return report;
     }
     async getTargets(myKingdom) {
@@ -77,10 +105,6 @@ let CombatService = class CombatService {
             .leftJoinAndSelect('k.user', 'u')
             .where('k.id != :id', { id: myKingdom.id })
             .andWhere('(k.shield_until IS NULL OR k.shield_until < :now)', { now })
-            .andWhere('k.score BETWEEN :min AND :max', {
-            min: Math.max(0, myKingdom.score - 500),
-            max: myKingdom.score + 500,
-        })
             .orderBy('RANDOM()')
             .limit(20)
             .getMany();
@@ -105,7 +129,10 @@ let CombatService = class CombatService {
             stone: Math.floor(target.stone * game_constants_1.LOOT_PERCENTAGE),
         };
         const scoreDiff = Math.abs((myKingdom?.score ?? 0) - target.score);
-        const marchSeconds = 30 + Math.floor(scoreDiff / 20);
+        const baseMarch = 30 + Math.floor(scoreDiff / 20);
+        const attackBoostActive = myKingdom?.attackSpeedBoostUntil &&
+            new Date() < new Date(myKingdom.attackSpeedBoostUntil);
+        const marchSeconds = attackBoostActive ? Math.ceil(baseMarch * 0.5) : baseMarch;
         const winChance = myAttackPower > 0 && defPower > 0
             ? Math.round(Math.min(95, Math.max(5, (myAttackPower / (myAttackPower + defPower)) * 100)))
             : myAttackPower > 0 ? 90 : 10;
@@ -169,7 +196,7 @@ let CombatService = class CombatService {
         }
         return losses;
     }
-    async applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report) {
+    async applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report, originalCounts) {
         attacker.gold = Math.min(attacker.maxGold, attacker.gold + report.loot.gold);
         attacker.wood = Math.min(attacker.maxWood, attacker.wood + report.loot.wood);
         attacker.stone = Math.min(attacker.maxStone, attacker.stone + report.loot.stone);
@@ -215,7 +242,9 @@ let CombatService = class CombatService {
         for (const unit of attackerUnits) {
             const losses = report.attackerLosses[unit.type] ?? 0;
             const wounded = Math.floor(losses * 0.3);
-            unit.count = Math.max(0, unit.count - (losses - wounded));
+            const deployedCount = unit.count;
+            const nonDeployed = originalCounts ? (originalCounts.get(unit.type) ?? deployedCount) - deployedCount : 0;
+            unit.count = Math.max(0, deployedCount - (losses - wounded)) + nonDeployed;
             unit.woundedCount = (unit.woundedCount || 0) + wounded;
         }
         for (const unit of defenderUnits) {

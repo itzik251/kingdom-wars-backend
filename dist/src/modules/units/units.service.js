@@ -42,6 +42,12 @@ let UnitsService = class UnitsService {
         if (stats.requiresVip && !isVip) {
             throw new common_1.BadRequestException('VIP_REQUIRED');
         }
+        if (stats.requiresReferralHero) {
+            const existing = unit;
+            if (!existing || existing.count === 0) {
+                throw new common_1.BadRequestException('RAGNAR_NOT_UNLOCKED');
+            }
+        }
         let unitRow = unit;
         if (!unitRow) {
             unitRow = this.unitRepo.create({
@@ -52,7 +58,7 @@ let UnitsService = class UnitsService {
                 trainingEndsAt: null,
             });
         }
-        if (stats.requiresVip) {
+        if (stats.requiresVip || stats.requiresReferralHero) {
             const totalGems = (stats.gemsCost ?? 0) * amount;
             if (kingdom.gems < totalGems)
                 throw new common_1.BadRequestException('Not enough gems');

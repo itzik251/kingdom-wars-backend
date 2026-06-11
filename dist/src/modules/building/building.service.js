@@ -20,45 +20,59 @@ const building_entity_1 = require("./building.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const game_constants_1 = require("../../constants/game.constants");
 let BuildingService = class BuildingService {
-    constructor(buildingRepo, kingdomRepo) {
+    constructor(buildingRepo, kingdomRepo, dataSource) {
         this.buildingRepo = buildingRepo;
         this.kingdomRepo = kingdomRepo;
+        this.dataSource = dataSource;
     }
     async upgradeBuilding(kingdomId, buildingType, isVip = false, buildingId) {
-        const [building, kingdom] = await Promise.all([
-            buildingId
-                ? this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } })
-                : this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
-            this.kingdomRepo.findOne({ where: { id: kingdomId } }),
-        ]);
-        if (!building)
-            throw new common_1.BadRequestException('Building not found');
-        if (building.isUpgrading)
-            throw new common_1.BadRequestException('Building already upgrading');
-        if (building.level >= game_constants_1.MAX_BUILDING_LEVEL)
-            throw new common_1.BadRequestException('Building at max level');
-        const cost = this.getUpgradeCost(building.type, building.level);
-        if (kingdom.gold < cost.gold)
-            throw new common_1.BadRequestException('Not enough gold');
-        if (kingdom.wood < cost.wood)
-            throw new common_1.BadRequestException('Not enough wood');
-        if (kingdom.stone < cost.stone)
-            throw new common_1.BadRequestException('Not enough stone');
-        kingdom.gold -= cost.gold;
-        kingdom.wood -= cost.wood;
-        kingdom.stone -= cost.stone;
-        await this.kingdomRepo.save(kingdom);
-        let buildTime = this.getBuildTime(building.type, building.level);
-        if (isVip)
-            buildTime = Math.floor(buildTime * (1 - game_constants_1.VIP_BUILD_TIME_REDUCTION));
-        building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
-        await this.buildingRepo.save(building);
-        return {
-            building,
-            cost,
-            upgradeEndsAt: building.upgradeEndsAt,
-            durationSeconds: buildTime,
-        };
+        return this.dataSource.transaction(async (manager) => {
+            const [building, kingdom] = await Promise.all([
+                buildingId
+                    ? manager.findOne(building_entity_1.Building, { where: { id: buildingId, kingdom: { id: kingdomId } } })
+                    : manager.findOne(building_entity_1.Building, { where: { kingdom: { id: kingdomId }, type: buildingType } }),
+                manager.findOne(kingdom_entity_1.Kingdom, { where: { id: kingdomId } }),
+            ]);
+            if (!building)
+                throw new common_1.BadRequestException('Building not found');
+            if (building.isUpgrading)
+                throw new common_1.BadRequestException('Building already upgrading');
+            if (building.level >= game_constants_1.MAX_BUILDING_LEVEL)
+                throw new common_1.BadRequestException('Building at max level');
+            const cost = this.getUpgradeCost(building.type, building.level);
+            if (kingdom.gold < cost.gold)
+                throw new common_1.BadRequestException('Not enough gold');
+            if (kingdom.wood < cost.wood)
+                throw new common_1.BadRequestException('Not enough wood');
+            if (kingdom.stone < cost.stone)
+                throw new common_1.BadRequestException('Not enough stone');
+            const deductResult = await manager
+                .createQueryBuilder()
+                .update(kingdom_entity_1.Kingdom)
+                .set({
+                gold: () => `gold - ${cost.gold}`,
+                wood: () => `wood - ${cost.wood}`,
+                stone: () => `stone - ${cost.stone}`,
+            })
+                .where('id = :id AND gold >= :g AND wood >= :w AND stone >= :s', {
+                id: kingdomId, g: cost.gold, w: cost.wood, s: cost.stone,
+            })
+                .execute();
+            if (!deductResult.affected || deductResult.affected === 0) {
+                throw new common_1.BadRequestException('Not enough resources');
+            }
+            let buildTime = this.getBuildTime(building.type, building.level);
+            if (isVip)
+                buildTime = Math.floor(buildTime * (1 - game_constants_1.VIP_BUILD_TIME_REDUCTION));
+            building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
+            await manager.save(building_entity_1.Building, building);
+            return {
+                building,
+                cost,
+                upgradeEndsAt: building.upgradeEndsAt,
+                durationSeconds: buildTime,
+            };
+        });
     }
     async speedUpUpgrade(kingdomId, buildingType, buildingId) {
         const [building, kingdom] = await Promise.all([
@@ -203,7 +217,9 @@ exports.BuildingService = BuildingService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __param(1, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
+    __param(2, (0, typeorm_1.InjectDataSource)()),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        typeorm_2.DataSource])
 ], BuildingService);
 //# sourceMappingURL=building.service.js.map

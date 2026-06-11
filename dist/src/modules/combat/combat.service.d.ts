@@ -24,6 +24,8 @@ export interface BattleReport {
         type: string;
         newLevel: number;
     };
+    heroType?: string;
+    squadSize?: number;
 }
 export declare class CombatService {
     private kingdomRepo;
@@ -33,7 +35,7 @@ export declare class CombatService {
     private economyService;
     private notifService;
     constructor(kingdomRepo: Repository<Kingdom>, unitRepo: Repository<Unit>, buildingRepo: Repository<Building>, userRepo: Repository<User>, economyService: EconomyService, notifService: NotificationService);
-    attack(attackerKingdomId: string, defenderKingdomId: string): Promise<BattleReport>;
+    attack(attackerKingdomId: string, defenderKingdomId: string, heroType?: string, squadInput?: Record<string, number>): Promise<BattleReport>;
     getTargets(myKingdom: Kingdom): Promise<Kingdom[]>;
     getKingdomProfile(myKingdomId: string, targetKingdomId: string): Promise<{
         id: string;

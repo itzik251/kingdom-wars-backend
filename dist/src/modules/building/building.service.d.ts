@@ -1,10 +1,11 @@
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Building, BuildingType } from './building.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 export declare class BuildingService {
     private buildingRepo;
     private kingdomRepo;
-    constructor(buildingRepo: Repository<Building>, kingdomRepo: Repository<Kingdom>);
+    private dataSource;
+    constructor(buildingRepo: Repository<Building>, kingdomRepo: Repository<Kingdom>, dataSource: DataSource);
     upgradeBuilding(kingdomId: string, buildingType: BuildingType, isVip?: boolean, buildingId?: string): Promise<{
         building: Building;
         cost: {

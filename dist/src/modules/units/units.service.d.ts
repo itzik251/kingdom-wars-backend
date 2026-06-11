@@ -22,6 +22,7 @@ export declare class UnitsService {
         requiredBarracksLevel: number;
         gemsCost?: number;
         requiresVip?: boolean;
+        requiresReferralHero?: boolean;
         type: string;
     }[];
 }

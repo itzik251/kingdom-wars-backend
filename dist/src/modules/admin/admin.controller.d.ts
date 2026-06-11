@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
 import { TonService } from '../ton/ton.service';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
+import { AntiBotService } from '../antibot/antibot.service';
 type ResourceType = 'gems' | 'gold' | 'wood' | 'stone' | 'food' | 'usdt' | 'vip';
 export declare class AdminController {
     private userRepo;
@@ -14,7 +15,8 @@ export declare class AdminController {
     private notifService;
     private tonService;
     private cryptoBotService;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService);
+    private antiBotService;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService, antiBotService: AntiBotService);
     dashboard(res: Response): void;
     private getWalletConfig;
     private guard;
@@ -194,5 +196,40 @@ export declare class AdminController {
         referralsTotal: number;
         referralsActive: number;
     }[]>;
+    getUserReferrals(headers: any, telegramId: string): Promise<{
+        telegramId: string;
+        username: string;
+        joinedAt: Date;
+        score: number;
+        active: boolean;
+    }[]>;
+    getAntiBotStatus(headers: any, telegramId: string): Promise<{
+        isBanned: boolean;
+        bannedUntil: Date;
+        abuseScore: number;
+    } | {
+        error: string;
+    }>;
+    antiBotBan(headers: any, telegramId: string, body: {
+        hours?: number;
+        reason?: string;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+        bannedFor?: undefined;
+        userId?: undefined;
+    } | {
+        success: boolean;
+        bannedFor: string;
+        userId: string;
+        error?: undefined;
+    }>;
+    antiBotUnban(headers: any, telegramId: string): Promise<{
+        error: string;
+        success?: undefined;
+    } | {
+        success: boolean;
+        error?: undefined;
+    }>;
 }
 export {};

@@ -68,11 +68,21 @@ let QuestService = class QuestService {
         const questDef = [...DAILY_QUESTS, ...WEEKLY_QUESTS].find(q => q.key === quest.questKey);
         if (!questDef)
             return null;
-        quest.rewardClaimed = true;
-        await this.questRepo.save(quest);
-        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-        kingdom.gems += questDef.rewardGems;
-        await this.kingdomRepo.save(kingdom);
+        const claimResult = await this.questRepo
+            .createQueryBuilder()
+            .update()
+            .set({ rewardClaimed: true })
+            .where('id = :id AND kingdom_id = :kid AND reward_claimed = false AND completed = true', { id: questId, kid: kingdomId })
+            .execute();
+        if (!claimResult.affected || claimResult.affected === 0) {
+            return null;
+        }
+        await this.kingdomRepo
+            .createQueryBuilder()
+            .update()
+            .set({ gems: () => `gems + ${questDef.rewardGems}` })
+            .where('id = :id', { id: kingdomId })
+            .execute();
         return { gemsRewarded: questDef.rewardGems };
     }
     async ensureQuests(kingdomId, defs, period, periodDate) {

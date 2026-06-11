@@ -1,12 +1,14 @@
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { TonService } from '../ton/ton.service';
 export declare class VipService {
     private userRepo;
     private kingdomRepo;
+    private dataSource;
     private tonService;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, tonService: TonService);
+    private readonly logger;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, dataSource: DataSource, tonService: TonService);
     getStatus(userId: string): Promise<{
         isVip: boolean;
         expiresAt: Date;

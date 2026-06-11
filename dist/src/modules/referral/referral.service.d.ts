@@ -1,15 +1,19 @@
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
+import { Unit } from '../units/unit.entity';
 export declare class ReferralService {
     private userRepo;
     private kingdomRepo;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>);
+    private unitRepo;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, unitRepo: Repository<Unit>);
     private getActiveReferralCount;
+    private getTotalReferralCount;
     getStats(userId: string): Promise<{
         referralCode: string;
         link: string;
         referredCount: number;
+        totalReferredCount: number;
         claimedCount: number;
         pendingRewards: {
             gems: number;

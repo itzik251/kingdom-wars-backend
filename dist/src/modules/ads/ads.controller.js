@@ -16,6 +16,7 @@ exports.AdsController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const antibot_guard_1 = require("../antibot/antibot.guard");
 const ads_service_1 = require("./ads.service");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
 class RewardDto {
@@ -45,7 +46,7 @@ let AdsController = class AdsController {
                 throw new common_1.BadRequestException('AD_NOT_VERIFIED');
         }
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.adsService.claimReward(req.user.userId, kingdom.id, dto.type);
+        return this.adsService.claimReward(req.user.userId, kingdom.id, dto.type, dto.adsgramToken);
     }
 };
 exports.AdsController = AdsController;
@@ -58,6 +59,8 @@ __decorate([
 ], AdsController.prototype, "getStatus", null);
 __decorate([
     (0, common_1.Post)('reward'),
+    (0, common_1.UseGuards)(antibot_guard_1.AntiBotGuard),
+    (0, antibot_guard_1.AntiBotAction)('ads_reward'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

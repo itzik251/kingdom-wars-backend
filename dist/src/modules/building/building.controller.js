@@ -16,6 +16,7 @@ exports.BuildingController = void 0;
 const common_1 = require("@nestjs/common");
 const class_validator_1 = require("class-validator");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const antibot_guard_1 = require("../antibot/antibot.guard");
 const building_service_1 = require("./building.service");
 const building_entity_1 = require("./building.entity");
 const kingdom_service_1 = require("../kingdom/kingdom.service");
@@ -77,6 +78,8 @@ __decorate([
 ], BuildingController.prototype, "getCosts", null);
 __decorate([
     (0, common_1.Post)('upgrade'),
+    (0, common_1.UseGuards)(antibot_guard_1.AntiBotGuard),
+    (0, antibot_guard_1.AntiBotAction)('building_upgrade'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

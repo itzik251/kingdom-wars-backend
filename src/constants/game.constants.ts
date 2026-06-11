@@ -70,8 +70,9 @@ export interface UnitStats {
   defensePower: number;
   trainingTime: number;   // seconds per unit
   requiredBarracksLevel: number;
-  gemsCost?:    number;   // VIP units cost gems instead of gold
-  requiresVip?: boolean;
+  gemsCost?:          number;   // VIP units cost gems instead of gold
+  requiresVip?:       boolean;
+  requiresReferralHero?: boolean; // Ragnar — unlocked only after referral milestone claim
 }
 
 export const UNIT_STATS: Record<UnitType, UnitStats> = {
@@ -83,6 +84,10 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   [UnitType.ELITE_GUARD]:{ goldCost: 500, foodCost: 80, upkeep: 8, attackPower: 25, defensePower: 20, trainingTime: 600, requiredBarracksLevel: 8 },
   [UnitType.PALADIN]:     { goldCost: 0, gemsCost: 100, foodCost: 0, upkeep: 5,  attackPower: 80,  defensePower: 60,  trainingTime: 300, requiredBarracksLevel: 3, requiresVip: true },
   [UnitType.DRAGON_RIDER]:{ goldCost: 0, gemsCost: 300, foodCost: 0, upkeep: 15, attackPower: 250, defensePower: 150, trainingTime: 600, requiredBarracksLevel: 5, requiresVip: true },
+  // Ragnar — referral hero (first unit given free on claim; additional units cost gems)
+  [UnitType.RAGNAR]:      { goldCost: 0, gemsCost: 200, foodCost: 0, upkeep: 20, attackPower: 400, defensePower: 300, trainingTime: 900, requiredBarracksLevel: 3, requiresReferralHero: true },
+  // Titan — USDT hero, can attack alone (no minimum squad)
+  [UnitType.TITAN]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 0, attackPower: 800, defensePower: 600, trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
 };
 
 // ─── Combat ──────────────────────────────────────────────────

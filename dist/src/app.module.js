@@ -27,6 +27,7 @@ const ads_module_1 = require("./modules/ads/ads.module");
 const telegram_module_1 = require("./modules/telegram/telegram.module");
 const admin_module_1 = require("./modules/admin/admin.module");
 const cryptobot_full_module_1 = require("./modules/cryptobot/cryptobot.full.module");
+const antibot_module_1 = require("./modules/antibot/antibot.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -52,9 +53,10 @@ exports.AppModule = AppModule = __decorate([
                         type: 'postgres',
                         url: config.get('DATABASE_URL'),
                         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-                        synchronize: true,
+                        synchronize: false,
                         logging: false,
                         ssl: { rejectUnauthorized: false },
+                        extra: { max: 15, idleTimeoutMillis: 30000 },
                     };
                 },
             }),
@@ -75,6 +77,7 @@ exports.AppModule = AppModule = __decorate([
             telegram_module_1.TelegramModule,
             admin_module_1.AdminModule,
             cryptobot_full_module_1.CryptoBotFullModule,
+            antibot_module_1.AntiBotModule,
         ],
     })
 ], AppModule);

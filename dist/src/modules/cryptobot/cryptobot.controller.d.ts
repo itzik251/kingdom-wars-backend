@@ -33,6 +33,12 @@ export declare class CryptoBotController {
     } | {
         paid: boolean;
         vipActivated: boolean;
+        reason: string;
+        status?: undefined;
+        expiresAt?: undefined;
+    } | {
+        paid: boolean;
+        vipActivated: boolean;
         expiresAt: Date;
         reason?: undefined;
         status?: undefined;

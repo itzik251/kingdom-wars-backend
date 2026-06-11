@@ -22,7 +22,17 @@ exports.useGameStore = (0, zustand_1.create)((set, get) => ({
             const data = await client_1.api.get('/kingdom');
             const prev = get();
             set({
-                kingdom: { ...data.kingdom, shieldActive: data.shieldActive, shieldUntil: data.shieldUntil, isVip: !!data.isVip, workers: data.workers ?? 0, maxWorkers: data.maxWorkers ?? 5, usdtBalance: data.kingdom?.usdtBalance ?? 0 },
+                kingdom: {
+                    ...data.kingdom,
+                    shieldActive: data.shieldActive,
+                    shieldUntil: data.shieldUntil,
+                    isVip: !!data.isVip,
+                    workers: data.workers ?? 0,
+                    maxWorkers: data.maxWorkers ?? 5,
+                    usdtBalance: data.kingdom?.usdtBalance ?? 0,
+                    attackSpeedBoostUntil: data.kingdom?.attackSpeedBoostUntil ?? null,
+                    productionBoostUntil: data.kingdom?.productionBoostUntil ?? null,
+                },
                 buildings: data.buildings ?? prev.buildings,
                 units: data.units ?? prev.units,
                 productionRates: data.productionRates && Object.keys(data.productionRates).length > 0

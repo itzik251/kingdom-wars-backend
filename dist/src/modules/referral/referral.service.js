@@ -18,6 +18,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
+const unit_entity_1 = require("../units/unit.entity");
 function calcRewards(from, to) {
     let gems = 0;
     let skins = 0;
@@ -34,9 +35,10 @@ function calcRewards(from, to) {
     return { gems, skins, vipDays };
 }
 let ReferralService = class ReferralService {
-    constructor(userRepo, kingdomRepo) {
+    constructor(userRepo, kingdomRepo, unitRepo) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
+        this.unitRepo = unitRepo;
     }
     async getActiveReferralCount(userId) {
         const result = await this.kingdomRepo
@@ -48,9 +50,20 @@ let ReferralService = class ReferralService {
             .getCount();
         return result;
     }
+    async getTotalReferralCount(userId) {
+        const result = await this.userRepo
+            .createQueryBuilder('u')
+            .innerJoin('u.referredBy', 'ref')
+            .where('ref.id = :userId', { userId })
+            .getCount();
+        return result;
+    }
     async getStats(userId) {
         const user = await this.userRepo.findOne({ where: { id: userId } });
-        const referredCount = await this.getActiveReferralCount(userId);
+        const [referredCount, totalReferredCount] = await Promise.all([
+            this.getActiveReferralCount(userId),
+            this.getTotalReferralCount(userId),
+        ]);
         const claimedCount = user.referralClaimedCount ?? 0;
         const pending = calcRewards(claimedCount, referredCount);
         const nextPerReferral = referredCount + 1;
@@ -63,6 +76,7 @@ let ReferralService = class ReferralService {
             referralCode: user.referralCode,
             link,
             referredCount,
+            totalReferredCount,
             claimedCount,
             pendingRewards: pending,
             hasPending: pending.gems > 0 || pending.skins > 0 || pending.vipDays > 0,
@@ -103,6 +117,24 @@ let ReferralService = class ReferralService {
             kingdom.vipExpiresAt = expiresAt;
         }
         await this.kingdomRepo.save(kingdom);
+        if (skins > 0) {
+            let ragnar = await this.unitRepo.findOne({
+                where: { kingdom: { id: kingdom.id }, type: unit_entity_1.UnitType.RAGNAR },
+            });
+            if (!ragnar) {
+                ragnar = this.unitRepo.create({
+                    kingdom: { id: kingdom.id },
+                    type: unit_entity_1.UnitType.RAGNAR,
+                    count: skins,
+                    trainingCount: 0,
+                    trainingEndsAt: null,
+                });
+            }
+            else {
+                ragnar.count += skins;
+            }
+            await this.unitRepo.save(ragnar);
+        }
         return {
             claimed: true,
             gems,
@@ -120,7 +152,9 @@ exports.ReferralService = ReferralService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __param(1, (0, typeorm_1.InjectRepository)(kingdom_entity_1.Kingdom)),
+    __param(2, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], ReferralService);
 //# sourceMappingURL=referral.service.js.map

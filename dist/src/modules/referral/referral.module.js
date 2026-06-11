@@ -13,12 +13,13 @@ const referral_controller_1 = require("./referral.controller");
 const referral_service_1 = require("./referral.service");
 const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
+const unit_entity_1 = require("../units/unit.entity");
 let ReferralModule = class ReferralModule {
 };
 exports.ReferralModule = ReferralModule;
 exports.ReferralModule = ReferralModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, kingdom_entity_1.Kingdom])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, kingdom_entity_1.Kingdom, unit_entity_1.Unit])],
         controllers: [referral_controller_1.ReferralController],
         providers: [referral_service_1.ReferralService],
         exports: [referral_service_1.ReferralService],

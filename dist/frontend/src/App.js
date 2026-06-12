@@ -79,7 +79,7 @@ function BattleErrorPopup({ message, onClose }) {
 }
 function BattleResultPopup({ report, onClose, onAttackAgain }) {
     const t = (0, useT_1.useT)();
-    const { setScreen } = (0, gameStore_1.useGameStore)();
+    const { setScreen, buildings, units } = (0, gameStore_1.useGameStore)();
     return (<div style={{ position: 'fixed', inset: 0, zIndex: 8000, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, overflowY: 'auto' }}>
       <div style={{ fontSize: 64, animation: 'pulse 0.5s infinite', textAlign: 'center' }}>
         {report.attackerWins ? '🏆' : '💀'}
@@ -118,16 +118,32 @@ function BattleResultPopup({ report, onClose, onAttackAgain }) {
 
       {report.attackerLosses && Object.values(report.attackerLosses).some((v) => v > 0) && (<div style={{ background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', width: '100%', maxWidth: 360 }}>
           <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 5 }}>⚔️ {t('your_losses')}</div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', fontSize: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, width: '100%' }}>
             {Object.entries(report.attackerLosses).filter(([, v]) => v > 0).map(([type, v]) => {
                 const wounded = report.attackerWounded?.[type] ?? 0;
-                return (<span key={type} style={{ color: '#e74c3c' }}>
-                  -{(0, format_1.fmt)(v - wounded)} {t(('u_' + type))}
-                  {wounded > 0 && <span style={{ color: '#f39c12' }}> 🏥{(0, format_1.fmt)(wounded)}</span>}
-                </span>);
+                const dead = v - wounded;
+                return (<div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: '4px 10px' }}>
+                  <span style={{ color: '#ccc', fontWeight: 600 }}>{t(('u_' + type))}</span>
+                  <span style={{ display: 'flex', gap: 10 }}>
+                    {dead > 0 && <span style={{ color: '#e74c3c' }}>💀 {(0, format_1.fmt)(dead)}</span>}
+                    {wounded > 0 && <span style={{ color: '#f39c12' }}>🏥 {(0, format_1.fmt)(wounded)}</span>}
+                  </span>
+                </div>);
             })}
           </div>
-          {Object.values(report.attackerWounded ?? {}).some((v) => v > 0) && (<div style={{ fontSize: 10, color: '#f39c12', marginTop: 4 }}>🏥 {t('wounded_recovering')}</div>)}
+          {Object.values(report.attackerWounded ?? {}).some((v) => v > 0) && (() => {
+                const totalWounded = units.reduce((s, u) => s + (u.woundedCount || 0), 0);
+                const hospitalLevel = buildings.find(b => b.type === 'hospital')?.level ?? 0;
+                const healRate = 5 + hospitalLevel * 10;
+                const totalMins = totalWounded > 0 ? Math.ceil((totalWounded / healRate) * 60) : 0;
+                const hh = Math.floor(totalMins / 60);
+                const mm = totalMins % 60;
+                const timeStr = hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+                return (<div style={{ fontSize: 10, color: '#f39c12', marginTop: 4 }}>
+                🏥 {t('wounded_recovering')}
+                {totalWounded > 0 && <span style={{ marginLeft: 6, color: '#e67e22' }}>· {t('hospital_heal_time', { time: timeStr })}</span>}
+              </div>);
+            })()}
         </div>)}
 
       {report.defenderLosses && Object.values(report.defenderLosses).some((v) => v > 0) && (<div style={{ background: 'rgba(39,174,96,0.08)', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', width: '100%', maxWidth: 360 }}>

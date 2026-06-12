@@ -217,9 +217,9 @@ export class CombatService {
     const arcaneLevel = attackerBuildings.find(b => b.type === BuildingType.ARCANE_TOWER)?.level ?? 0;
     const arcaneMult = 1 + arcaneLevel * 0.1;
 
-    let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * UNIT_STATS[u.type].attackPower, 0) * arcaneMult;
+    let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * (UNIT_STATS[u.type]?.attackPower ?? 0), 0) * arcaneMult;
     let defensePower =
-      defenderUnits.reduce((sum, u) => sum + u.count * UNIT_STATS[u.type].defensePower, 0) + wallBonus;
+      defenderUnits.reduce((sum, u) => sum + u.count * (UNIT_STATS[u.type]?.defensePower ?? 0), 0) + wallBonus;
 
     attackPower  *= this.random(COMBAT_RANDOM_MIN, COMBAT_RANDOM_MAX);
     defensePower *= this.random(COMBAT_RANDOM_MIN, COMBAT_RANDOM_MAX);
@@ -267,7 +267,9 @@ export class CombatService {
     const losses: Record<string, number> = {};
     for (const unit of units) {
       if (unit.count > 0) {
-        losses[unit.type] = Math.floor(unit.count * lossRate);
+        const raw = unit.count * lossRate;
+        // For single units (heroes), use round so a 25%+ loss rate shows at least 1 loss
+        losses[unit.type] = unit.count === 1 ? Math.round(raw) : Math.floor(raw);
       }
     }
     return losses;

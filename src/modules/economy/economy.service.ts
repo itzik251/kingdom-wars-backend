@@ -75,7 +75,7 @@ export class EconomyService {
     // Worker salary: 5 gold/hour per worker
     const workerSalary = workerCount * 5 * hoursElapsed;
 
-    // Hero salary: deduct gems daily; heroes who aren't paid leave (count--)
+    // Hero salary: deduct gems daily; if not enough gems, deduct what we can (heroes stay)
     const HERO_SALARY_INTERVAL_HOURS = 24;
     const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
     if (heroSalaryTicks > 0) {
@@ -86,24 +86,7 @@ export class EconomyService {
         }
       }
       if (gemsNeeded > 0) {
-        if (kingdom.gems >= gemsNeeded) {
-          kingdom.gems -= gemsNeeded;
-        } else {
-          // Not enough gems — heroes leave one by one until debt is covered
-          let debt = gemsNeeded - kingdom.gems;
-          kingdom.gems = 0;
-          for (const unit of units) {
-            if (debt <= 0) break;
-            if (HERO_TYPES.has(unit.type) && unit.count > 0) {
-              const salary = (HERO_SALARY_GEMS[unit.type] ?? 0) * heroSalaryTicks;
-              if (salary > 0) {
-                unit.count = Math.max(0, unit.count - 1);
-                debt -= salary;
-              }
-            }
-          }
-          await this.unitRepo.save(units.filter(u => HERO_TYPES.has(u.type)));
-        }
+        kingdom.gems = Math.max(0, (kingdom.gems || 0) - gemsNeeded);
       }
     }
 
@@ -115,6 +98,13 @@ export class EconomyService {
     kingdom.wood  = Math.min(kingdom.maxWood,  Math.floor(kingdom.wood  + production.wood  * bonus));
     kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
     kingdom.food  = Math.min(kingdom.maxFood,  Math.max(0, Math.floor(newFood)));
+
+    // Ragnar hero generates 2 gems/hour
+    const ragnar = units.find(u => u.type === 'ragnar' && u.count > 0);
+    if (ragnar) {
+      kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
+    }
+
     kingdom.lastResourceTick = now;
 
     // Food shortage: soldiers desert (lose 0.5% per food unit short, max 5% per tick)

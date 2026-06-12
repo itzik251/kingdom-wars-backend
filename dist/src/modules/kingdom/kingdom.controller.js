@@ -51,6 +51,18 @@ let KingdomController = class KingdomController {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
     }
+    async buyGems(req, body) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.buyGems(kingdom.id, body.gems);
+    }
+    async buyTitan(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.buyTitanHero(kingdom.id);
+    }
+    async buyGiant(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.kingdomService.buyGiantHero(kingdom.id);
+    }
     withdrawUsdt() {
         throw new common_1.BadRequestException('נא להשתמש בטופס המשיכה החדש עם כתובת ארנק');
     }
@@ -114,6 +126,28 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], KingdomController.prototype, "requestWithdrawal", null);
+__decorate([
+    (0, common_1.Post)('buy-gems'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "buyGems", null);
+__decorate([
+    (0, common_1.Post)('buy-titan'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "buyTitan", null);
+__decorate([
+    (0, common_1.Post)('buy-giant'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "buyGiant", null);
 __decorate([
     (0, common_1.Post)('withdraw-usdt'),
     __metadata("design:type", Function),

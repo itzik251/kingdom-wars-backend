@@ -10,7 +10,8 @@ export declare enum UnitType {
     PALADIN = "paladin",
     DRAGON_RIDER = "dragon_rider",
     RAGNAR = "ragnar",
-    TITAN = "titan"
+    TITAN = "titan",
+    GIANT = "giant"
 }
 export declare const HERO_TYPES: Set<UnitType>;
 export declare const HERO_SALARY_GEMS: Record<string, number>;

@@ -46,5 +46,22 @@ export declare class KingdomController {
         wallet: string;
         status: string;
     }>;
+    buyGems(req: any, body: {
+        gems: number;
+    }): Promise<{
+        gemsAdded: number;
+        gems: number;
+        usdtBalance: number;
+    }>;
+    buyTitan(req: any): Promise<{
+        trainingCount: number;
+        trainingEndsAt: Date;
+        usdtBalance: number;
+    }>;
+    buyGiant(req: any): Promise<{
+        trainingCount: number;
+        trainingEndsAt: Date;
+        usdtBalance: number;
+    }>;
     withdrawUsdt(): void;
 }

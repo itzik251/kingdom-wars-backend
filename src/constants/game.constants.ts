@@ -89,7 +89,9 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   // Ragnar — referral hero (first unit given free on claim; additional units cost gems)
   [UnitType.RAGNAR]:      { goldCost: 0, gemsCost: 200, foodCost: 0, upkeep: 20, attackPower: 400, defensePower: 300, trainingTime: 900, requiredBarracksLevel: 3, requiresReferralHero: true },
   // Titan — USDT hero, can attack alone (no minimum squad)
-  [UnitType.TITAN]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 0, attackPower: 800, defensePower: 600, trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
+  [UnitType.TITAN]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 10, attackPower: 800,  defensePower: 600,  trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
+  // Giant — USDT hero, can attack alone
+  [UnitType.GIANT]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 50, attackPower: 2000, defensePower: 1200, trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
 };
 
 // ─── Combat ──────────────────────────────────────────────────

@@ -54,6 +54,24 @@ export class KingdomController {
     return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
   }
 
+  @Post('buy-gems')
+  async buyGems(@Request() req, @Body() body: { gems: number }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.buyGems(kingdom.id, body.gems);
+  }
+
+  @Post('buy-titan')
+  async buyTitan(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.buyTitanHero(kingdom.id);
+  }
+
+  @Post('buy-giant')
+  async buyGiant(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.buyGiantHero(kingdom.id);
+  }
+
   @Post('withdraw-usdt')
   withdrawUsdt() {
     throw new BadRequestException('נא להשתמש בטופס המשיכה החדש עם כתובת ארנק');

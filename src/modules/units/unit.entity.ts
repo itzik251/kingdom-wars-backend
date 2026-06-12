@@ -15,6 +15,7 @@ export enum UnitType {
   DRAGON_RIDER = 'dragon_rider',
   RAGNAR       = 'ragnar',
   TITAN        = 'titan',
+  GIANT        = 'giant',
 }
 
 export const HERO_TYPES = new Set<UnitType>([
@@ -23,15 +24,17 @@ export const HERO_TYPES = new Set<UnitType>([
   UnitType.DRAGON_RIDER,
   UnitType.RAGNAR,
   UnitType.TITAN,
+  UnitType.GIANT,
 ]);
 
 // Daily gem salary per hero type
 export const HERO_SALARY_GEMS: Record<string, number> = {
-  [UnitType.KNIGHT]:       0, // free starter hero — no salary
+  [UnitType.KNIGHT]:       1,
   [UnitType.PALADIN]:      3,
   [UnitType.DRAGON_RIDER]: 5,
   [UnitType.RAGNAR]:       2,
-  [UnitType.TITAN]:        0, // purchased with real USDT — permanent, never leaves
+  [UnitType.TITAN]:        0,
+  [UnitType.GIANT]:        10,
 };
 
 @Entity('units')

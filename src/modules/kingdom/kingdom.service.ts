@@ -211,6 +211,57 @@ export class KingdomService {
     return { name: clean };
   }
 
+  async buyTitanHero(kingdomId: string) {
+    const COST = 0.1;
+    const TRAINING_TIME = 300;
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+    if ((kingdom.usdtBalance ?? 0) < COST)
+      throw new BadRequestException('נדרש 0.1 USDT לרכישת Titan');
+    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
+    await this.kingdomRepo.save(kingdom);
+    let titan = await this.unitRepo.findOne({ where: { kingdom: { id: kingdomId }, type: UnitType.TITAN } });
+    if (!titan)
+      titan = this.unitRepo.create({ kingdom: { id: kingdomId } as any, type: UnitType.TITAN, count: 0, trainingCount: 0, woundedCount: 0 });
+    const existingEnd = titan.trainingEndsAt && new Date(titan.trainingEndsAt) > new Date() ? new Date(titan.trainingEndsAt) : new Date();
+    titan.trainingCount = (titan.trainingCount || 0) + 1;
+    titan.trainingEndsAt = new Date(existingEnd.getTime() + TRAINING_TIME * 1000);
+    await this.unitRepo.save(titan);
+    return { trainingCount: titan.trainingCount, trainingEndsAt: titan.trainingEndsAt, usdtBalance: kingdom.usdtBalance };
+  }
+
+  async buyGiantHero(kingdomId: string) {
+    const COST = 0.5;
+    const TRAINING_TIME = 600;
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+    if ((kingdom.usdtBalance ?? 0) < COST)
+      throw new BadRequestException('נדרש 0.5 USDT לרכישת Giant');
+    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
+    await this.kingdomRepo.save(kingdom);
+    let giant = await this.unitRepo.findOne({ where: { kingdom: { id: kingdomId }, type: UnitType.GIANT } });
+    if (!giant)
+      giant = this.unitRepo.create({ kingdom: { id: kingdomId } as any, type: UnitType.GIANT, count: 0, trainingCount: 0, woundedCount: 0 });
+    const existingEnd = giant.trainingEndsAt && new Date(giant.trainingEndsAt) > new Date() ? new Date(giant.trainingEndsAt) : new Date();
+    giant.trainingCount = (giant.trainingCount || 0) + 1;
+    giant.trainingEndsAt = new Date(existingEnd.getTime() + TRAINING_TIME * 1000);
+    await this.unitRepo.save(giant);
+    return { trainingCount: giant.trainingCount, trainingEndsAt: giant.trainingEndsAt, usdtBalance: kingdom.usdtBalance };
+  }
+
+  async buyGems(kingdomId: string, gems: number) {
+    if (!gems || gems < 1 || gems > 10000) throw new BadRequestException('Invalid gems amount');
+    const cost = parseFloat((gems / 100).toFixed(6));
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+    if ((kingdom.usdtBalance ?? 0) < cost)
+      throw new BadRequestException(`נדרש $${cost.toFixed(2)} USDT`);
+    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - cost).toFixed(6));
+    kingdom.gems = (kingdom.gems || 0) + gems;
+    await this.kingdomRepo.save(kingdom);
+    return { gemsAdded: gems, gems: kingdom.gems, usdtBalance: kingdom.usdtBalance };
+  }
+
   async expandStorage(kingdomId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const COST = 100;

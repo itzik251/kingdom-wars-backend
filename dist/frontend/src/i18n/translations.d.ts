@@ -107,6 +107,9 @@ declare const he: {
     worker_max: string;
     not_enough_gold_worker: string;
     no_workers_to_fire: string;
+    not_enough_gems: string;
+    not_enough_gold: string;
+    need_barracks: string;
     shop_title: string;
     vip_section: string;
     vip_monthly: string;
@@ -390,6 +393,7 @@ declare const he: {
     u_paladin: string;
     u_dragon_rider: string;
     u_titan: string;
+    u_giant: string;
     u_ragnar: string;
     u_knight: string;
     heroes_badge: string;
@@ -423,6 +427,7 @@ declare const he: {
     progress_label: string;
     upkeep_per_hr: string;
     hero_salary: string;
+    gems_per_hr: string;
     hero_salary_note: string;
     squad_select: string;
     squad_close: string;
@@ -432,6 +437,9 @@ declare const he: {
     squad_min_warn: string;
     titan_solo: string;
     wounded_recovering: string;
+    hospital_heal_time: string;
+    hospital_wounded_total: string;
+    added_to_queue: string;
     storage_full_label: string;
     level_arrow: string;
     upgrading_progress: string;
@@ -493,6 +501,11 @@ declare const he: {
     titan_note: string;
     titan_purchased: string;
     titan_buy_btn: string;
+    giant_section_title: string;
+    giant_hero_desc: string;
+    giant_note: string;
+    giant_purchased: string;
+    giant_buy_btn: string;
     gem_forge_title: string;
     gem_forge_desc: string;
     gem_forge_built: string;
@@ -614,6 +627,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -897,6 +913,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -930,6 +947,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -939,6 +957,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -1000,6 +1021,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -1120,6 +1146,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -1403,6 +1432,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -1436,6 +1466,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -1445,6 +1476,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -1506,6 +1540,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -1626,6 +1665,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -1909,6 +1951,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -1942,6 +1985,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -1951,6 +1995,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -2012,6 +2059,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -2132,6 +2184,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -2415,6 +2470,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -2448,6 +2504,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -2457,6 +2514,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -2518,6 +2578,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -2638,6 +2703,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -2921,6 +2989,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -2954,6 +3023,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -2963,6 +3033,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -3024,6 +3097,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -3144,6 +3222,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -3427,6 +3508,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -3460,6 +3542,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -3469,6 +3552,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -3530,6 +3616,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -3650,6 +3741,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -3933,6 +4027,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -3966,6 +4061,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -3975,6 +4071,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -4036,6 +4135,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;
@@ -4156,6 +4260,9 @@ export declare const TRANSLATIONS: {
         worker_max: string;
         not_enough_gold_worker: string;
         no_workers_to_fire: string;
+        not_enough_gems: string;
+        not_enough_gold: string;
+        need_barracks: string;
         shop_title: string;
         vip_section: string;
         vip_monthly: string;
@@ -4439,6 +4546,7 @@ export declare const TRANSLATIONS: {
         u_paladin: string;
         u_dragon_rider: string;
         u_titan: string;
+        u_giant: string;
         u_ragnar: string;
         u_knight: string;
         heroes_badge: string;
@@ -4472,6 +4580,7 @@ export declare const TRANSLATIONS: {
         progress_label: string;
         upkeep_per_hr: string;
         hero_salary: string;
+        gems_per_hr: string;
         hero_salary_note: string;
         squad_select: string;
         squad_close: string;
@@ -4481,6 +4590,9 @@ export declare const TRANSLATIONS: {
         squad_min_warn: string;
         titan_solo: string;
         wounded_recovering: string;
+        hospital_heal_time: string;
+        hospital_wounded_total: string;
+        added_to_queue: string;
         storage_full_label: string;
         level_arrow: string;
         upgrading_progress: string;
@@ -4542,6 +4654,11 @@ export declare const TRANSLATIONS: {
         titan_note: string;
         titan_purchased: string;
         titan_buy_btn: string;
+        giant_section_title: string;
+        giant_hero_desc: string;
+        giant_note: string;
+        giant_purchased: string;
+        giant_buy_btn: string;
         gem_forge_title: string;
         gem_forge_desc: string;
         gem_forge_built: string;

@@ -10,7 +10,7 @@ const useT_1 = require("../i18n/useT");
 const REGULAR_UNITS = ['spearman', 'archer', 'swordsman', 'cavalry', 'catapult', 'elite_guard'];
 const GOLD_HEROES = ['knight'];
 const VIP_UNITS = ['paladin', 'dragon_rider'];
-const SPECIAL_UNITS = ['titan'];
+const SPECIAL_UNITS = ['titan', 'giant'];
 const UNIT_CONFIG = {
     spearman: { icon: '🗡️', gold: 10, power: 1, def: 1, color: '#aaa', upkeep: 1 },
     archer: { icon: '🏹', gold: 20, power: 2, def: 1, color: '#7dbb3f', upkeep: 1 },
@@ -18,15 +18,16 @@ const UNIT_CONFIG = {
     cavalry: { icon: '🐴', gold: 80, power: 9, def: 5, color: '#9b59b6', upkeep: 3 },
     catapult: { icon: '💣', gold: 200, power: 15, def: 2, color: '#e67e22', upkeep: 5 },
     elite_guard: { icon: '🛡️', gold: 500, power: 25, def: 20, color: '#f4d03f', upkeep: 8 },
-    knight: { icon: '🗡️', gold: 800, power: 40, def: 30, color: '#85c1e9', upkeep: 2, isHero: true },
-    paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5, isHero: true, dailySalaryGems: 3 },
-    dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15, isHero: true, dailySalaryGems: 5 },
-    ragnar: { icon: '🦸', gold: 0, gems: 200, power: 400, def: 300, color: '#e67e22', referralHero: true, upkeep: 20, isHero: true, dailySalaryGems: 2 },
-    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 0, isHero: true, dailySalaryGems: 4, canSoloAttack: true },
+    knight: { icon: '🗡️', gold: 800, power: 40, def: 30, color: '#85c1e9', upkeep: 2, isHero: true, dailySalaryGems: 1 },
+    paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5, isHero: true, dailySalaryGems: 3, canSoloAttack: true },
+    dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15, isHero: true, dailySalaryGems: 5, canSoloAttack: true },
+    ragnar: { icon: '🦸', gold: 0, gems: 200, power: 400, def: 300, color: '#e67e22', referralHero: true, upkeep: 20, isHero: true, dailySalaryGems: 2, canSoloAttack: true, gemsPerHour: 2 },
+    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 10, isHero: true, dailySalaryGems: 4, canSoloAttack: true },
+    giant: { icon: '👹', gold: 0, usdtCost: 0.5, power: 2000, def: 1200, color: '#8e44ad', usdtUnit: true, upkeep: 50, isHero: true, dailySalaryGems: 10, canSoloAttack: true },
 };
 const RAGNAR_REQUIRED = 10;
 function ArmyScreen() {
-    const { units, kingdom, productionRates, refresh } = (0, gameStore_1.useGameStore)();
+    const { units, kingdom, buildings, productionRates, refresh } = (0, gameStore_1.useGameStore)();
     const [amounts, setAmounts] = (0, react_1.useState)({});
     const [loading, setLoading] = (0, react_1.useState)(null);
     const [msg, setMsg] = (0, react_1.useState)('');
@@ -69,8 +70,9 @@ function ArmyScreen() {
         setMsg('');
         try {
             if (cfg?.usdtUnit) {
+                const endpoint = type === 'giant' ? '/kingdom/buy-giant' : '/kingdom/buy-titan';
                 for (let i = 0; i < amount; i++) {
-                    await client_1.api.post('/kingdom/buy-titan');
+                    await client_1.api.post(endpoint);
                 }
                 await refresh();
                 window.dispatchEvent(new Event('usdt-balance-refresh'));
@@ -93,6 +95,18 @@ function ArmyScreen() {
             }
             else if (raw === 'RAGNAR_NOT_UNLOCKED') {
                 setMsg('❌ ' + t('ragnar_required', { n: RAGNAR_REQUIRED }));
+            }
+            else if (raw.includes('Not enough gems') || raw.includes('enough gems')) {
+                setMsg('❌ ' + t('not_enough_gems'));
+            }
+            else if (raw.includes('Not enough gold') || raw.includes('enough gold')) {
+                setMsg('❌ ' + t('not_enough_gold'));
+            }
+            else if (raw.includes('No Barracks') || raw.includes('no barracks')) {
+                setMsg('❌ ' + t('need_barracks'));
+            }
+            else if (raw.includes('USDT') || raw.includes('usdt')) {
+                setMsg('❌ ' + t('missing_usdt_balance'));
             }
             else {
                 setMsg('❌ ' + (raw || t('error')));
@@ -145,13 +159,15 @@ function ArmyScreen() {
               <div style={{ color: '#a0845a', fontSize: 11, display: 'flex', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
                 <span>⚔️ {cfg?.power}</span>
                 <span>🛡️ {cfg?.def}</span>
-                <span style={{ color: '#7dbb3f' }}>🌾 {t('upkeep_per_hr', { n: cfg?.upkeep ?? 0 })}</span>
-                {isUsdtUnit ? <span style={{ color: '#27ae60' }}>💵 ${cfg?.usdtCost}{t('per_unit')}</span>
-                : isVipUnit ? <span style={{ color: '#f1c40f' }}>💎 {cfg?.gems}{t('per_unit')}</span>
+                {(cfg?.upkeep ?? 0) > 0 && <span style={{ color: '#7dbb3f' }}>🌾 {t('upkeep_per_hr', { n: cfg.upkeep })}</span>}
+                {isUsdtUnit ? <span style={{ color: '#27ae60', display: 'flex', alignItems: 'center', gap: 2 }}><img src="/assets/icon_dollar.png" style={{ width: 11, height: 11 }}/>${cfg?.usdtCost}{t('per_unit')}</span>
+                : isVipUnit ? <span style={{ color: '#f1c40f', display: 'flex', alignItems: 'center', gap: 2 }}><img src="/assets/icon_gem.png" style={{ width: 11, height: 11 }}/>{cfg?.gems}{t('per_unit')}</span>
                     : <span>💰 {cfg?.gold}{t('per_unit')}</span>}
               </div>
               {cfg?.isHero && cfg.dailySalaryGems && (<div style={{ fontSize: 10, color: '#a78bfa', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <img src="/assets/icon_gem.png" style={{ width: 10, height: 10 }}/>
                   <span>{t('hero_salary', { n: cfg.dailySalaryGems })}</span>
+                  {cfg.gemsPerHour && <><span style={{ color: '#c084fc' }}>·</span><img src="/assets/icon_gem.png" style={{ width: 10, height: 10 }}/><span style={{ color: '#c084fc' }}>{t('gems_per_hr', { n: cfg.gemsPerHour })}</span></>}
                   {cfg.canSoloAttack && <span style={{ color: '#f87171', marginLeft: 4 }}>· {t('titan_solo')}</span>}
                 </div>)}
               {(u.woundedCount || 0) > 0 && (<div style={{ fontSize: 10, color: '#e74c3c', marginTop: 2 }}>{t('wounded', { n: (0, format_1.fmt)(u.woundedCount || 0) })}</div>)}
@@ -189,13 +205,15 @@ function ArmyScreen() {
               {loading === u.type ? '...' : isTraining
                     ? t('add_to_queue', { n: amounts[u.type] || 1 })
                     : isUsdtUnit
-                        ? `${t('recruit')} ${amounts[u.type] || 1} (💵 $${usdtCostTotal})`
-                        : `${t('recruit')} ${amounts[u.type] || 1} (${isVipUnit ? `💎 ${(0, format_1.fmt)(cost)}` : `💰 ${(0, format_1.fmt)(cost)}`})`}
+                        ? <>{t('recruit')} {amounts[u.type] || 1} (<img src="/assets/icon_dollar.png" style={{ width: 12, height: 12, verticalAlign: 'middle' }}/>${usdtCostTotal})</>
+                        : isVipUnit || isRagnar
+                            ? <>{t('recruit')} {amounts[u.type] || 1} (<img src="/assets/icon_gem.png" style={{ width: 12, height: 12, verticalAlign: 'middle' }}/>{(0, format_1.fmt)(cost)})</>
+                            : `${t('recruit')} ${amounts[u.type] || 1} (💰 ${(0, format_1.fmt)(cost)})`}
             </button>
             {!canAfford && (<div style={{ fontSize: 11, color: '#e74c3c', textAlign: 'center' }}>
                 {isUsdtUnit
-                        ? `💵 ${t('missing_usdt_balance') || 'יתרת USDT לא מספיקה'} (${usdtBal.toFixed(4)}/$${usdtCostTotal})`
-                        : isVipUnit ? t('missing_gems', { n: (0, format_1.fmt)(cost - (kingdom?.gems || 0)) }) : t('missing_gold', { n: (0, format_1.fmt)(cost - (kingdom?.gold || 0)) })}
+                        ? <><img src="/assets/icon_dollar.png" style={{ width: 11, height: 11, verticalAlign: 'middle' }}/> {t('missing_usdt_balance') || 'יתרת USDT לא מספיקה'} ({usdtBal.toFixed(4)}/${usdtCostTotal})</>
+                        : isVipUnit || isRagnar ? t('missing_gems', { n: (0, format_1.fmt)(cost - (kingdom?.gems || 0)) }) : t('missing_gold', { n: (0, format_1.fmt)(cost - (kingdom?.gold || 0)) })}
               </div>)}
           </div>)}
       </div>);
@@ -232,6 +250,29 @@ function ArmyScreen() {
               <span style={{ color: '#3498db' }}>⏳ <Countdown_1.default endsAt={u.trainingEndsAt}/></span>
             </div>))}
         </div>)}
+
+      {(() => {
+            const totalWounded = units.reduce((s, u) => s + (u.woundedCount || 0), 0);
+            if (totalWounded === 0)
+                return null;
+            const hospitalLevel = buildings.find(b => b.type === 'hospital')?.level ?? 0;
+            const healRate = 5 + hospitalLevel * 10;
+            const hoursLeft = totalWounded / healRate;
+            const totalMins = Math.ceil(hoursLeft * 60);
+            const hh = Math.floor(totalMins / 60);
+            const mm = totalMins % 60;
+            const timeStr = hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+            return (<div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#e74c3c', marginBottom: 6 }}>🏥 {t('b_hospital')}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a0845a' }}>
+              <span>{t('hospital_wounded_total', { n: (0, format_1.fmt)(totalWounded) })}</span>
+              <span style={{ color: '#f39c12' }}>{t('hospital_heal_time', { time: timeStr })}</span>
+            </div>
+            {units.filter(u => (u.woundedCount || 0) > 0).map(u => (<div key={u.type} style={{ fontSize: 10, color: '#e74c3c', marginTop: 3 }}>
+                {t('u_' + u.type)}: {(0, format_1.fmt)(u.woundedCount)} 🩹
+              </div>))}
+          </div>);
+        })()}
 
       <div style={{ background: foodBalance < 0 ? 'rgba(231,76,60,0.12)' : 'rgba(120,192,48,0.10)', border: `1px solid ${foodBalance < 0 ? 'rgba(231,76,60,0.35)' : 'rgba(120,192,48,0.3)'}`, borderRadius: 12, padding: '10px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -292,7 +333,7 @@ function ArmyScreen() {
             return (<>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#c0392b' }}>⚔️ {t('special_heroes') || 'גיבורים מיוחדים'}</div>
-              <span style={{ fontSize: 10, color: '#27ae60', background: 'rgba(39,174,96,0.15)', borderRadius: 8, padding: '2px 8px', fontWeight: 700 }}>💵 USDT</span>
+              <span style={{ fontSize: 10, color: '#27ae60', background: 'rgba(39,174,96,0.15)', borderRadius: 8, padding: '2px 8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}><img src="/assets/icon_dollar.png" style={{ width: 11, height: 11 }}/> USDT</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               {specialUnitsInArmy.map(u => <UnitCard key={u.type} u={u}/>)}

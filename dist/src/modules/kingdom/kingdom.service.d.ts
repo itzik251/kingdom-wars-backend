@@ -57,6 +57,21 @@ export declare class KingdomService {
     renameKingdom(kingdomId: string, name: string): Promise<{
         name: string;
     }>;
+    buyTitanHero(kingdomId: string): Promise<{
+        trainingCount: number;
+        trainingEndsAt: Date;
+        usdtBalance: number;
+    }>;
+    buyGiantHero(kingdomId: string): Promise<{
+        trainingCount: number;
+        trainingEndsAt: Date;
+        usdtBalance: number;
+    }>;
+    buyGems(kingdomId: string, gems: number): Promise<{
+        gemsAdded: number;
+        gems: number;
+        usdtBalance: number;
+    }>;
     expandStorage(kingdomId: string): Promise<{
         maxGold: number;
         maxWood: number;

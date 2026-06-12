@@ -25,6 +25,7 @@ var UnitType;
     UnitType["DRAGON_RIDER"] = "dragon_rider";
     UnitType["RAGNAR"] = "ragnar";
     UnitType["TITAN"] = "titan";
+    UnitType["GIANT"] = "giant";
 })(UnitType || (exports.UnitType = UnitType = {}));
 exports.HERO_TYPES = new Set([
     UnitType.KNIGHT,
@@ -32,13 +33,15 @@ exports.HERO_TYPES = new Set([
     UnitType.DRAGON_RIDER,
     UnitType.RAGNAR,
     UnitType.TITAN,
+    UnitType.GIANT,
 ]);
 exports.HERO_SALARY_GEMS = {
-    [UnitType.KNIGHT]: 0,
+    [UnitType.KNIGHT]: 1,
     [UnitType.PALADIN]: 3,
     [UnitType.DRAGON_RIDER]: 5,
     [UnitType.RAGNAR]: 2,
     [UnitType.TITAN]: 0,
+    [UnitType.GIANT]: 10,
 };
 let Unit = class Unit {
 };

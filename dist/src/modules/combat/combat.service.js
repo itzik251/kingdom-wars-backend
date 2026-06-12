@@ -165,8 +165,8 @@ let CombatService = class CombatService {
         const wallBonus = wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
         const arcaneLevel = attackerBuildings.find(b => b.type === building_entity_1.BuildingType.ARCANE_TOWER)?.level ?? 0;
         const arcaneMult = 1 + arcaneLevel * 0.1;
-        let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * game_constants_1.UNIT_STATS[u.type].attackPower, 0) * arcaneMult;
-        let defensePower = defenderUnits.reduce((sum, u) => sum + u.count * game_constants_1.UNIT_STATS[u.type].defensePower, 0) + wallBonus;
+        let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * (game_constants_1.UNIT_STATS[u.type]?.attackPower ?? 0), 0) * arcaneMult;
+        let defensePower = defenderUnits.reduce((sum, u) => sum + u.count * (game_constants_1.UNIT_STATS[u.type]?.defensePower ?? 0), 0) + wallBonus;
         attackPower *= this.random(game_constants_1.COMBAT_RANDOM_MIN, game_constants_1.COMBAT_RANDOM_MAX);
         defensePower *= this.random(game_constants_1.COMBAT_RANDOM_MIN, game_constants_1.COMBAT_RANDOM_MAX);
         const attackerWins = attackPower > defensePower;
@@ -202,7 +202,8 @@ let CombatService = class CombatService {
         const losses = {};
         for (const unit of units) {
             if (unit.count > 0) {
-                losses[unit.type] = Math.floor(unit.count * lossRate);
+                const raw = unit.count * lossRate;
+                losses[unit.type] = unit.count === 1 ? Math.round(raw) : Math.floor(raw);
             }
         }
         return losses;

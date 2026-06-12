@@ -79,25 +79,7 @@ let EconomyService = class EconomyService {
                 }
             }
             if (gemsNeeded > 0) {
-                if (kingdom.gems >= gemsNeeded) {
-                    kingdom.gems -= gemsNeeded;
-                }
-                else {
-                    let debt = gemsNeeded - kingdom.gems;
-                    kingdom.gems = 0;
-                    for (const unit of units) {
-                        if (debt <= 0)
-                            break;
-                        if (unit_entity_2.HERO_TYPES.has(unit.type) && unit.count > 0) {
-                            const salary = (unit_entity_2.HERO_SALARY_GEMS[unit.type] ?? 0) * heroSalaryTicks;
-                            if (salary > 0) {
-                                unit.count = Math.max(0, unit.count - 1);
-                                debt -= salary;
-                            }
-                        }
-                    }
-                    await this.unitRepo.save(units.filter(u => unit_entity_2.HERO_TYPES.has(u.type)));
-                }
+                kingdom.gems = Math.max(0, (kingdom.gems || 0) - gemsNeeded);
             }
         }
         const newFood = kingdom.food + production.food * bonus - upkeep;
@@ -106,6 +88,10 @@ let EconomyService = class EconomyService {
         kingdom.wood = Math.min(kingdom.maxWood, Math.floor(kingdom.wood + production.wood * bonus));
         kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
         kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(newFood)));
+        const ragnar = units.find(u => u.type === 'ragnar' && u.count > 0);
+        if (ragnar) {
+            kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
+        }
         kingdom.lastResourceTick = now;
         if (foodShortfall > 0) {
             const desertionRate = Math.min(0.05, foodShortfall * 0.005);

@@ -215,7 +215,7 @@ export class EconomyService {
   calculateUpkeep(units: Unit[], hours: number): number {
     return units.reduce((total, unit) => {
       const stats = UNIT_STATS[unit.type];
-      return total + unit.count * stats.upkeep * hours;
+      return total + unit.count * (stats?.upkeep ?? 0) * hours;
     }, 0);
   }
 
@@ -228,6 +228,12 @@ export class EconomyService {
         await this.buildingRepo.save(building);
         completed.push({ type: building.type, level: building.level });
 
+        const STORAGE_BUMP: Partial<Record<BuildingType, { field: 'maxGold'|'maxWood'|'maxStone'|'maxFood'; perLevel: number }>> = {
+          [BuildingType.GOLD_MINE]:    { field: 'maxGold',  perLevel: 300 },
+          [BuildingType.LUMBER_MILL]:  { field: 'maxWood',  perLevel: 250 },
+          [BuildingType.STONE_QUARRY]: { field: 'maxStone', perLevel: 200 },
+          [BuildingType.FARM]:         { field: 'maxFood',  perLevel: 150 },
+        };
         if (building.type === BuildingType.TOWN_HALL) {
           const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
           if (kingdom) {
@@ -238,6 +244,9 @@ export class EconomyService {
             kingdom.maxFood  = Math.floor(2000 * mult);
             await this.kingdomRepo.save(kingdom);
           }
+        } else if (STORAGE_BUMP[building.type as BuildingType]) {
+          const bump = STORAGE_BUMP[building.type as BuildingType]!;
+          await this.kingdomRepo.increment({ id: kingdomId }, bump.field, bump.perLevel);
         }
       }
     }

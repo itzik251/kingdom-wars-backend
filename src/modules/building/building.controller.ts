@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AntiBotGuard, AntiBotAction } from '../antibot/antibot.guard';
 import { BuildingService } from './building.service';
 import { BuildingType } from './building.entity';
 import { KingdomService } from '../kingdom/kingdom.service';
@@ -31,6 +32,8 @@ export class BuildingController {
   }
 
   @Post('upgrade')
+  @UseGuards(AntiBotGuard)
+  @AntiBotAction('building_upgrade')
   async upgrade(@Request() req, @Body() dto: UpgradeDto) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     const result = await this.buildingService.upgradeBuilding(kingdom.id, dto.type, false, dto.buildingId);

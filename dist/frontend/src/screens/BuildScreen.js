@@ -205,6 +205,9 @@ function BuildScreen() {
                             : t('no_resources_btn')}
                   </button>
                 </>)}
+              {['gold_mine', 'lumber_mill', 'stone_quarry', 'farm'].includes(b.type) && (<div style={{ fontSize: 11, color: '#a0845a', marginTop: 8, textAlign: 'center', padding: '5px 8px', background: 'rgba(244,208,63,0.05)', borderRadius: 6 }}>
+                  {t('storage_upgrade_hint')}
+                </div>)}
             </div>);
         })}
       </div>

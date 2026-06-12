@@ -9,7 +9,24 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: '*', credentials: true });
+  // Restrict CORS to the game domain only
+  const allowedOrigins = [
+    'https://kingdomwars.cloud',
+    'https://www.kingdomwars.cloud',
+    // Allow local dev
+    ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
+  ];
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (Telegram WebApp, mobile)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, false); // reject silently (don't crash)
+      }
+    },
+    credentials: true,
+  });
 
   // Serve React frontend as static files
   // index.html: no-cache so Telegram always loads the latest version

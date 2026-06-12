@@ -82,6 +82,8 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   [UnitType.CAVALRY]:    { goldCost: 80,  foodCost: 20, upkeep: 3, attackPower: 9,  defensePower: 5,  trainingTime: 80,  requiredBarracksLevel: 3 },
   [UnitType.CATAPULT]:   { goldCost: 200, foodCost: 40, upkeep: 5, attackPower: 15, defensePower: 2,  trainingTime: 200, requiredBarracksLevel: 5 },
   [UnitType.ELITE_GUARD]:{ goldCost: 500, foodCost: 80, upkeep: 8, attackPower: 25, defensePower: 20, trainingTime: 600, requiredBarracksLevel: 8 },
+  // Knight — free starter hero, available to all players without VIP/USDT/referrals
+  [UnitType.KNIGHT]:      { goldCost: 800, foodCost: 0, upkeep: 2, attackPower: 40, defensePower: 30, trainingTime: 120, requiredBarracksLevel: 1 },
   [UnitType.PALADIN]:     { goldCost: 0, gemsCost: 100, foodCost: 0, upkeep: 5,  attackPower: 80,  defensePower: 60,  trainingTime: 300, requiredBarracksLevel: 3, requiresVip: true },
   [UnitType.DRAGON_RIDER]:{ goldCost: 0, gemsCost: 300, foodCost: 0, upkeep: 15, attackPower: 250, defensePower: 150, trainingTime: 600, requiredBarracksLevel: 5, requiresVip: true },
   // Ragnar — referral hero (first unit given free on claim; additional units cost gems)
@@ -95,7 +97,7 @@ export const COMBAT_RANDOM_MIN = 0.85;
 export const COMBAT_RANDOM_MAX = 1.15;
 
 // Winner gets this fraction of defender's resources
-export const LOOT_PERCENTAGE = 0.30;
+export const LOOT_PERCENTAGE = 1.0; // Winner takes all shown loot
 
 // Max resource loss for the loser
 export const DEFENDER_LOSS_MAX = 0.20;

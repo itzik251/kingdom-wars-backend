@@ -13,6 +13,7 @@ function ReferralSection() {
     const t = (0, useT_1.useT)();
     (0, react_1.useEffect)(() => { client_1.api.get('/referral').then(setReferral).catch(() => { }); }, []);
     const referredCount = referral?.referredCount ?? 0;
+    const totalReferredCount = referral?.totalReferredCount ?? referredCount;
     const claimedCount = referral?.claimedCount ?? 0;
     const pending = referral?.pendingRewards ?? { gems: 0, skins: 0, vipDays: 0 };
     const hasPending = referral?.hasPending ?? false;
@@ -34,7 +35,7 @@ function ReferralSection() {
             if (r.vipDays > 0)
                 parts.push(`👑 VIP ${r.vipDays} ${t('days_free')}`);
             if (r.skins > 0)
-                parts.push(`🎨 ${r.skins} ${t('rare_skin')}`);
+                parts.push(`🦸 ${r.skins}× ${t('ragnar_name')}`);
             setMsg(parts.length ? `✅ ${parts.join(' + ')}` : `✅ ${t('claimed_success')}`);
             const updated = await client_1.api.get('/referral');
             setReferral(updated);
@@ -50,20 +51,27 @@ function ReferralSection() {
     const milestones = [
         { every: 1, label: t('friend'), reward: `💎 +100 Gems` },
         { every: 5, label: t('friends'), reward: `💎 +200 Gems ${t('bonus')}` },
-        { every: 10, label: t('friends'), reward: `🎨 ${t('rare_skin')}` },
+        { every: 10, label: t('friends'), reward: `🦸 ${t('ragnar_name')} (${t('referral_hero')})` },
         { every: 20, label: t('friends'), reward: `👑 VIP 30 ${t('days_free')}` },
     ];
     return (<div style={{ marginBottom: 8 }}>
       
       <div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.1),rgba(26,138,64,0.05))', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: 14, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
           <div style={{ fontSize: 13, color: '#a0845a' }}>
             👥 {t('ref_friends_count')} <strong style={{ color: '#27ae60', fontSize: 16 }}>{referredCount}</strong>
           </div>
           {claimedCount > 0 && (<div style={{ fontSize: 11, color: '#555' }}>✅ {t('claimed')}: {claimedCount}</div>)}
         </div>
-        <div style={{ fontSize: 10, color: '#666', marginBottom: 10, lineHeight: 1.4 }}>
+        
+        {totalReferredCount > referredCount && (<div style={{ fontSize: 10, color: '#27ae60', marginBottom: 4 }}>
+            ⚡ {referredCount} {t('active_friends')} · ⏳ {totalReferredCount - referredCount} {t('pending_activation')}
+          </div>)}
+        <div style={{ fontSize: 10, color: '#666', marginBottom: 4, lineHeight: 1.4 }}>
           ℹ️ {t('ref_active_note')}
+        </div>
+        <div style={{ fontSize: 10, color: '#3498db', marginBottom: 10, lineHeight: 1.4 }}>
+          🍪 {t('ref_cookie_note')}
         </div>
 
         
@@ -71,7 +79,7 @@ function ReferralSection() {
             <div style={{ fontSize: 12, color: '#f4d03f', fontWeight: 700, marginBottom: 4 }}>🎁 {t('pending_rewards')}:</div>
             {pending.gems > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>💎 {pending.gems} Gems</div>}
             {pending.vipDays > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>👑 VIP {pending.vipDays} {t('days_free')}</div>}
-            {pending.skins > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>🎨 {pending.skins}× {t('rare_skin')}</div>}
+            {pending.skins > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>🦸 {pending.skins}× {t('ragnar_name')}</div>}
           </div>)}
 
         {hasPending && (<button onClick={claimAll} disabled={claiming} style={{ width: '100%', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#f39c12,#f4d03f)', border: 'none', color: '#000', fontWeight: 800, fontSize: 14, cursor: 'pointer', marginBottom: 10 }}>

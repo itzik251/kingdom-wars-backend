@@ -23,9 +23,11 @@ export interface BattleReport {
   attackerWins: boolean;
   attackerPower: number;
   defenderPower: number;
-  loot: { gold: number; wood: number; stone: number; usdt?: number; game?: number };
-  attackerLosses: Record<string, number>;
+  loot: { gold: number; wood: number; stone: number; gems?: number; usdt?: number; game?: number };
+  attackerLosses: Record<string, number>;   // total losses (dead + wounded)
   defenderLosses: Record<string, number>;
+  attackerWounded: Record<string, number>;  // subset of losses that recover in hospital (70%)
+  defenderWounded: Record<string, number>;
   winStreak?: number;
   streakBonus?: number;
   buildingDamaged?: { type: string; newLevel: number };
@@ -65,7 +67,8 @@ export class CombatService {
     // Score-based protection — only when BOTH have meaningful scores (≥10)
     const attackerScore = attacker.score || 0;
     const defenderScore = defender.score || 0;
-    if (attackerScore >= 10 && defenderScore >= 10 && attackerScore > defenderScore * 10) {
+    // Anti-snowball: active in production only
+    if (process.env.NODE_ENV === 'production' && attackerScore >= 10 && defenderScore >= 10 && attackerScore > defenderScore * 10) {
       throw new BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
     }
 
@@ -91,7 +94,11 @@ export class CombatService {
 
     const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
 
-    // Validate hero commander if provided
+    // Hero required if attacker owns any hero
+    const hasHero = allAttackerUnits.some(u => HERO_TYPES.has(u.type as any) && u.count > 0);
+    if (hasHero && !heroType) {
+      throw new BadRequestException('HERO_REQUIRED');
+    }
     if (heroType) {
       const heroUnit = allAttackerUnits.find(u => u.type === heroType);
       if (!heroUnit || heroUnit.count < 1) throw new BadRequestException(`Hero ${heroType} not available`);
@@ -161,6 +168,7 @@ export class CombatService {
       gold:  Math.floor(target.gold  * LOOT_PERCENTAGE),
       wood:  Math.floor(target.wood  * LOOT_PERCENTAGE),
       stone: Math.floor(target.stone * LOOT_PERCENTAGE),
+      gems:  Math.floor((target.gems  ?? 0) * LOOT_PERCENTAGE),
     };
 
     // Simulated march time: 30 seconds base + score difference factor
@@ -228,12 +236,20 @@ export class CombatService {
           gold:  Math.floor(defender.gold  * lootMultiplier),
           wood:  Math.floor(defender.wood  * lootMultiplier),
           stone: Math.floor(defender.stone * lootMultiplier),
+          gems:  Math.floor((defender.gems  ?? 0) * lootMultiplier),
         }
-      : { gold: 0, wood: 0, stone: 0 };
+      : { gold: 0, wood: 0, stone: 0, gems: 0 };
 
-    // Winner loses 10-20% of troops, loser loses 50-70%
-    const winnerLossRate = this.random(0.10, 0.20);
-    const loserLossRate  = this.random(0.50, 0.70);
+    // Power-ratio-based losses
+    // closeness = 1 when perfectly even, approaches 0 when one-sided
+    const winPow = attackerWins ? attackPower : defensePower;
+    const losPow = attackerWins ? defensePower : attackPower;
+    const closeness = losPow / Math.max(winPow, 1); // 0..1
+
+    // Winner: 8% (dominant) → 20% (close fight)
+    const winnerLossRate = Math.min(0.20, Math.max(0.08, 0.08 + closeness * 0.12 + this.random(-0.02, 0.02)));
+    // Loser: 25% (close fight) → 45% (dominant victory)
+    const loserLossRate  = Math.min(0.45, Math.max(0.25, 0.25 + (1 - closeness) * 0.20 + this.random(-0.02, 0.02)));
 
     return {
       attackerWins,
@@ -242,6 +258,8 @@ export class CombatService {
       loot,
       attackerLosses: this.calculateLosses(attackerUnits, attackerWins ? winnerLossRate : loserLossRate),
       defenderLosses: this.calculateLosses(defenderUnits, attackerWins ? loserLossRate : winnerLossRate),
+      attackerWounded: {},
+      defenderWounded: {},
     };
   }
 
@@ -266,10 +284,12 @@ export class CombatService {
     attacker.gold  = Math.min(attacker.maxGold,  attacker.gold  + report.loot.gold);
     attacker.wood  = Math.min(attacker.maxWood,  attacker.wood  + report.loot.wood);
     attacker.stone = Math.min(attacker.maxStone, attacker.stone + report.loot.stone);
+    attacker.gems  = (attacker.gems ?? 0) + (report.loot.gems ?? 0);
 
     defender.gold  = Math.max(0, defender.gold  - report.loot.gold);
     defender.wood  = Math.max(0, defender.wood  - report.loot.wood);
     defender.stone = Math.max(0, defender.stone - report.loot.stone);
+    defender.gems  = Math.max(0, (defender.gems ?? 0) - (report.loot.gems ?? 0));
 
     // VIP players also loot 20% of defender's USDT — always set field so frontend shows it
     if (report.attackerWins && attacker.isVip) {
@@ -314,19 +334,25 @@ export class CombatService {
       }).catch(() => {});
     }
 
-    // Wounded soldiers: 30% of losses become wounded (recover via hospital) instead of dying.
+    // 70% of losses go to hospital (wounded), 30% die permanently
+    report.attackerWounded = {};
+    report.defenderWounded = {};
     for (const unit of attackerUnits) {
       const losses = report.attackerLosses[unit.type] ?? 0;
-      const wounded = Math.floor(losses * 0.3);
-      const deployedCount = unit.count; // already capped to squad amount
+      const wounded = Math.floor(losses * 0.70);
+      const dead = losses - wounded;
+      report.attackerWounded[unit.type] = wounded;
+      const deployedCount = unit.count;
       const nonDeployed = originalCounts ? (originalCounts.get(unit.type) ?? deployedCount) - deployedCount : 0;
-      unit.count = Math.max(0, deployedCount - (losses - wounded)) + nonDeployed;
+      unit.count = Math.max(0, deployedCount - dead) + nonDeployed;
       unit.woundedCount = (unit.woundedCount || 0) + wounded;
     }
     for (const unit of defenderUnits) {
       const losses = report.defenderLosses[unit.type] ?? 0;
-      const wounded = Math.floor(losses * 0.3);
-      unit.count = Math.max(0, unit.count - (losses - wounded));
+      const wounded = Math.floor(losses * 0.70);
+      const dead = losses - wounded;
+      report.defenderWounded[unit.type] = wounded;
+      unit.count = Math.max(0, unit.count - dead);
       unit.woundedCount = (unit.woundedCount || 0) + wounded;
     }
     await this.unitRepo.save([...attackerUnits, ...defenderUnits]);

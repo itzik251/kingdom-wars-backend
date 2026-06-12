@@ -32,6 +32,13 @@ export class UnitsService {
     if (stats.requiresVip && !isVip) {
       throw new BadRequestException('VIP_REQUIRED');
     }
+    // Ragnar can only be trained if player already has at least 1 (unlocked via referral)
+    if (stats.requiresReferralHero) {
+      const existing = unit; // already fetched above
+      if (!existing || existing.count === 0) {
+        throw new BadRequestException('RAGNAR_NOT_UNLOCKED');
+      }
+    }
 
     // Create the unit row lazily if it doesn't exist yet (avoids null crash below)
     let unitRow = unit;
@@ -45,7 +52,7 @@ export class UnitsService {
       });
     }
 
-    if (stats.requiresVip) {
+    if (stats.requiresVip || stats.requiresReferralHero) {
       const totalGems = (stats.gemsCost ?? 0) * amount;
       if (kingdom.gems < totalGems) throw new BadRequestException('Not enough gems');
       kingdom.gems -= totalGems;

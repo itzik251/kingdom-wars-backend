@@ -7,27 +7,61 @@ const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("./Countdown");
 const gameStore_1 = require("../store/gameStore");
-const sheetWrap = {
-    position: 'fixed', inset: 0, zIndex: 50,
-    background: 'rgba(0,0,0,0.75)',
-    display: 'flex', alignItems: 'flex-end',
+const HERO_TYPES = new Set(['knight', 'paladin', 'dragon_rider', 'ragnar', 'titan']);
+const HERO_POWER = { titan: 150, dragon_rider: 100, ragnar: 90, paladin: 80, knight: 40 };
+const UNIT_ATK = {
+    spearman: 1, archer: 2, swordsman: 3, cavalry: 5, catapult: 10, elite_guard: 8,
+    knight: 40, paladin: 80, dragon_rider: 100, ragnar: 90, titan: 150,
 };
-const sheetInner = {
-    width: '100%',
-    maxHeight: '82vh',
-    overflowY: 'auto',
-    background: 'linear-gradient(180deg,#1a0a00 0%,#110700 100%)',
-    borderRadius: '20px 20px 0 0',
-    padding: '20px 16px 110px',
-    animation: 'slideUp 0.25s ease-out',
+const UNIT_META = {
+    knight: { icon: '🗡️', nameKey: 'u_knight', heroColor: '#85c1e9' },
+    paladin: { icon: '⚔️', nameKey: 'u_paladin', heroColor: '#f4d03f' },
+    dragon_rider: { icon: '🐉', nameKey: 'u_dragon_rider', heroColor: '#e74c3c' },
+    ragnar: { icon: '🪓', nameKey: 'u_ragnar', heroColor: '#e67e22' },
+    titan: { icon: '🗿', nameKey: 'u_titan', heroColor: '#9b59b6' },
+    spearman: { icon: '🏹', nameKey: 'u_spearman' },
+    archer: { icon: '🏹', nameKey: 'u_archer' },
+    swordsman: { icon: '🗡️', nameKey: 'u_swordsman' },
+    cavalry: { icon: '🐴', nameKey: 'u_cavalry' },
+    catapult: { icon: '🪨', nameKey: 'u_catapult' },
+    elite_guard: { icon: '🛡️', nameKey: 'u_elite_guard' },
 };
-function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown = 0 }) {
+function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown = 0, sentSquad }) {
     const [profile, setProfile] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [error, setError] = (0, react_1.useState)(false);
+    const [squadCounts, setSquadCounts] = (0, react_1.useState)({});
     const t = (0, useT_1.useT)();
     const myScore = (0, gameStore_1.useGameStore)(s => s.kingdom?.score ?? 0);
     const isVip = (0, gameStore_1.useGameStore)(s => !!s.kingdom?.isVip);
+    const myUnits = (0, gameStore_1.useGameStore)(s => s.units ?? []);
+    const anyMarching = (0, gameStore_1.useGameStore)(s => Object.keys(s.marchingSquads).length > 0);
+    const sentTypes = (attacking && sentSquad) ? Object.keys(sentSquad).filter(k => (sentSquad[k] ?? 0) > 0) : [];
+    const myHeroUnits = myUnits.filter(u => HERO_TYPES.has(u.type) && (u.count > 0 || sentTypes.includes(u.type)));
+    const mySoldierUnits = myUnits.filter(u => !HERO_TYPES.has(u.type) && (u.count > 0 || sentTypes.includes(u.type)));
+    const hasAnyHero = myUnits.some(u => HERO_TYPES.has(u.type) && u.count > 0);
+    const totalHeroCount = myUnits.filter(u => HERO_TYPES.has(u.type)).reduce((s, u) => s + u.count, 0);
+    const displayCounts = (attacking && sentSquad) ? sentSquad : squadCounts;
+    const squadTotal = Object.values(displayCounts).reduce((s, v) => s + v, 0);
+    const heroesInSquad = myHeroUnits.filter(u => (displayCounts[u.type] ?? 0) > 0);
+    const soldiersInSquad = Object.entries(displayCounts).filter(([t, v]) => !HERO_TYPES.has(t) && v > 0).reduce((s, [, v]) => s + v, 0);
+    const commanderType = heroesInSquad.length > 0
+        ? heroesInSquad.reduce((best, u) => (HERO_POWER[u.type] ?? 0) > (HERO_POWER[best.type] ?? 0) ? u : best).type
+        : undefined;
+    const squadPower = (0, react_1.useMemo)(() => {
+        if (squadTotal === 0)
+            return myUnits.reduce((s, u) => s + (UNIT_ATK[u.type] ?? 0) * u.count, 0);
+        return Object.entries(displayCounts).reduce((s, [type, cnt]) => s + (UNIT_ATK[type] ?? 0) * cnt, 0);
+    }, [displayCounts, myUnits, squadTotal]);
+    const heroRequired = hasAnyHero && heroesInSquad.length === 0;
+    const soldierOk = commanderType === 'knight' ? soldiersInSquad >= 10 : true;
+    (0, react_1.useEffect)(() => {
+        if (myUnits.length > 0) {
+            const defaults = {};
+            myUnits.forEach(u => { defaults[u.type] = u.count; });
+            setSquadCounts(defaults);
+        }
+    }, [myUnits.length]);
     (0, react_1.useEffect)(() => {
         let alive = true;
         setLoading(true);
@@ -40,115 +74,224 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             setLoading(false); });
         return () => { alive = false; };
     }, [kingdomId]);
-    if (loading) {
-        return (<div style={sheetWrap} onClick={onClose}>
-        <div style={{ ...sheetInner, textAlign: 'center', padding: 40, color: '#a0845a' }}>{t('loading_intel')}</div>
-      </div>);
-    }
-    if (error || !profile) {
-        return (<div style={sheetWrap} onClick={onClose}>
-        <div style={{ ...sheetInner, textAlign: 'center', padding: 40, color: '#e74c3c' }}>
-          {t('failed_load_kingdom')}
-        </div>
-      </div>);
-    }
+    if (loading)
+        return (<div style={S.backdrop} onClick={onClose}>
+      <div style={{ ...S.sheet, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120, color: '#a0845a', fontSize: 15 }}>
+        🔍 {t('loading_intel')}
+      </div>
+    </div>);
+    if (error || !profile)
+        return (<div style={S.backdrop} onClick={onClose}>
+      <div style={{ ...S.sheet, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120, color: '#e74c3c', fontSize: 15 }}>
+        ❌ {t('failed_load_kingdom')}
+      </div>
+    </div>);
     const defScore = Number(profile.score) || 0;
-    const toWeakToAttack = myScore >= 10 && defScore >= 10 && myScore > defScore * 10;
-    const wcColor = profile.winChance >= 60 ? '#27ae60' : profile.winChance >= 40 ? '#f39c12' : '#e74c3c';
-    const wcBar = profile.winChance >= 60
-        ? 'linear-gradient(90deg,#27ae60,#2ecc71)'
-        : profile.winChance >= 40
-            ? 'linear-gradient(90deg,#f39c12,#e67e22)'
-            : 'linear-gradient(90deg,#c0392b,#e74c3c)';
-    return (<div style={sheetWrap} onClick={onClose}>
-      <div style={sheetInner} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#e74c3c' }}>🏰 {profile.name}</div>
-            <div style={{ fontSize: 12, color: '#a0845a' }}>@{profile.username || '?'} · 🏆 {(0, format_1.fmt)(profile.score)}</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', fontSize: 22, cursor: 'pointer' }}>✕</button>
-        </div>
+    const toWeakToAttack = !import.meta.env.DEV && myScore >= 10 && defScore >= 10 && myScore > defScore * 10;
+    const noFreeHero = !hasAnyHero;
+    const canAttack = hasAnyHero && !profile.isShielded && !toWeakToAttack && !heroRequired && soldierOk && !attacking;
+    const winPct = profile.defPower > 0
+        ? Math.round(Math.min(95, Math.max(5, (squadPower / (squadPower + profile.defPower)) * 100)))
+        : squadPower > 0 ? 90 : 10;
+    const wcColor = winPct >= 60 ? '#27ae60' : winPct >= 40 ? '#f39c12' : '#e74c3c';
+    const wcBar = winPct >= 60
+        ? 'linear-gradient(90deg,#1a5c2a,#27ae60)'
+        : winPct >= 40 ? 'linear-gradient(90deg,#7a4800,#f39c12)'
+            : 'linear-gradient(90deg,#6a1010,#e74c3c)';
+    const handleAttack = () => {
+        if (!canAttack)
+            return;
+        const squad = squadTotal > 0 ? squadCounts : undefined;
+        onAttack(profile, { heroType: commanderType, squad });
+    };
+    const allUnitRows = [
+        ...myHeroUnits.map(u => ({ ...u, isHero: true })),
+        ...mySoldierUnits.map(u => ({ ...u, isHero: false })),
+    ];
+    return (<div style={S.backdrop} onClick={onClose}>
+      <div style={S.sheet} onClick={e => e.stopPropagation()}>
 
-        {profile.isShielded && (<div style={{ background: 'rgba(52,152,219,0.15)', border: '1px solid #3498db', borderRadius: 10, padding: '10px 14px', marginBottom: 14, color: '#3498db', fontSize: 13, textAlign: 'center' }}>
-            🛡️ {t('kingdom_protected')} — <Countdown_1.default endsAt={profile.shieldUntil}/>
-          </div>)}
-
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#a0845a', marginBottom: 6 }}>
-            <span>⚔️ {t('your_power')}: {(0, format_1.fmt)(profile.myAttackPower)}</span>
-            <span>🛡️ {t('defender_power')}: {(0, format_1.fmt)(profile.defPower)}</span>
+        
+        <div style={{ padding: '14px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ flex: 1, paddingRight: 10 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>🏰 {profile.name}</div>
+            <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>@{profile.username || '?'} · 🏆{(0, format_1.fmt)(profile.score)} · 🗡️{(0, format_1.fmt)(profile.armySize)}</div>
           </div>
-          <div style={{ height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${profile.winChance}%`, background: wcBar, borderRadius: 6, transition: 'width 0.5s' }}/>
-          </div>
-          <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, marginTop: 6, color: wcColor }}>
-            {t('win_chance', { n: profile.winChance })}
-          </div>
-        </div>
-
-        <div style={{ background: 'rgba(244,208,63,0.08)', border: '1px solid rgba(244,208,63,0.2)', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
-          <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 8 }}>{t('potential_loot')}</div>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>💰</div><div style={{ fontSize: 14, fontWeight: 700, color: '#f4d03f' }}>{(0, format_1.fmt)(profile.lootable.gold)}</div></div>
-            <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪵</div><div style={{ fontSize: 14, fontWeight: 700, color: '#a0682a' }}>{(0, format_1.fmt)(profile.lootable.wood)}</div></div>
-            <div style={{ textAlign: 'center' }}><div style={{ fontSize: 18 }}>🪨</div><div style={{ fontSize: 14, fontWeight: 700, color: '#aaa' }}>{(0, format_1.fmt)(profile.lootable.stone)}</div></div>
-            
-            <div style={{ textAlign: 'center', position: 'relative', opacity: isVip ? 1 : 0.5 }}>
-              <div style={{ fontSize: 18 }}>💵</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: isVip ? '#27ae60' : '#555' }}>
-                ${((profile.usdtBalance ?? 0) * 0.20).toFixed(4)}
-              </div>
-              <div style={{ fontSize: 9, color: isVip ? '#a0845a' : '#666' }}>USDT {!isVip && '🔒'}</div>
-            </div>
-          </div>
-          {!isVip && (<div style={{ fontSize: 10, color: '#9b59b6', textAlign: 'center', marginTop: 8, background: 'rgba(155,89,182,0.08)', borderRadius: 6, padding: '5px 8px' }}>
-              🔒 {t('vip_usdt_raid_note')}
-            </div>)}
+          <button onClick={onClose} style={S.closeBtn}>✕</button>
         </div>
 
         
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-          <div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🏆 {(0, format_1.fmt)(profile.score)} {t('score')}</div>
-          <div style={{ background: 'rgba(39,174,96,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#27ae60' }}>💵 {(profile.usdtBalance ?? 0).toFixed(4)} USDT</div>
-          {profile.isShielded && profile.shieldUntil && (<div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: '#3498db' }}>🛡️ <Countdown_1.default endsAt={profile.shieldUntil}/></div>)}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
-          {[
-            { label: t('army_size'), value: (0, format_1.fmt)(profile.armySize), icon: '🪖' },
-            { label: t('wall_defense'), value: `Lv.${profile.wallLevel}`, icon: '🧱' },
-            { label: t('march_time'), value: `${profile.marchSeconds}s`, icon: '⏱️' },
-        ].map(({ label, value, icon }) => (<div key={label} style={{ background: 'rgba(0,0,0,0.4)', borderRadius: 10, padding: '10px 8px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: 20 }}>{icon}</div>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>{value}</div>
-              <div style={{ fontSize: 9, color: '#a0845a' }}>{label}</div>
-            </div>))}
-        </div>
-
-        <button onClick={() => !profile.isShielded && !attacking && !toWeakToAttack && onAttack(profile)} disabled={profile.isShielded || attacking || toWeakToAttack} style={{
-            width: '100%', padding: '14px',
-            background: (profile.isShielded || toWeakToAttack) ? '#333' : 'linear-gradient(135deg,#c0392b,#e74c3c)',
-            border: 'none', borderRadius: 12, color: 'white',
-            fontSize: 16, fontWeight: 800,
-            cursor: (profile.isShielded || attacking || toWeakToAttack) ? 'not-allowed' : 'pointer',
-            boxShadow: (profile.isShielded || toWeakToAttack) ? 'none' : '0 4px 20px rgba(231,76,60,0.5)',
-            letterSpacing: '0.5px', opacity: attacking ? 0.7 : 1,
-        }}>
-          {profile.isShielded
-            ? t('protected_btn')
-            : toWeakToAttack
-                ? `⛔ ${t('too_weak_to_attack')}`
-                : attacking && marchCountdown > 0
-                    ? `⚔️ ${t('marching')} ${marchCountdown}s...`
-                    : attacking
-                        ? t('attacking_label')
-                        : t('attack_btn_time', { n: profile.marchSeconds })}
-        </button>
-        {toWeakToAttack && (<div style={{ fontSize: 11, color: '#e67e22', textAlign: 'center', marginTop: 8, background: 'rgba(230,126,34,0.1)', borderRadius: 8, padding: '6px 10px' }}>
-            ⚠️ {t('too_weak_attack_note')}
+        {profile.isShielded && (<div style={{ margin: '8px 14px 0', background: 'rgba(52,152,219,0.12)', border: '1px solid rgba(52,152,219,0.35)', borderRadius: 10, padding: '8px 14px', color: '#5dade2', fontSize: 13, textAlign: 'center', fontWeight: 700 }}>
+            🛡️ {t('kingdom_protected')} — <Countdown_1.default endsAt={profile.shieldUntil}/>
           </div>)}
+
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 14px 0' }}>
+          
+          <div style={S.card}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: wcColor, textAlign: 'center', lineHeight: 1 }}>{winPct}%</div>
+            <div style={{ fontSize: 10, color: '#555', textAlign: 'center', marginTop: 4 }}>{t('win_chance_label')}</div>
+            <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, margin: '8px 0', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${winPct}%`, background: wcBar, borderRadius: 3, transition: 'width 0.35s' }}/>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#666' }}>
+              <span style={{ color: '#aaa', fontWeight: 600 }}>⚔️ {(0, format_1.fmt)(squadPower)}</span>
+              <span style={{ color: '#aaa', fontWeight: 600 }}>🛡️ {(0, format_1.fmt)(profile.defPower)}</span>
+            </div>
+            <div style={{ fontSize: 9, color: '#3d3d3d', textAlign: 'center', marginTop: 4 }}>{t('win_chance_squad_hint')}</div>
+          </div>
+
+          
+          <div style={S.card}>
+            <div style={{ fontSize: 10, color: '#a0845a', fontWeight: 700, marginBottom: 6, textAlign: 'center' }}>{t('loot_card_title')}</div>
+            {[
+            { icon: '💰', label: t('gold'), val: profile.lootable.gold, color: '#f4d03f' },
+            { icon: '🪵', label: t('wood'), val: profile.lootable.wood, color: '#c0832a' },
+            { icon: '🪨', label: t('stone'), val: profile.lootable.stone, color: '#bdc3c7' },
+            { icon: '💎', label: t('gems_attack'), val: profile.lootable.gems ?? 0, color: '#a29bfe' },
+        ].map(({ icon, label, val, color }) => (<div key={icon} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
+                <span style={{ color: '#666' }}>{icon} {label}</span>
+                <span style={{ fontWeight: 700, color }}>{(0, format_1.fmt)(val)}</span>
+              </div>))}
+            {isVip && (<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
+                <span style={{ color: '#666' }}>💵 USDT</span>
+                <span style={{ fontWeight: 700, color: '#2ecc71' }}>${((profile.usdtBalance ?? 0) * 0.20).toFixed(2)}</span>
+              </div>)}
+            <div style={{ fontSize: 9, color: '#3d3d3d', marginTop: 4, textAlign: 'center' }}>{t('loot_full_transfer')}</div>
+          </div>
+        </div>
+
+        
+        {toWeakToAttack && (<div style={{ margin: '8px 14px 0', background: 'rgba(230,126,34,0.1)', border: '1px solid rgba(230,126,34,0.3)', borderRadius: 10, padding: '10px', textAlign: 'center', color: '#e67e22', fontSize: 13, fontWeight: 700 }}>
+            ⛔ {t('too_weak_to_attack')}
+            <div style={{ fontSize: 10, color: '#a0845a', marginTop: 3, fontWeight: 400 }}>{t('too_weak_attack_note')}</div>
+          </div>)}
+
+        
+        {!profile.isShielded && !toWeakToAttack && !hasAnyHero && !anyMarching && (<div style={{ margin: '8px 14px 0', background: 'rgba(133,193,233,0.08)', border: '1px solid rgba(133,193,233,0.25)', borderRadius: 10, padding: '10px 14px', color: '#85c1e9', fontSize: 12, textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, marginBottom: 3 }}>🗡️ {t('no_hero_title')}</div>
+            <div style={{ fontSize: 10, color: '#555', lineHeight: 1.5 }}>
+              {t('no_hero_desc1')}<br />
+              <strong style={{ color: '#85c1e9' }}>{t('no_hero_desc2')}</strong>
+            </div>
+          </div>)}
+
+        
+        {!profile.isShielded && !toWeakToAttack && allUnitRows.length > 0 && (<div style={{ margin: '10px 14px 0', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#ccc' }}>{t('squad_label')}</div>
+              {commanderType && (<div style={{ fontSize: 10, color: '#f4d03f', background: 'rgba(244,208,63,0.1)', borderRadius: 20, padding: '2px 8px', border: '1px solid rgba(244,208,63,0.2)' }}>
+                  {t('commander_label', { name: t(UNIT_META[commanderType]?.nameKey) })}
+                </div>)}
+            </div>
+            <div style={{ fontSize: 9, color: '#3d3d3d', marginBottom: 8 }}>{t('slider_hint')}</div>
+
+            
+            {myHeroUnits.length > 0 && (<div style={{ fontSize: 9, color: '#f4d03f', fontWeight: 600, marginBottom: 5, opacity: 0.8 }}>
+                {t('heroes_badge')} — {heroRequired ? <span style={{ color: '#e74c3c' }}>{t('heroes_must_send_one')}</span> : t('heroes_send_one')}
+              </div>)}
+
+            {allUnitRows.map((u, i) => {
+                const meta = UNIT_META[u.type] ?? { icon: '🪖', nameKey: u.type };
+                const val = displayCounts[u.type] ?? 0;
+                const totalCount = (attacking && sentSquad) ? val + u.count : u.count;
+                const isHeroRow = u.isHero;
+                const isCommander = u.type === commanderType;
+                const fillColor = isHeroRow ? (meta.heroColor ?? '#f4d03f') : '#e74c3c';
+                const showSoldierSep = !isHeroRow && i > 0 && allUnitRows[i - 1]?.isHero;
+                return (<div key={u.type}>
+                  {showSoldierSep && (<div style={{ margin: '6px 0 4px' }}>
+                      <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }}/>
+                      <div style={{ fontSize: 9, color: '#3d3d3d', marginTop: 4 }}>{t('soldiers_optional')}</div>
+                    </div>)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 26, marginBottom: 2 }}>
+                    <span style={{ fontSize: 14, width: 18, textAlign: 'center', flexShrink: 0, position: 'relative' }}>
+                      {meta.icon}
+                      {isCommander && <span style={{ position: 'absolute', top: -5, right: -5, fontSize: 8 }}>👑</span>}
+                    </span>
+                    <div style={{ fontSize: 11, width: 72, flexShrink: 0, color: isHeroRow ? (meta.heroColor ?? '#f4d03f') : '#999', fontWeight: isHeroRow ? 700 : 400, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {t(meta.nameKey)}
+                    </div>
+                    <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'visible', position: 'relative' }}>
+                      <input type="range" min={0} max={totalCount} value={val} onChange={e => setSquadCounts(prev => ({ ...prev, [u.type]: +e.target.value }))} disabled={attacking} style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: attacking ? 'not-allowed' : 'pointer', height: 20, top: -8, margin: 0 }}/>
+                      <div style={{ height: '100%', width: `${totalCount > 0 ? (val / totalCount) * 100 : 0}%`, background: fillColor, borderRadius: 2, transition: 'width 0.1s' }}/>
+                    </div>
+                    <div style={{ fontSize: 10, width: 36, textAlign: 'left', flexShrink: 0, color: val > 0 ? fillColor : '#444', fontWeight: val > 0 ? 700 : 400 }}>
+                      {val}/{totalCount}
+                    </div>
+                  </div>
+                </div>);
+            })}
+
+            {heroRequired && (<div style={{ fontSize: 10, color: '#e74c3c', textAlign: 'center', marginTop: 6, background: 'rgba(231,76,60,0.08)', borderRadius: 6, padding: 4 }}>
+                {t('hero_required_warn')}
+              </div>)}
+            {!soldierOk && (<div style={{ fontSize: 10, color: '#e74c3c', textAlign: 'center', marginTop: 4, background: 'rgba(231,76,60,0.08)', borderRadius: 6, padding: 4 }}>
+                {t('squad_min_warn', { n: soldiersInSquad })}
+              </div>)}
+          </div>)}
+
+        
+        <div style={{ padding: '12px 14px 0' }}>
+          <button disabled={!canAttack} onClick={handleAttack} style={{
+            width: '100%', padding: '14px',
+            background: canAttack
+                ? 'linear-gradient(135deg,#7b0000,#c0392b,#e74c3c)'
+                : heroRequired ? 'rgba(231,76,60,0.1)' : 'rgba(255,255,255,0.04)',
+            border: canAttack
+                ? 'none'
+                : heroRequired ? '1px solid rgba(231,76,60,0.3)' : '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 12,
+            color: canAttack ? '#fff' : heroRequired ? '#e74c3c' : '#444',
+            fontSize: 15, fontWeight: 800,
+            cursor: canAttack ? 'pointer' : 'not-allowed',
+            boxShadow: canAttack ? '0 4px 20px rgba(192,57,43,0.4)' : 'none',
+            letterSpacing: 0.3,
+            transition: 'all 0.2s',
+        }}>
+            {attacking && marchCountdown > 0 ? `⚔️ ${t('marching')} ${marchCountdown}s...`
+            : attacking ? t('attacking_label')
+                : noFreeHero ? t('all_heroes_out')
+                    : heroRequired ? t('send_one_hero_up')
+                        : !soldierOk ? t('squad_min_warn', { n: soldiersInSquad })
+                            : profile.isShielded ? `🛡️ ${t('protected_btn')}`
+                                : toWeakToAttack ? `⛔ ${t('too_weak_to_attack')}`
+                                    : t('attack_btn_time', { n: profile.marchSeconds })}
+          </button>
+        </div>
+
       </div>
     </div>);
 }
+const S = {
+    backdrop: {
+        position: 'fixed', inset: 0, zIndex: 50,
+        background: 'rgba(0,0,0,0.88)',
+        display: 'flex', alignItems: 'flex-end',
+    },
+    sheet: {
+        width: '100%',
+        background: '#0c0714',
+        borderRadius: '20px 20px 0 0',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderBottom: 'none',
+        paddingBottom: 24,
+        animation: 'slideUp 0.25s cubic-bezier(0.34,1.4,0.64,1)',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        direction: 'rtl',
+    },
+    card: {
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 12,
+        padding: '10px 12px',
+    },
+    closeBtn: {
+        width: 28, height: 28, borderRadius: 8,
+        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+        color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, cursor: 'pointer', flexShrink: 0,
+    },
+};
 //# sourceMappingURL=KingdomProfileSheet.js.map

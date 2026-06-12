@@ -15,6 +15,7 @@ export interface KingdomProfile {
         gold: number;
         wood: number;
         stone: number;
+        gems: number;
     };
     defPower: number;
     myAttackPower: number;
@@ -27,12 +28,17 @@ export interface KingdomProfile {
         level: number;
     }[];
 }
+export interface AttackSquad {
+    heroType?: string;
+    squad?: Record<string, number>;
+}
 interface Props {
     kingdomId: string;
     onClose: () => void;
-    onAttack: (profile: KingdomProfile) => void;
+    onAttack: (profile: KingdomProfile, squadOptions?: AttackSquad) => void;
     attacking?: boolean;
     marchCountdown?: number;
+    sentSquad?: Record<string, number>;
 }
-export default function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown }: Props): import("react").JSX.Element;
+export default function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown, sentSquad }: Props): import("react").JSX.Element;
 export {};

@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
 import { TonService } from '../ton/ton.service';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
+import { AntiBotService } from '../antibot/antibot.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 
 const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
@@ -25,6 +26,7 @@ export class AdminController {
     private notifService: NotificationService,
     private tonService: TonService,
     private cryptoBotService: CryptoBotService,
+    private antiBotService: AntiBotService,
   ) {}
 
   @Get()
@@ -42,8 +44,17 @@ export class AdminController {
   }
 
   private guard(headers: any) {
-    const secret = this.config.get('ADMIN_SECRET') || 'kw_admin_2026';
-    if (headers['x-admin-secret'] !== secret) throw new UnauthorizedException('Forbidden');
+    const secret = this.config.get('ADMIN_SECRET');
+    // ── SECURITY: Admin secret MUST be set in environment — no hardcoded fallback ──
+    if (!secret) throw new UnauthorizedException('Admin access not configured');
+    const provided = headers['x-admin-secret'] || '';
+    // Constant-time comparison to prevent timing attacks
+    const crypto = require('crypto');
+    const secretBuf = Buffer.from(secret);
+    const providedBuf = Buffer.from(provided.padEnd(secret.length, '\0').slice(0, Math.max(secret.length, provided.length)));
+    if (secretBuf.length !== providedBuf.length || !crypto.timingSafeEqual(secretBuf, providedBuf)) {
+      throw new UnauthorizedException('Forbidden');
+    }
   }
 
   @Get('stats')
@@ -414,5 +425,69 @@ export class AdminController {
         referralsActive: activeRefMap.get(u.id) ?? 0,
       };
     });
+  }
+
+  @Get('users/:telegramId/referrals')
+  async getUserReferrals(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const referrer = await this.userRepo.findOne({ where: { telegramId } });
+    if (!referrer) return [];
+
+    const referred = await this.userRepo.find({ where: { referredBy: { id: referrer.id } }, order: { createdAt: 'DESC' } });
+    if (!referred.length) return [];
+
+    const kingdomRows = await this.kingdomRepo
+      .createQueryBuilder('k')
+      .innerJoin('k.user', 'u')
+      .select('u.id', 'userId')
+      .addSelect('k.score', 'score')
+      .where('u.id IN (:...ids)', { ids: referred.map(u => u.id) })
+      .getRawMany();
+
+    const scoreMap = new Map(kingdomRows.map((r: any) => [r.userId, Number(r.score ?? 0)]));
+
+    return referred.map(u => {
+      const score = scoreMap.get(u.id) ?? 0;
+      return {
+        telegramId: u.telegramId,
+        username: u.username || u.firstName,
+        joinedAt: u.createdAt,
+        score,
+        active: score > 0,
+      };
+    });
+  }
+
+  // ─── Anti-Bot Management ─────────────────────────────────────────────────
+
+  @Get('antibot/status/:telegramId')
+  async getAntiBotStatus(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    return this.antiBotService.getBanStatus(user.id);
+  }
+
+  @Post('antibot/ban/:telegramId')
+  async antiBotBan(
+    @Headers() headers: any,
+    @Param('telegramId') telegramId: string,
+    @Body() body: { hours?: number; reason?: string },
+  ) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const hours = body.hours ?? 24;
+    await this.antiBotService.banUser(user.id, hours, body.reason || 'admin manual ban');
+    return { success: true, bannedFor: `${hours}h`, userId: user.id };
+  }
+
+  @Post('antibot/unban/:telegramId')
+  async antiBotUnban(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    await this.antiBotService.unbanUser(user.id);
+    return { success: true };
   }
 }

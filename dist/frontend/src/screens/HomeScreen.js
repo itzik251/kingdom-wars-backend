@@ -10,44 +10,48 @@ const client_1 = require("../api/client");
 const costs_1 = require("../utils/costs");
 const WorkersPanel_1 = require("../components/WorkersPanel");
 const B = {
-    town_hall: { icon: '🏛️', top: '#c8a040', left: '#7a5c18', right: '#4a3808', glow: 'rgba(200,160,64,0.8)', label: 'בית העיר' },
-    gold_mine: { icon: '⛏️', top: '#d4a820', left: '#8a6010', right: '#5a3808', glow: 'rgba(212,168,32,0.7)', label: 'מכרה זהב' },
-    lumber_mill: { icon: '🪵', top: '#5a8c30', left: '#2c5018', right: '#183008', glow: 'rgba(90,140,48,0.7)', label: 'טחנת עץ' },
-    stone_quarry: { icon: '🪨', top: '#808890', left: '#505860', right: '#303840', glow: 'rgba(128,136,144,0.6)', label: 'מחצבה' },
-    farm: { icon: '🌾', top: '#78c030', left: '#407818', right: '#285008', glow: 'rgba(120,192,48,0.7)', label: 'חווה' },
-    barracks: { icon: '⚔️', top: '#c03030', left: '#781818', right: '#480808', glow: 'rgba(192,48,48,0.7)', label: 'בסיס צבאי' },
-    academy: { icon: '📚', top: '#9050c8', left: '#502878', right: '#300858', glow: 'rgba(144,80,200,0.7)', label: 'אקדמיה' },
-    wall: { icon: '🧱', top: '#909090', left: '#585858', right: '#383838', glow: 'rgba(144,144,144,0.6)', label: 'חומה' },
-    watch_tower: { icon: '🗼', top: '#3090d8', left: '#185888', right: '#083058', glow: 'rgba(48,144,216,0.7)', label: 'מגדל שמירה' },
-    hospital: { icon: '🏥', top: '#e74c3c', left: '#922b21', right: '#641e16', glow: 'rgba(231,76,60,0.7)', label: 'בית חולים' },
-    arcane_tower: { icon: '🔮', top: '#9b59b6', left: '#5b2c6f', right: '#3a1a45', glow: 'rgba(155,89,182,0.7)', label: 'מגדל ארקני' },
+    town_hall: { icon: '🏛️', top: '#c8a040', left: '#7a5c18', right: '#4a3808', glow: 'rgba(200,160,64,0.8)', label: 'Town Hall' },
+    gold_mine: { icon: '⛏️', top: '#d4a820', left: '#8a6010', right: '#5a3808', glow: 'rgba(212,168,32,0.7)', label: 'Gold Mine' },
+    lumber_mill: { icon: '🪵', top: '#5a8c30', left: '#2c5018', right: '#183008', glow: 'rgba(90,140,48,0.7)', label: 'Lumber Mill' },
+    stone_quarry: { icon: '🪨', top: '#808890', left: '#505860', right: '#303840', glow: 'rgba(128,136,144,0.6)', label: 'Quarry' },
+    farm: { icon: '🌾', top: '#78c030', left: '#407818', right: '#285008', glow: 'rgba(120,192,48,0.7)', label: 'Farm' },
+    barracks: { icon: '⚔️', top: '#c03030', left: '#781818', right: '#480808', glow: 'rgba(192,48,48,0.7)', label: 'Barracks' },
+    academy: { icon: '📚', top: '#9050c8', left: '#502878', right: '#300858', glow: 'rgba(144,80,200,0.7)', label: 'Academy' },
+    wall: { icon: '🧱', top: '#909090', left: '#585858', right: '#383838', glow: 'rgba(144,144,144,0.6)', label: 'Wall' },
+    watch_tower: { icon: '🗼', top: '#3090d8', left: '#185888', right: '#083058', glow: 'rgba(48,144,216,0.7)', label: 'Watch Tower' },
+    hospital: { icon: '🏥', top: '#e74c3c', left: '#922b21', right: '#641e16', glow: 'rgba(231,76,60,0.7)', label: 'Hospital' },
+    arcane_tower: { icon: '🔮', top: '#9b59b6', left: '#5b2c6f', right: '#3a1a45', glow: 'rgba(155,89,182,0.7)', label: 'Arcane Tower' },
+    gem_forge: { icon: '💎', top: '#1aafbf', left: '#0d7080', right: '#074850', glow: 'rgba(26,175,191,0.7)', label: 'Gem Mine' },
 };
 const GRID = 16;
 const TILE_W = 64, TILE_H = 32;
 const LAYOUT = {
     town_hall: { gx: 7, gy: 7, size: 2 },
-    barracks: { gx: 5, gy: 4 },
-    academy: { gx: 4, gy: 6 },
-    wall: { gx: 8, gy: 3 },
-    watch_tower: { gx: 11, gy: 4 },
-    hospital: { gx: 11, gy: 6 },
-    gold_mine: { gx: 4, gy: 10 },
-    stone_quarry: { gx: 4, gy: 8 },
-    lumber_mill: { gx: 11, gy: 10 },
-    farm: { gx: 11, gy: 8 },
-    arcane_tower: { gx: 5, gy: 12 },
+    barracks: { gx: 5, gy: 3 },
+    academy: { gx: 3, gy: 5 },
+    wall: { gx: 8, gy: 2 },
+    watch_tower: { gx: 11, gy: 3 },
+    hospital: { gx: 13, gy: 5 },
+    stone_quarry: { gx: 3, gy: 8 },
+    gold_mine: { gx: 3, gy: 11 },
+    farm: { gx: 12, gy: 8 },
+    lumber_mill: { gx: 12, gy: 11 },
+    arcane_tower: { gx: 6, gy: 14 },
+    gem_forge: { gx: 9, gy: 14 },
 };
 const EXTRA_POSITIONS = {
-    gold_mine: [{ gx: 4, gy: 11 }, { gx: 4, gy: 12 }, { gx: 3, gy: 10 }, { gx: 3, gy: 11 }, { gx: 3, gy: 12 }],
-    stone_quarry: [{ gx: 3, gy: 8 }, { gx: 4, gy: 9 }, { gx: 3, gy: 9 }, { gx: 4, gy: 7 }, { gx: 3, gy: 7 }],
-    lumber_mill: [{ gx: 12, gy: 10 }, { gx: 11, gy: 11 }, { gx: 12, gy: 11 }, { gx: 11, gy: 12 }, { gx: 12, gy: 12 }],
-    farm: [{ gx: 12, gy: 8 }, { gx: 11, gy: 9 }, { gx: 12, gy: 9 }, { gx: 11, gy: 7 }, { gx: 12, gy: 7 }],
+    gold_mine: [{ gx: 2, gy: 11 }, { gx: 3, gy: 12 }, { gx: 2, gy: 12 }, { gx: 3, gy: 13 }, { gx: 2, gy: 13 }],
+    stone_quarry: [{ gx: 2, gy: 8 }, { gx: 3, gy: 9 }, { gx: 2, gy: 9 }, { gx: 3, gy: 10 }, { gx: 2, gy: 10 }],
+    lumber_mill: [{ gx: 13, gy: 11 }, { gx: 12, gy: 12 }, { gx: 13, gy: 12 }, { gx: 12, gy: 13 }, { gx: 13, gy: 13 }],
+    farm: [{ gx: 13, gy: 8 }, { gx: 12, gy: 9 }, { gx: 13, gy: 9 }, { gx: 12, gy: 10 }, { gx: 13, gy: 10 }],
+    gem_forge: [{ gx: 8, gy: 14 }, { gx: 10, gy: 14 }],
 };
 function buildingStats(type, level, t) {
     const fmt2 = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(Math.floor(n));
     const prod = (base) => fmt2(base * Math.pow(1.12, level - 1));
     const prodNext = (base) => fmt2(base * Math.pow(1.12, level));
     const storage = (base) => fmt2(base * (1 + (level - 1) * 0.3));
+    const storage2 = (base) => fmt2(base * (1 + level * 0.3));
     const BARRACKS_UNLOCKS = {
         1: `${t('u_spearman')}, ${t('u_archer')}`,
         2: t('u_swordsman'),
@@ -59,24 +63,29 @@ function buildingStats(type, level, t) {
         case 'town_hall': return [
             t('stat_storage_row1', { gold: storage(5000), wood: storage(4000) }),
             t('stat_storage_row2', { stone: storage(3000), food: storage(2000) }),
-            t('stat_max_lv', { n: level < 3 ? 3 : level < 5 ? 5 : level < 8 ? 8 : level < 12 ? 12 : level < 16 ? 16 : 20 }),
+            t('stat_storage_row1_next', { n: level + 1, gold: storage2(5000), wood: storage2(4000) }),
+            t('stat_storage_row2_next', { n: level + 1, stone: storage2(3000), food: storage2(2000) }),
             t('stat_radius', { n: 5 + Math.floor(level / 2) }),
         ];
         case 'gold_mine': return [
             t('stat_prod_now', { n: prod(100), res: t('gold') }),
             t('stat_prod_next', { n: level + 1, next: prodNext(100), res: t('gold') }),
+            t('stat_res_storage', { n: 300, res: t('gold') }),
         ];
         case 'lumber_mill': return [
             t('stat_prod_now', { n: prod(80), res: t('wood') }),
             t('stat_prod_next', { n: level + 1, next: prodNext(80), res: t('wood') }),
+            t('stat_res_storage', { n: 250, res: t('wood') }),
         ];
         case 'stone_quarry': return [
             t('stat_prod_now', { n: prod(60), res: t('stone') }),
             t('stat_prod_next', { n: level + 1, next: prodNext(60), res: t('stone') }),
+            t('stat_res_storage', { n: 200, res: t('stone') }),
         ];
         case 'farm': return [
             t('stat_prod_now', { n: prod(50), res: t('food') }),
             t('stat_prod_next', { n: level + 1, next: prodNext(50), res: t('food') }),
+            t('stat_res_storage', { n: 150, res: t('food') }),
             t('stat_food_warn'),
         ];
         case 'barracks': {
@@ -115,6 +124,11 @@ function buildingStats(type, level, t) {
             t('stat_arcane_atk', { n: level * 10 }),
             t('stat_arcane_next', { n: level + 1, next: (level + 1) * 10 }),
             t('stat_arcane_vip'),
+        ];
+        case 'gem_forge': return [
+            t('stat_gem_forge_now', { n: level * 2 }),
+            t('stat_gem_forge_next', { level: level + 1, gems: level * 2 + 2 }),
+            t('stat_gem_forge_cost', { cost: ((level + 1) * 0.1).toFixed(1) }),
         ];
         default: return [t('stat_upgrade_default')];
     }
@@ -165,6 +179,32 @@ const TERRAIN = {
     forest: { top: '#2a6a10', left: '#164008', right: '#0a2004' },
     water: { top: '#2a5890', left: '#183858', right: '#0c2038' },
 };
+const TERRAIN_IMG = {
+    grass1: '/assets/tile_grass.png',
+    grass2: '/assets/tile_grass.png',
+    path: '/assets/tile_dirt.png',
+    dirt: '/assets/tile_dirt.png',
+    rock: '/assets/tile_rock.png',
+    water: '/assets/tile_water.png',
+    forest: '/assets/tile_grass.png',
+};
+function buildingImg(type, level) {
+    switch (type) {
+        case 'town_hall': return level >= 10 ? '/assets/building_town_hall_10.png' : level >= 5 ? '/assets/building_town_hall_5.png' : '/assets/building_town_hall_1.png';
+        case 'gold_mine': return '/assets/building_gold_mine.png';
+        case 'lumber_mill': return '/assets/building_lumber_mill.png';
+        case 'stone_quarry': return '/assets/building_stone_quarry.png';
+        case 'farm': return '/assets/building_farm.png';
+        case 'barracks': return '/assets/building_barracks.png';
+        case 'academy': return '/assets/building_academy.png';
+        case 'wall': return '/assets/building_wall.png';
+        case 'watch_tower': return '/assets/building_watch_tower.png';
+        case 'hospital': return '/assets/building_hospital.png';
+        case 'arcane_tower': return '/assets/building_arcane.png';
+        case 'gem_forge': return '/assets/building_gem_forge.png';
+        default: return null;
+    }
+}
 function isoXY(gx, gy) {
     return {
         x: (gx - gy) * (TILE_W / 2),
@@ -318,8 +358,14 @@ function HomeScreen() {
         setUpgrading(selected);
         setMsg('');
         try {
-            await client_1.api.post('/buildings/upgrade', { type: selectedBuilding.type, buildingId: selected });
+            if (selectedBuilding.type === 'gem_forge') {
+                await client_1.api.post('/kingdom/upgrade-gem-forge', { buildingId: selected });
+            }
+            else {
+                await client_1.api.post('/buildings/upgrade', { type: selectedBuilding.type, buildingId: selected });
+            }
             await refresh();
+            window.dispatchEvent(new Event('usdt-balance-refresh'));
             setMsg(tr('upgrade_started_msg'));
             setSelected(null);
         }
@@ -344,16 +390,19 @@ function HomeScreen() {
         lumber_mill: { gold: 150, wood: 0, stone: 100 },
         stone_quarry: { gold: 150, wood: 100, stone: 0 },
         farm: { gold: 100, wood: 150, stone: 0 },
+        gem_forge: { gold: 0, wood: 0, stone: 0 },
     };
     const BUILD_DESC = {
         academy: tr('bd_academy'), wall: tr('bd_wall'),
         watch_tower: tr('bd_watch_tower'), hospital: tr('bd_hospital'),
         arcane_tower: tr('bd_arcane_tower'), gold_mine: tr('bd_gold_mine'),
         lumber_mill: tr('bd_lumber_mill'), stone_quarry: tr('bd_stone_quarry'), farm: tr('bd_farm'),
+        gem_forge: tr('gem_forge_desc'),
     };
     const availableToBuild = [
         ...BUILDABLE.filter(t => !existingTypes.includes(t)),
         ...RESOURCE_BUILDABLE.filter(t => countOfType(t) < 6),
+        ...(countOfType('gem_forge') < 3 ? ['gem_forge'] : []),
     ];
     function costFor(type) {
         const base = BUILD_COSTS[type] ?? { gold: 200, wood: 100, stone: 100 };
@@ -365,13 +414,19 @@ function HomeScreen() {
         setBuilding(type);
         setBuildMsg('');
         try {
-            await client_1.api.post('/buildings/build', { type });
+            if (type === 'gem_forge') {
+                await client_1.api.post('/kingdom/build-gem-forge');
+            }
+            else {
+                await client_1.api.post('/buildings/build', { type });
+            }
             await refresh();
             setBuildModal(false);
             setMsg(tr('building_built', { name: tr('b_' + type) }));
         }
         catch (e) {
-            setBuildMsg('❌ ' + (e.response?.data?.message || tr('error')));
+            const msg = e.response?.data?.message;
+            setBuildMsg('❌ ' + (Array.isArray(msg) ? msg.join(', ') : msg || tr('error')));
         }
         finally {
             setBuilding(null);
@@ -407,8 +462,14 @@ function HomeScreen() {
         </div>
         <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
           
-          {[{ k: 'gold', e: '💰', c: '#f4d03f' }, { k: 'wood', e: '🪵', c: '#a0682a' }, { k: 'stone', e: '🪨', c: '#aaa' }, { k: 'food', e: '🌾', c: '#7dbb3f' }].map(({ k, e, c }) => (<div key={k} style={{ fontSize: 9, color: c, background: 'rgba(0,0,0,0.5)', borderRadius: 5, padding: '2px 5px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              {e}{productionRates[k] >= 0 ? '+' : ''}{(0, format_1.fmt)(productionRates[k] || 0)}
+          {[
+            { k: 'gold', icon: '/assets/icon_gold.png', c: '#f4d03f' },
+            { k: 'wood', icon: '/assets/icon_wood.png', c: '#a0682a' },
+            { k: 'stone', icon: '/assets/icon_stone.png', c: '#aaa' },
+            { k: 'food', icon: '/assets/icon_food.png', c: '#7dbb3f' },
+        ].map(({ k, icon, c }) => (<div key={k} style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 9, color: c, background: 'rgba(0,0,0,0.5)', borderRadius: 5, padding: '2px 5px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <img src={icon} alt={k} style={{ width: 11, height: 11, objectFit: 'contain' }}/>
+              {productionRates[k] >= 0 ? '+' : ''}{(0, format_1.fmt)(productionRates[k] || 0)}
             </div>))}
           {kingdom?.shieldActive && (<div style={{ background: 'rgba(52,152,219,0.3)', border: '1px solid #3498db', borderRadius: 6, padding: '2px 7px', fontSize: 10, color: '#3498db', fontWeight: 700 }}>
               🛡️<Countdown_1.default endsAt={kingdom.shieldUntil}/>
@@ -482,26 +543,25 @@ function HomeScreen() {
                     transform: 'skewY(-26.6deg)', transformOrigin: 'top right',
                 }}/>
                 
-                <div style={{
-                    position: 'absolute', left: 0, top: 0, width: TILE_W, height: TILE_H,
-                    clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                    background: locked
-                        ? 'linear-gradient(135deg,#0e200a,#0a160a)'
-                        : isWallPerim
-                            ? `linear-gradient(135deg,${wallTop},${wallLeft})`
-                            : wild
-                                ? `linear-gradient(135deg,${t.top}88,${t.left})`
-                                : `linear-gradient(135deg,${t.top},${t.left})`,
-                    opacity: locked ? 0.5 : 1,
-                }}>
-                  
-                  {type === 'forest' && !locked && !isWallPerim && (<div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, opacity: 0.7 }}>🌲</div>)}
-                  {type === 'water' && !locked && (<div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg,rgba(255,255,255,0.04) 0px,rgba(255,255,255,0.04) 1px,transparent 1px,transparent 6px)' }}/>)}
-                  {type === 'path' && (<div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg,rgba(0,0,0,0.05) 0px,rgba(0,0,0,0.05) 1px,transparent 1px,transparent 4px)' }}/>)}
-                  {isWallPerim && wallPerimH > 0 && (<div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg,rgba(0,0,0,0.15) 0px,rgba(0,0,0,0.15) 1px,transparent 1px,transparent 8px)', opacity: 0.6 }}/>)}
-                  {locked && (<div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: 'rgba(255,255,255,0.15)' }}>🔒</div>)}
-                  {wild && !locked && type === 'grass1' && (<div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, opacity: 0.5 }}>🌿</div>)}
-                </div>
+                {TERRAIN_IMG[type] && !isWallPerim ? (<div style={{ position: 'absolute', left: 0, top: 0, width: TILE_W, height: TILE_H, clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', overflow: 'hidden', opacity: locked ? 0.35 : wild ? 0.7 : 1 }}>
+                    <img src={TERRAIN_IMG[type]} alt="" style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}/>
+                    {type === 'forest' && !locked && (<div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, opacity: 0.85 }}>🌲</div>)}
+                    {locked && (<div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: 'rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.45)' }}>🔒</div>)}
+                  </div>) : (<div style={{
+                        position: 'absolute', left: 0, top: 0, width: TILE_W, height: TILE_H,
+                        clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
+                        background: locked
+                            ? 'linear-gradient(135deg,#0e200a,#0a160a)'
+                            : isWallPerim
+                                ? `linear-gradient(135deg,${wallTop},${wallLeft})`
+                                : wild
+                                    ? `linear-gradient(135deg,${t.top}88,${t.left})`
+                                    : `linear-gradient(135deg,${t.top},${t.left})`,
+                        opacity: locked ? 0.5 : 1,
+                    }}>
+                    {isWallPerim && wallPerimH > 0 && (<div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg,rgba(0,0,0,0.15) 0px,rgba(0,0,0,0.15) 1px,transparent 1px,transparent 8px)', opacity: 0.6 }}/>)}
+                    {locked && (<div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: 'rgba(255,255,255,0.15)' }}>🔒</div>)}
+                  </div>)}
               </div>);
         })}
 
@@ -564,40 +624,56 @@ function HomeScreen() {
                     cursor: 'pointer',
                 }}>
                 
-                <div style={{
-                    position: 'absolute', left: 0, top: tH / 2,
-                    width: tW / 2, height: BODY,
-                    background: `linear-gradient(180deg,${leftColor},${rightColor})`,
-                    transform: 'skewY(26.6deg)', transformOrigin: 'top left',
-                }}/>
-                
-                <div style={{
-                    position: 'absolute', right: 0, top: tH / 2,
-                    width: tW / 2, height: BODY,
-                    background: `linear-gradient(180deg,${rightColor},rgba(0,0,0,0.85))`,
-                    transform: 'skewY(-26.6deg)', transformOrigin: 'top right',
-                }}/>
-                
-                <div style={{
-                    position: 'absolute', left: 0, top: 0, width: tW, height: tH,
-                    clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
-                    background: `radial-gradient(ellipse at 38% 28%,${topColor},${leftColor})`,
-                    boxShadow: isSelected ? `0 0 22px ${cfg.glow}` : `0 0 8px ${cfg.glow}55`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'box-shadow 0.2s',
-                }}>
-                  <span style={{
-                    fontSize: sz === 2 ? 26 : 17,
-                    filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.95))',
-                    animation: isUpg ? 'hammer 0.8s ease-in-out infinite' : undefined,
-                    paddingTop: tH * 0.18,
-                }}>
-                    {isUpg ? '🔨' : cfg.icon}
-                  </span>
-                </div>
-
-                
-                {isSelected && (<div style={{ position: 'absolute', inset: -4, boxShadow: `0 0 20px ${cfg.glow}, 0 0 40px ${cfg.glow}44`, pointerEvents: 'none', animation: 'pulse-glow 1.5s ease-in-out infinite' }}/>)}
+                {(() => {
+                    const imgSrc = isUpg ? null : buildingImg(b.type, b.level);
+                    const imgW = sz === 2 ? 148 : 96;
+                    const imgH = imgW;
+                    const imgTop = sz === 2 ? -90 : -62;
+                    if (imgSrc) {
+                        return (<>
+                        <img src={imgSrc} alt={b.type} style={{
+                                position: 'absolute',
+                                width: imgW,
+                                height: imgH,
+                                left: (tW - imgW) / 2,
+                                top: imgTop,
+                                pointerEvents: 'none',
+                                filter: isSelected
+                                    ? `drop-shadow(0 0 8px ${cfg.glow}) drop-shadow(0 0 14px ${cfg.glow}88)`
+                                    : 'drop-shadow(0 4px 8px rgba(0,0,0,0.9))',
+                                transition: 'filter 0.2s',
+                            }}/>
+                        {isSelected && (<img src="/assets/fx_selected.png" alt="" style={{ position: 'absolute', width: tW + 12, left: -6, top: tH * 0.25, pointerEvents: 'none', opacity: 0.85, animation: 'pulse-glow 1.5s ease-in-out infinite' }}/>)}
+                      </>);
+                    }
+                    return (<>
+                      <div style={{
+                            position: 'absolute', left: 0, top: tH / 2,
+                            width: tW / 2, height: BODY,
+                            background: `linear-gradient(180deg,${leftColor},${rightColor})`,
+                            transform: 'skewY(26.6deg)', transformOrigin: 'top left',
+                        }}/>
+                      <div style={{
+                            position: 'absolute', right: 0, top: tH / 2,
+                            width: tW / 2, height: BODY,
+                            background: `linear-gradient(180deg,${rightColor},rgba(0,0,0,0.85))`,
+                            transform: 'skewY(-26.6deg)', transformOrigin: 'top right',
+                        }}/>
+                      <div style={{
+                            position: 'absolute', left: 0, top: 0, width: tW, height: tH,
+                            clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)',
+                            background: `radial-gradient(ellipse at 38% 28%,${topColor},${leftColor})`,
+                            boxShadow: isSelected ? `0 0 22px ${cfg.glow}` : `0 0 8px ${cfg.glow}55`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'box-shadow 0.2s',
+                        }}>
+                        <span style={{ fontSize: sz === 2 ? 26 : 17, filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.95))', paddingTop: tH * 0.18 }}>
+                          {isUpg ? '🔨' : cfg.icon}
+                        </span>
+                      </div>
+                      {isSelected && (<div style={{ position: 'absolute', inset: -4, boxShadow: `0 0 20px ${cfg.glow}, 0 0 40px ${cfg.glow}44`, pointerEvents: 'none', animation: 'pulse-glow 1.5s ease-in-out infinite' }}/>)}
+                    </>);
+                })()}
 
                 
                 <div style={{
@@ -642,12 +718,15 @@ function HomeScreen() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
-                width: 42, height: 42, borderRadius: 12,
+                width: 48, height: 48, borderRadius: 12,
                 background: `linear-gradient(135deg,${B[selectedType]?.left},${B[selectedType]?.right})`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: `0 0 14px ${B[selectedType]?.glow}`,
+                overflow: 'hidden', flexShrink: 0,
             }}>
-                {B[selectedType]?.icon}
+                {buildingImg(selectedType, selectedBuilding?.level ?? 1)
+                ? <img src={buildingImg(selectedType, selectedBuilding?.level ?? 1)} alt="" style={{ width: 52, height: 52, objectFit: 'contain' }}/>
+                : <span style={{ fontSize: 22 }}>{B[selectedType]?.icon}</span>}
               </div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: 15, color: B[selectedType]?.top }}>{tr('b_' + selectedType) || B[selectedType]?.label}</div>
@@ -673,6 +752,23 @@ function HomeScreen() {
                 {speedingUp ? '...' : tr('speedup_btn', { n: Math.max(1, Math.ceil(Math.max(0, (new Date(selectedBuilding.upgradeEndsAt).getTime() - Date.now()) / 60000))) })}
               </button>
             </div>) : (() => {
+                if (selectedType === 'gem_forge') {
+                    const usdtCost = parseFloat(((selectedBuilding.level + 1) * 0.1).toFixed(2));
+                    const usdtBal = kingdom?.usdtBalance ?? 0;
+                    const canAfford = usdtBal >= usdtCost && selectedBuilding.level < 10;
+                    return (<>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    <div style={{ background: canAfford ? 'rgba(26,175,191,0.15)' : 'rgba(231,76,60,0.15)', border: `1px solid ${canAfford ? 'rgba(26,175,191,0.4)' : 'rgba(231,76,60,0.3)'}`, borderRadius: 8, padding: '5px 10px', fontSize: 12 }}>
+                      <span style={{ color: '#a0845a' }}>💵 </span>
+                      <strong style={{ color: canAfford ? '#1aafbf' : '#e74c3c' }}>${usdtCost} USDT</strong>
+                      <span style={{ color: '#666', fontSize: 10 }}> / {tr('balance_label')}: ${usdtBal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <button className="btn" style={{ width: '100%', padding: '12px', fontSize: 14, opacity: canAfford ? 1 : 0.5, borderRadius: 12, background: 'linear-gradient(135deg,#0d7080,#1aafbf)', color: '#fff', border: 'none' }} disabled={!!upgrading || !canAfford} onClick={upgrade}>
+                    {upgrading ? '⏳...' : canAfford ? tr('gem_forge_upgrade_btn').replace('{level}', String(selectedBuilding.level + 1)).replace('{cost}', `$${usdtCost}`) : selectedBuilding.level >= 10 ? tr('gem_forge_max_level') : tr('gem_forge_insufficient')}
+                  </button>
+                </>);
+                }
                 const cost = (0, costs_1.upgradeCost)(selectedType, selectedBuilding.level);
                 const canAfford = (kingdom?.gold ?? 0) >= cost.gold && (kingdom?.wood ?? 0) >= cost.wood && (kingdom?.stone ?? 0) >= cost.stone;
                 return (<>
@@ -687,6 +783,9 @@ function HomeScreen() {
               </>);
             })()}
 
+          {['gold_mine', 'lumber_mill', 'stone_quarry', 'farm'].includes(selectedType) && (<div style={{ fontSize: 11, color: '#a0845a', marginTop: 8, textAlign: 'center', padding: '5px 8px', background: 'rgba(244,208,63,0.05)', borderRadius: 6 }}>
+              {tr('storage_upgrade_hint')}
+            </div>)}
           {msg && <div style={{ textAlign: 'center', fontSize: 12, marginTop: 8, color: msg.startsWith('⬆️') || msg.startsWith('⚡') ? '#27ae60' : '#e74c3c' }}>{msg}</div>}
         </div>)}
 
@@ -717,9 +816,13 @@ function HomeScreen() {
 
             {availableToBuild.length === 0 ? (<div style={{ textAlign: 'center', color: '#a0845a', padding: 40 }}>{tr('all_buildings_built')}</div>) : availableToBuild.map(type => {
                 const cfg = B[type];
+                const isGemForge = type === 'gem_forge';
                 const baseCost = costFor(type);
                 const vipLocked = type === 'arcane_tower' && !kingdom?.isVip;
-                const canAfford = !vipLocked && (kingdom?.gold ?? 0) >= baseCost.gold && (kingdom?.wood ?? 0) >= baseCost.wood && (kingdom?.stone ?? 0) >= baseCost.stone;
+                const usdtBal = kingdom?.usdtBalance ?? 0;
+                const canAfford = isGemForge
+                    ? usdtBal >= 0.1
+                    : !vipLocked && (kingdom?.gold ?? 0) >= baseCost.gold && (kingdom?.wood ?? 0) >= baseCost.wood && (kingdom?.stone ?? 0) >= baseCost.stone;
                 const dupCount = countOfType(type);
                 const desc = (BUILD_DESC[type] ?? '') + (dupCount > 0 ? ` ${tr('copy_num', { n: dupCount + 1 })}` : '');
                 return (<div key={type} style={{
@@ -741,9 +844,14 @@ function HomeScreen() {
                   </div>
 
                   <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-                    {baseCost.gold > 0 && <CostBadge icon="💰" val={baseCost.gold} have={kingdom?.gold ?? 0} color="#f4d03f"/>}
-                    {baseCost.wood > 0 && <CostBadge icon="🪵" val={baseCost.wood} have={kingdom?.wood ?? 0} color="#a0682a"/>}
-                    {baseCost.stone > 0 && <CostBadge icon="🪨" val={baseCost.stone} have={kingdom?.stone ?? 0} color="#aaa"/>}
+                    {isGemForge ? (<div style={{ background: canAfford ? 'rgba(26,175,191,0.15)' : 'rgba(231,76,60,0.15)', border: `1px solid ${canAfford ? 'rgba(26,175,191,0.4)' : 'rgba(231,76,60,0.3)'}`, borderRadius: 8, padding: '5px 10px', fontSize: 12 }}>
+                        <strong style={{ color: canAfford ? '#1aafbf' : '#e74c3c' }}>💵 0.1 USDT</strong>
+                        <span style={{ color: '#666', fontSize: 10 }}> / יתרה: ${usdtBal.toFixed(2)}</span>
+                      </div>) : (<>
+                        {baseCost.gold > 0 && <CostBadge icon="💰" val={baseCost.gold} have={kingdom?.gold ?? 0} color="#f4d03f"/>}
+                        {baseCost.wood > 0 && <CostBadge icon="🪵" val={baseCost.wood} have={kingdom?.wood ?? 0} color="#a0682a"/>}
+                        {baseCost.stone > 0 && <CostBadge icon="🪨" val={baseCost.stone} have={kingdom?.stone ?? 0} color="#aaa"/>}
+                      </>)}
                   </div>
 
                   {vipLocked ? (<div style={{ textAlign: 'center', padding: '10px', background: 'rgba(241,196,15,0.08)', borderRadius: 8, border: '1px solid rgba(241,196,15,0.25)', fontSize: 12, color: '#f1c40f' }}>
@@ -757,15 +865,26 @@ function HomeScreen() {
         </div>)}
     </div>);
 }
+const RES_ICON = {
+    '💰': '/assets/icon_gold.png',
+    '🪵': '/assets/icon_wood.png',
+    '🪨': '/assets/icon_stone.png',
+    '🌾': '/assets/icon_food.png',
+    '💎': '/assets/icon_gem.png',
+    '💵': '/assets/icon_dollar.png',
+};
 function CostBadge({ icon, val, have, color }) {
     const ok = have >= val;
+    const imgSrc = RES_ICON[icon];
     return (<div style={{
             display: 'flex', alignItems: 'center', gap: 4,
             background: ok ? 'rgba(0,0,0,0.4)' : 'rgba(60,0,0,0.4)',
             borderRadius: 8, padding: '4px 10px',
             border: `1px solid ${ok ? color + '33' : '#e74c3c44'}`,
         }}>
-      <span style={{ fontSize: 13 }}>{icon}</span>
+      {imgSrc
+            ? <img src={imgSrc} alt={icon} style={{ width: 14, height: 14, objectFit: 'contain' }}/>
+            : <span style={{ fontSize: 13 }}>{icon}</span>}
       <span style={{ fontSize: 12, fontWeight: 700, color: ok ? color : '#e74c3c' }}>{(0, format_1.fmt)(val)}</span>
     </div>);
 }

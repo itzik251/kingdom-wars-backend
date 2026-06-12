@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Body, Request, UseGuards, Headers, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Request, UseGuards, Headers, Logger, UnauthorizedException } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CryptoBotService } from './cryptobot.service';
 import { VipService } from '../vip/vip.service';
@@ -7,6 +8,9 @@ import { Repository } from 'typeorm';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 import { ConfigService } from '@nestjs/config';
+
+// Track used invoice IDs to prevent replay attacks
+const activatedInvoices = new Set<number>();
 
 @Controller('cryptobot')
 export class CryptoBotController {
@@ -46,7 +50,13 @@ export class CryptoBotController {
       return { paid: false, reason: 'user_mismatch' };
     }
 
-    // Activate VIP
+    // ── Replay protection: each invoice can only activate VIP once ───────────
+    const invoiceId = Number(body.invoiceId);
+    if (activatedInvoices.has(invoiceId)) {
+      return { paid: true, vipActivated: false, reason: 'already_activated' };
+    }
+    activatedInvoices.add(invoiceId);
+
     const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: req.user.userId } } });
     if (!kingdom) return { paid: false, reason: 'kingdom_not_found' };
 
@@ -54,19 +64,42 @@ export class CryptoBotController {
       Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + VIP_DURATION_DAYS * 86_400_000,
     );
     await this.kingdomRepo.update({ id: kingdom.id }, { vipExpiresAt: expiresAt });
-
+    this.logger.log(`VIP activated via check-vip-payment: userId=${req.user.userId} invoice=${invoiceId}`);
     return { paid: true, vipActivated: true, expiresAt };
   }
 
   /** CryptoBot webhook — called automatically when payment completes */
   @Post('webhook')
   async handleWebhook(@Body() body: any, @Headers() headers: any) {
-    // Verify webhook signature (optional but recommended)
-    this.logger.log('CryptoBot webhook received: ' + JSON.stringify(body));
+    // ── Verify CryptoBot webhook signature ───────────────────────────────────
+    // CryptoBot signs with HMAC-SHA256: key=SHA256(token), data=JSON body string
+    const cryptoBotToken = this.config.get<string>('CRYPTO_BOT_TOKEN') || '';
+    if (cryptoBotToken) {
+      const receivedSig = headers['crypto-pay-api-signature'] || headers['Crypto-Pay-Api-Signature'] || '';
+      if (!receivedSig) {
+        this.logger.warn('CryptoBot webhook: missing signature header — rejected');
+        throw new UnauthorizedException('Missing webhook signature');
+      }
+      const bodyStr = JSON.stringify(body);
+      const secretKey = crypto.createHash('sha256').update(cryptoBotToken).digest();
+      const expectedSig = crypto.createHmac('sha256', secretKey).update(bodyStr).digest('hex');
+      if (!crypto.timingSafeEqual(Buffer.from(receivedSig, 'hex'), Buffer.from(expectedSig, 'hex'))) {
+        this.logger.warn('CryptoBot webhook: invalid signature — rejected');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+    }
 
     if (body?.update_type === 'invoice_paid') {
       const invoice = body.payload as any;
+      const invoiceId = Number(invoice?.invoice_id);
       const payload = invoice?.payload || '';
+
+      // ── Replay protection ─────────────────────────────────────────────────
+      if (activatedInvoices.has(invoiceId)) {
+        this.logger.warn(`Duplicate webhook for invoice ${invoiceId} — ignored`);
+        return { ok: true };
+      }
+      activatedInvoices.add(invoiceId);
 
       if (payload.startsWith('vip:')) {
         const userId = payload.split(':')?.[1];
@@ -79,7 +112,7 @@ export class CryptoBotController {
           Math.max(Date.now(), kingdom.vipExpiresAt?.getTime() ?? 0) + VIP_DURATION_DAYS * 86_400_000,
         );
         await this.kingdomRepo.update({ id: kingdom.id }, { vipExpiresAt: expiresAt });
-        this.logger.log(`VIP activated for userId=${userId} via webhook`);
+        this.logger.log(`VIP activated via webhook: userId=${userId} invoice=${invoiceId}`);
       }
     }
     return { ok: true };

@@ -14,7 +14,7 @@ const USDT_JETTON_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 const GAME_WALLET = 'UQBQeWT7nw0KjeKmSbxsmqqgDRh61H-_ZamVc3_I5S1jNX0T';
 const VIP_PRICE_USDT = 5;
 const TONCENTER = 'https://toncenter.com/api/v3';
-const REWARD_AD_BLOCK_ID = '34207';
+const REWARD_AD_BLOCK_ID = '34710';
 async function getJettonWalletAddr(ownerAddress) {
     try {
         const res = await fetch(`${TONCENTER}/jetton/wallets?owner_address=${encodeURIComponent(ownerAddress)}&jetton_address=${USDT_JETTON_MASTER}&limit=1`);
@@ -52,7 +52,7 @@ function WalletBar() {
             borderRadius: 12, padding: '10px 14px', marginBottom: 14,
         }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 18 }}>💎</span>
+        <img src="/assets/icon_dollar.png" style={{ width: 18, height: 18 }}/>
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: wallet ? '#3498db' : '#a0845a' }}>
             {wallet ? t('wallet_connected') : t('ton_wallet')}
@@ -67,7 +67,7 @@ function WalletBar() {
         </button>)}
     </div>);
 }
-async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSuccess, t, verifyEndpoint) {
+async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSuccess, t, verifyEndpoint, successMsg) {
     const senderAddr = wallet.account.address;
     const senderFriendly = core_1.Address.parseRaw(senderAddr).toString({ bounceable: false });
     const jettonWallet = await getJettonWalletAddr(senderFriendly);
@@ -83,6 +83,7 @@ async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSucce
     });
     showMsg('⏳ ' + t('vip_tx_sent'), true);
     const txHash = result.boc.replace(/[+/=]/g, (c) => c === '+' ? '-' : c === '/' ? '_' : '').slice(0, 44);
+    const extraData = verifyEndpoint.includes('topup') ? { amount: amountUsdt } : {};
     let attempts = 0;
     return new Promise(res => {
         const poll = setInterval(async () => {
@@ -90,8 +91,9 @@ async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSucce
             if (attempts > 30) {
                 clearInterval(poll);
                 try {
-                    await client_1.api.post(verifyEndpoint, { tonTxHash: txHash });
-                    showMsg('✅ ' + t('vip_activated_usdt'), true);
+                    await client_1.api.post(verifyEndpoint, { tonTxHash: txHash, ...extraData });
+                    if (successMsg)
+                        showMsg(successMsg, true);
                     onSuccess();
                     res(true);
                 }
@@ -102,13 +104,12 @@ async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSucce
                 return;
             }
             try {
-                const r = await client_1.api.post(verifyEndpoint, { tonTxHash: txHash });
-                if (r.success) {
-                    clearInterval(poll);
-                    showMsg('👑 ' + t('vip_activated_usdt'), true);
-                    onSuccess();
-                    res(true);
-                }
+                await client_1.api.post(verifyEndpoint, { tonTxHash: txHash, ...extraData });
+                clearInterval(poll);
+                if (successMsg)
+                    showMsg(successMsg, true);
+                onSuccess();
+                res(true);
             }
             catch { }
         }, 4000);
@@ -127,7 +128,7 @@ function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
         onLoading(true);
         setPolling(true);
         try {
-            await sendUsdtViaTon(tonConnectUI, wallet, VIP_PRICE_USDT, showMsg, onSuccess, t, '/vip/activate');
+            await sendUsdtViaTon(tonConnectUI, wallet, VIP_PRICE_USDT, showMsg, onSuccess, t, '/vip/activate', '👑 ' + t('vip_activated_usdt'));
         }
         catch (e) {
             showMsg(e?.message?.includes('rejects') || e?.message?.includes('cancel') ? t('payment_cancelled') : (e?.message || t('error')), false);
@@ -153,7 +154,7 @@ function VipPaymentButtons({ loading, onLoading, showMsg, onSuccess }) {
     }
     return (<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {wallet ? (<button style={{ fontSize: 12, padding: '9px 12px', background: 'linear-gradient(135deg,#0088cc,#005f8f)', border: 'none', color: '#fff', fontWeight: 800, borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }} disabled={loading} onClick={payWithTonWallet}>
-          {loading && polling ? '⏳ ' + t('vip_verifying') : `💎 ${VIP_PRICE_USDT} USDT`}
+          {loading && polling ? '⏳ ' + t('vip_verifying') : `💵 ${VIP_PRICE_USDT} USDT`}
         </button>) : (<div style={{ fontSize: 11, color: '#5d8aa8', textAlign: 'center', padding: '6px 0' }}>
           🔗 {t('connect_wallet_to_pay_vip')}
         </div>)}
@@ -206,6 +207,9 @@ function ReferralCard() {
       
       <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 8 }}>
         👥 {t('friends_invited', { n: referral?.referredCount ?? 0 })}
+        {(referral?.totalReferredCount ?? 0) > (referral?.referredCount ?? 0) && (<span style={{ fontSize: 10, color: '#f39c12', marginRight: 6 }}>
+            {' '}+{(referral?.totalReferredCount ?? 0) - (referral?.referredCount ?? 0)} ⏳
+          </span>)}
       </div>
 
       {link ? (<>
@@ -301,7 +305,8 @@ function UsdtBalanceSection() {
     const isPending = withdrawalStatus === 'pending';
     const isApproved = withdrawalStatus === 'approved';
     return (<div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color: '#a0845a', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#a0845a', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <img src="/assets/icon_dollar.png" style={{ width: 14, height: 14 }}/>
         {t('usdt_section')}
       </div>
       <div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.12),rgba(26,138,64,0.06))', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: 16 }}>
@@ -311,12 +316,12 @@ function UsdtBalanceSection() {
           <div>
             <div style={{ fontSize: 11, color: '#a0845a' }}>{t('available_balance')}</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: bal > 0 ? '#27ae60' : '#666' }}>
-              ${bal.toFixed(4)} USDT
+              ${bal.toFixed(3)} USDT
             </div>
           </div>
           {isPending ? (<div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, color: '#f4d03f', fontWeight: 700 }}>⏳ {t('withdrawal_pending')}</div>
-              <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>${withdrawalPending.toFixed(4)} USDT</div>
+              <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>${withdrawalPending.toFixed(3)} USDT</div>
             </div>) : bal >= 20 ? (<button onClick={() => setShowWalletForm(v => !v)} style={{ padding: '11px 16px', borderRadius: 12, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
               {t('withdraw_btn')}
             </button>) : (<div style={{ textAlign: 'right' }}>
@@ -329,7 +334,7 @@ function UsdtBalanceSection() {
         {isPending && (<div style={{ background: 'rgba(244,208,63,0.1)', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12 }}>
             <div style={{ fontWeight: 700, color: '#f4d03f', marginBottom: 4 }}>⏳ {t('withdrawal_processing')}</div>
             <div style={{ color: '#a0845a' }}>💳 {t('wallet_label')}: <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: 10 }}>{withdrawalWallet}</span></div>
-            <div style={{ color: '#a0845a', marginTop: 4 }}>💵 {t('amount_label')}: <strong style={{ color: '#f4d03f' }}>${withdrawalPending.toFixed(4)} USDT</strong></div>
+            <div style={{ color: '#a0845a', marginTop: 4 }}>💵 {t('amount_label')}: <strong style={{ color: '#f4d03f' }}>${withdrawalPending.toFixed(3)} USDT</strong></div>
           </div>)}
 
         
@@ -339,7 +344,7 @@ function UsdtBalanceSection() {
             </div>
             <input type="text" value={walletInput} onChange={e => setWalletInput(e.target.value)} placeholder="T... (Tron TRC20)" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontFamily: 'monospace', marginBottom: 8, outline: 'none' }}/>
             <button onClick={submitWithdrawal} disabled={submitting} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
-              {submitting ? '...' : `💸 ${t('confirm_withdrawal')} $${bal.toFixed(4)}`}
+              {submitting ? '...' : `💸 ${t('confirm_withdrawal')} $${bal.toFixed(3)}`}
             </button>
             <div style={{ fontSize: 10, color: '#666', marginTop: 6 }}>⚠️ {t('withdrawal_note')}</div>
           </div>)}
@@ -363,6 +368,263 @@ function UsdtBalanceSection() {
       </div>
     </div>);
 }
+function UsdtTopupSection({ refresh }) {
+    const [tonConnectUI] = (0, ui_react_1.useTonConnectUI)();
+    const wallet = (0, ui_react_1.useTonWallet)();
+    const t = (0, useT_1.useT)();
+    const [amount, setAmount] = (0, react_1.useState)(5);
+    const [custom, setCustom] = (0, react_1.useState)('');
+    const [useCustom, setUseCustom] = (0, react_1.useState)(false);
+    const [loading, setLoading] = (0, react_1.useState)(false);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
+    const PRESETS = [5, 10, 20, 30, 50];
+    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 5000); }
+    const finalAmount = useCustom ? parseFloat(custom) || 0 : amount;
+    async function pay() {
+        if (!wallet) {
+            tonConnectUI.openModal();
+            return;
+        }
+        if (!finalAmount || finalAmount < 5) {
+            show(t('topup_min_error'), false);
+            return;
+        }
+        setLoading(true);
+        try {
+            const result = await sendUsdtViaTon(tonConnectUI, wallet, finalAmount, show, async () => {
+                await refresh();
+                window.dispatchEvent(new Event('usdt-balance-refresh'));
+            }, t, '/kingdom/topup-usdt');
+            if (result)
+                show(t('topup_success').replace('{n}', String(finalAmount)));
+        }
+        catch (e) {
+            show(e?.message?.includes('cancel') ? t('payment_cancelled') : (e?.message || t('error')), false);
+        }
+        finally {
+            setLoading(false);
+        }
+    }
+    return (<div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#27ae60', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(39,174,96,0.15)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <img src="/assets/icon_dollar.png" style={{ width: 14, height: 14 }}/>
+        {t('topup_section_title')}
+      </div>
+      <div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.1),rgba(26,138,64,0.05))', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: 14 }}>
+        <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 10 }}>{t('topup_choose_amount')}</div>
+
+        
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          {PRESETS.map(p => (<button key={p} onClick={() => { setAmount(p); setUseCustom(false); }} style={{ flex: '1 1 0', minWidth: 44, padding: '8px 0', borderRadius: 10, background: !useCustom && amount === p ? 'linear-gradient(135deg,#27ae60,#1e8449)' : 'rgba(39,174,96,0.12)', border: `1px solid ${!useCustom && amount === p ? '#27ae60' : 'rgba(39,174,96,0.3)'}`, color: !useCustom && amount === p ? '#fff' : '#27ae60', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              ${p}
+            </button>))}
+          <button onClick={() => setUseCustom(v => !v)} style={{ flex: '1 1 0', minWidth: 44, padding: '8px 4px', borderRadius: 10, background: useCustom ? 'linear-gradient(135deg,#27ae60,#1e8449)' : 'rgba(39,174,96,0.12)', border: `1px solid ${useCustom ? '#27ae60' : 'rgba(39,174,96,0.3)'}`, color: useCustom ? '#fff' : '#27ae60', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+            {t('topup_custom')}
+          </button>
+        </div>
+
+        
+        {useCustom && (<input type="number" min={5} step={1} value={custom} onChange={e => setCustom(e.target.value)} placeholder={t('topup_placeholder')} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(39,174,96,0.3)', color: '#fff', fontSize: 13, marginBottom: 10, outline: 'none' }}/>)}
+
+        <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 10 }}>
+          {t('topup_payment_info').replace('{amount}', finalAmount ? `$${finalAmount}` : '—')}
+        </div>
+
+        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
+
+        <button onClick={pay} disabled={loading || finalAmount < 5} style={{ width: '100%', padding: '12px', borderRadius: 10, background: loading || !finalAmount || finalAmount < 5 ? 'rgba(39,174,96,0.2)' : 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: loading || !finalAmount || finalAmount < 5 ? 'not-allowed' : 'pointer', opacity: loading || !finalAmount || finalAmount < 5 ? 0.6 : 1 }}>
+          {loading ? t('processing') : wallet ? <><img src="/assets/icon_dollar.png" style={{ width: 13, height: 13, marginRight: 4, verticalAlign: 'middle' }}/>{t('topup_btn').replace('{amount}', `$${finalAmount || '—'}`)}</> : t('connect_wallet_pay')}
+        </button>
+      </div>
+    </div>);
+}
+function BuyGemsSection({ refresh }) {
+    const { kingdom } = (0, gameStore_1.useGameStore)();
+    const t = (0, useT_1.useT)();
+    const [gems, setGems] = (0, react_1.useState)(100);
+    const [loading, setLoading] = (0, react_1.useState)(false);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
+    const AMOUNTS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 4000); }
+    const usdtCost = gems / 100;
+    const bal = kingdom?.usdtBalance ?? 0;
+    const canAfford = bal >= usdtCost;
+    async function buy() {
+        setLoading(true);
+        try {
+            const r = await client_1.api.post('/kingdom/buy-gems', { gems });
+            await refresh();
+            window.dispatchEvent(new Event('usdt-balance-refresh'));
+            show(t('buy_gems_success').replace('{gems}', String(r.gemsAdded)).replace('{bal}', `$${r.usdtBalance?.toFixed(3)}`));
+        }
+        catch (e) {
+            show('❌ ' + (e.response?.data?.message || t('error')), false);
+        }
+        finally {
+            setLoading(false);
+        }
+    }
+    return (<div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#9b59b6', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(155,89,182,0.15)', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <img src="/assets/icon_gem.png" style={{ width: 14, height: 14 }}/>
+        {t('buy_gems_title')}
+      </div>
+      <div style={{ background: 'linear-gradient(135deg,rgba(155,89,182,0.1),rgba(90,44,111,0.05))', border: '1px solid rgba(155,89,182,0.25)', borderRadius: 14, padding: 14 }}>
+
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginBottom: 10 }}>
+          {AMOUNTS.map(a => (<button key={a} onClick={() => setGems(a)} style={{ padding: '7px 2px', borderRadius: 8, background: gems === a ? 'linear-gradient(135deg,#9b59b6,#6c3483)' : 'rgba(155,89,182,0.12)', border: `1px solid ${gems === a ? '#9b59b6' : 'rgba(155,89,182,0.25)'}`, color: gems === a ? '#fff' : '#9b59b6', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+              {a}
+            </button>))}
+        </div>
+
+        <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 10 }}>
+          {t('buy_gems_cost').split('{n}')[0]}<strong style={{ color: canAfford ? '#9b59b6' : '#e74c3c' }}>${usdtCost.toFixed(2)}</strong>{t('buy_gems_cost').split('{n}')[1]}
+          {!canAfford && <span style={{ fontSize: 10, color: '#e74c3c', marginRight: 6 }}> — {t('buy_gems_insufficient')}</span>}
+        </div>
+
+        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
+
+        <button onClick={buy} disabled={loading || !canAfford} style={{ width: '100%', padding: '11px', borderRadius: 10, background: canAfford && !loading ? 'linear-gradient(135deg,#9b59b6,#6c3483)' : 'rgba(155,89,182,0.2)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: !canAfford || loading ? 'not-allowed' : 'pointer', opacity: !canAfford || loading ? 0.6 : 1 }}>
+          {loading ? t('processing') : <><img src="/assets/icon_gem.png" style={{ width: 13, height: 13, marginRight: 4, verticalAlign: 'middle' }}/>{t('buy_gems_btn').replace('{gems}', String(gems)).replace('{cost}', `$${usdtCost.toFixed(2)}`)}</>}
+        </button>
+      </div>
+    </div>);
+}
+function TitanHeroSection() {
+    const [tonConnectUI] = (0, ui_react_1.useTonConnectUI)();
+    const wallet = (0, ui_react_1.useTonWallet)();
+    const { refresh } = (0, gameStore_1.useGameStore)();
+    const t = (0, useT_1.useT)();
+    const [loading, setLoading] = (0, react_1.useState)(false);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
+    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 5000); }
+    async function buy() {
+        if (!wallet) {
+            tonConnectUI.openModal();
+            return;
+        }
+        setLoading(true);
+        try {
+            const result = await sendUsdtViaTon(tonConnectUI, wallet, 0.1, show, async () => { await refresh(); }, t, '/kingdom/buy-titan');
+            if (result)
+                show(t('titan_purchased'));
+        }
+        catch (e) {
+            show(e?.message?.includes('cancel') ? t('payment_cancelled') : (e?.message || t('error')), false);
+        }
+        finally {
+            setLoading(false);
+        }
+    }
+    return (<div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#e74c3c', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(231,76,60,0.15)' }}>
+        {t('titan_section_title')}
+      </div>
+      <div style={{ background: 'linear-gradient(135deg,rgba(231,76,60,0.1),rgba(120,30,20,0.05))', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 14, padding: 14 }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#7b1515,#c0392b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, flexShrink: 0 }}>⚔️</div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#e74c3c' }}>Titan</div>
+            <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>{t('titan_hero_desc')}</div>
+            <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, fontWeight: 700 }}>
+              <span style={{ color: '#e74c3c' }}>⚔️ 600</span>
+              <span style={{ color: '#3498db' }}>🛡️ 450</span>
+              <span style={{ color: '#f4d03f' }}>💵 0.1 USDT</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize: 10, color: '#666', marginBottom: 10 }}>
+          {t('titan_note')}
+        </div>
+        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
+        <button onClick={buy} disabled={loading} style={{ width: '100%', padding: '11px', borderRadius: 10, background: loading ? 'rgba(231,76,60,0.2)' : 'linear-gradient(135deg,#7b1515,#c0392b)', border: '1px solid #e74c3c', color: '#fff', fontWeight: 800, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+          {loading ? t('processing') : wallet ? t('titan_buy_btn') : t('connect_wallet_pay')}
+        </button>
+      </div>
+    </div>);
+}
+function GemForgeSection({ refresh }) {
+    const { kingdom, buildings } = (0, gameStore_1.useGameStore)();
+    const t = (0, useT_1.useT)();
+    const [loading, setLoading] = (0, react_1.useState)(null);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
+    const bal = kingdom?.usdtBalance ?? 0;
+    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 5000); }
+    const gemForges = buildings.filter(b => b.type === 'gem_forge');
+    async function build() {
+        setLoading('build');
+        try {
+            await client_1.api.post('/kingdom/build-gem-forge');
+            await refresh();
+            show(t('gem_forge_built'));
+        }
+        catch (e) {
+            show('❌ ' + (e.response?.data?.message || t('error')), false);
+        }
+        finally {
+            setLoading(null);
+        }
+    }
+    async function upgrade(buildingId, currentLevel) {
+        setLoading(buildingId);
+        try {
+            const r = await client_1.api.post('/kingdom/upgrade-gem-forge', { buildingId });
+            await refresh();
+            show(t('gem_forge_upgraded').replace('{level}', String(r.newLevel)).replace('{gems}', String(r.newLevel * 2)));
+        }
+        catch (e) {
+            show('❌ ' + (e.response?.data?.message || t('error')), false);
+        }
+        finally {
+            setLoading(null);
+        }
+    }
+    return (<div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#f4d03f', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(244,208,63,0.15)' }}>
+        {t('gem_forge_title')}
+      </div>
+      <div style={{ background: 'linear-gradient(135deg,rgba(244,208,63,0.08),rgba(184,134,11,0.04))', border: '1px solid rgba(244,208,63,0.2)', borderRadius: 14, padding: 14 }}>
+        <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 10 }}>
+          {t('gem_forge_desc')}
+        </div>
+
+        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
+
+        
+        {gemForges.length > 0 && (<div style={{ marginBottom: 10 }}>
+            {gemForges.map(forge => {
+                const upgradeCost = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
+                const canUpgrade = bal >= upgradeCost && forge.level < 10;
+                return (<div key={forge.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#f4d03f' }}>{t('gem_forge_label').replace('{n}', String(forge.slot + 1)).replace('{level}', String(forge.level))}</div>
+                    <div style={{ fontSize: 10, color: '#a0845a' }}>{t('gem_forge_produces').replace('{n}', String(forge.level * 2))}</div>
+                  </div>
+                  {forge.level < 10 ? (<button onClick={() => upgrade(forge.id, forge.level)} disabled={loading === forge.id || !canUpgrade} style={{ padding: '7px 10px', borderRadius: 8, background: canUpgrade ? 'linear-gradient(135deg,#b8860b,#f4d03f)' : 'rgba(244,208,63,0.15)', border: 'none', color: canUpgrade ? '#1a0a00' : '#666', fontWeight: 700, fontSize: 11, cursor: !canUpgrade ? 'not-allowed' : 'pointer', opacity: !canUpgrade || loading === forge.id ? 0.6 : 1 }}>
+                      {loading === forge.id ? '...' : `⬆️ $${upgradeCost}`}
+                    </button>) : (<div style={{ fontSize: 10, color: '#f4d03f' }}>{t('gem_forge_max_level')}</div>)}
+                </div>);
+            })}
+          </div>)}
+
+        
+        {gemForges.length < 3 ? (<>
+            <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 8 }}>
+              {t('gem_forge_slot').replace('{n}', String(gemForges.length + 1)).split('0.1 USDT')[0]}<strong style={{ color: bal >= 0.1 ? '#f4d03f' : '#e74c3c' }}>0.1 USDT</strong>
+              {bal < 0.1 && <span style={{ color: '#e74c3c', fontSize: 10 }}> — {t('gem_forge_insufficient')}</span>}
+            </div>
+            <button onClick={build} disabled={loading === 'build' || bal < 0.1} style={{ width: '100%', padding: '11px', borderRadius: 10, background: bal >= 0.1 && loading !== 'build' ? 'linear-gradient(135deg,#b8860b,#f4d03f)' : 'rgba(244,208,63,0.15)', border: 'none', color: bal >= 0.1 ? '#1a0a00' : '#666', fontWeight: 800, fontSize: 13, cursor: bal < 0.1 || loading === 'build' ? 'not-allowed' : 'pointer', opacity: bal < 0.1 || loading === 'build' ? 0.6 : 1 }}>
+              {loading === 'build' ? t('gem_forge_building') : t('gem_forge_build_btn')}
+            </button>
+          </>) : (<div style={{ textAlign: 'center', fontSize: 12, color: '#f4d03f', padding: '8px 0' }}>{t('gem_forge_max_reached')}</div>)}
+      </div>
+    </div>);
+}
 const SECTION = ({ title, children }) => (<div style={{ marginBottom: 20 }}>
     <div style={{ fontSize: 13, fontWeight: 800, color: '#a0845a', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
       {title}
@@ -377,15 +639,25 @@ function ShopScreen() {
     const [msgOk, setMsgOk] = (0, react_1.useState)(true);
     const [speeding, setSpeeding] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(null);
+    const [, setTick] = (0, react_1.useState)(0);
     const t = (0, useT_1.useT)();
+    (0, react_1.useEffect)(() => {
+        const id = setInterval(() => setTick(n => n + 1), 1000);
+        return () => clearInterval(id);
+    }, []);
     const upgrading = buildings.filter(b => b.upgradeEndsAt && new Date() < new Date(b.upgradeEndsAt));
     const isVip = !!kingdom?.isVip || vip?.isVip;
     const gems = kingdom?.gems ?? 0;
     (0, react_1.useEffect)(() => { load(); }, []);
     async function load() {
-        const [v, a] = await Promise.all([client_1.api.get('/vip'), client_1.api.get('/ads/status')]);
-        setVip(v);
-        setAds(a);
+        try {
+            const [v, a] = await Promise.all([client_1.api.get('/vip'), client_1.api.get('/ads/status')]);
+            setVip(v);
+            setAds(a);
+        }
+        catch {
+            setAds(prev => prev ?? { adsWatchedToday: 0, adsRemainingToday: 30, boostActive: false, boostUntil: null, attackBoostActive: false, attackBoostUntil: null });
+        }
     }
     function showMsg(text, ok = true) {
         setMsg(text);
@@ -413,63 +685,45 @@ function ShopScreen() {
         try {
             const Adsgram = window.Adsgram;
             if (Adsgram) {
-                let AdController;
+                let AdController = null;
                 try {
                     AdController = Adsgram.init({ blockId: REWARD_AD_BLOCK_ID });
                 }
-                catch (initErr) {
-                    console.error('[AdsGram] init error:', initErr);
-                    showMsg(`📺 Ad init error: ${initErr?.message || 'unknown'}`, false);
-                    return;
+                catch {
                 }
-                const showPromise = AdController.show();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('AD_TIMEOUT')), 30_000));
+                if (AdController) {
+                    await AdController.show().catch(() => { });
+                }
+            }
+            let reward;
+            for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    const result = await Promise.race([showPromise, timeoutPromise]);
-                    console.log('[AdsGram] show result:', result);
-                    if (!result?.done) {
-                        const desc = (result?.description || '').toLowerCase();
-                        const userSkipped = desc.includes('skip') || desc.includes('close') || desc.includes('dismiss') || desc.includes('cancel');
-                        if (userSkipped) {
-                            showMsg('📺 ' + t('ad_not_completed'), false);
-                            return;
-                        }
-                        console.warn('[AdsGram] no ad available (done:false), granting reward. desc:', result?.description);
-                    }
+                    reward = await client_1.api.post('/ads/reward', { type });
+                    break;
                 }
-                catch (adErr) {
-                    console.error('[AdsGram] show error:', adErr);
-                    const desc = (adErr?.description || adErr?.message || '').toLowerCase();
-                    if (adErr?.message === 'AD_TIMEOUT') {
-                        showMsg('📺 ' + t('ad_not_completed'), false);
-                        return;
+                catch (retryErr) {
+                    const isNetworkErr = !retryErr.response;
+                    if (isNetworkErr && attempt < 3) {
+                        await new Promise(r => setTimeout(r, 1000 * attempt));
+                        continue;
                     }
-                    const userDismissed = desc.includes('skip') || desc.includes('close') || desc.includes('dismiss') || desc.includes('cancel');
-                    if (userDismissed) {
-                        showMsg('📺 ' + t('ad_not_completed'), false);
-                        return;
-                    }
-                    console.warn('[AdsGram] SDK error, granting reward:', desc);
+                    throw retryErr;
                 }
             }
-            else {
-                console.warn('[AdsGram] SDK not loaded, granting reward in dev mode');
-            }
-            const reward = await client_1.api.post('/ads/reward', { type });
+            await Promise.all([load(), refresh()]);
+            window.dispatchEvent(new Event('usdt-balance-refresh'));
             const rewardTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const msgs = {
                 double_production: `🚀 ${t('double_prod')} — ${t('double_prod_active', { time: rewardTime(reward.boostUntil) })}`,
                 double_attack_speed: `⚡ ${t('double_attack_speed_active', { time: rewardTime(reward.boostUntil) })}`,
-                usdt_bonus: `💵 +0.0001 USDT ${t('added_to_balance')}`,
+                usdt_bonus: `💵 +0.001 USDT ${t('added_to_balance')}`,
                 gems: `💎 +10 Gems ${t('added_to_balance')}`,
                 gold_bonus: `💰 +500 ${t('gold')} ${t('added_to_balance')}`,
-                wood_bonus: `🪵 +400 ${t('wood')} ${t('added_to_balance')}`,
-                stone_bonus: `🪨 +300 ${t('stone')} ${t('added_to_balance')}`,
-                food_bonus: `🌾 +200 ${t('food')} ${t('added_to_balance')}`,
+                wood_bonus: `🪵 +500 ${t('wood')} ${t('added_to_balance')}`,
+                stone_bonus: `🪨 +500 ${t('stone')} ${t('added_to_balance')}`,
+                food_bonus: `🌾 +500 ${t('food')} ${t('added_to_balance')}`,
             };
             showMsg(msgs[type] || '✅ ' + t('confirm'));
-            await Promise.all([load(), refresh()]);
-            window.dispatchEvent(new Event('usdt-balance-refresh'));
         }
         catch (e) {
             showMsg(e.response?.data?.message || t('error'), false);
@@ -492,6 +746,7 @@ function ShopScreen() {
         }
     }
     const adsLeft = ads?.adsRemainingToday ?? 0;
+    const adsMax = ads ? (ads.adsWatchedToday ?? 0) + (ads.adsRemainingToday ?? 0) : 30;
     return (<div className="screen" style={{ paddingBottom: 140 }}>
       <div className="screen-title">{t('shop_title')}</div>
 
@@ -504,6 +759,9 @@ function ShopScreen() {
 
       
       <WalletBar />
+
+      
+      <UsdtTopupSection refresh={refresh}/>
 
       
       <SECTION title={t('vip_section')}>
@@ -537,16 +795,17 @@ function ShopScreen() {
             { icon: '🔮', label: t('b_arcane_tower') },
             { icon: '🚫', label: t('vip_no_ads') },
             { icon: '🏆', label: t('vip_badge_feat') },
-            { icon: '💎', label: t('vip_gems_x') },
+            { icon: '/assets/icon_gem.png', label: t('vip_gems_x') },
             { icon: '🚀', label: t('vip_prod_x15') },
             { icon: '⚔️', label: t('vip_usdt_raid') },
+            { icon: '⚔️', label: t('u_paladin') + ' & 🐉 ' + t('u_dragon_rider') },
         ].map(f => (<div key={f.label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 background: isVip ? 'rgba(244,208,63,0.08)' : 'rgba(0,0,0,0.3)',
                 borderRadius: 8, padding: '7px 10px',
                 border: `1px solid ${isVip ? 'rgba(244,208,63,0.2)' : 'rgba(255,255,255,0.04)'}`,
             }}>
-                <span style={{ fontSize: 16 }}>{f.icon}</span>
+                {f.icon.startsWith('/') ? <img src={f.icon} style={{ width: 16, height: 16 }}/> : <span style={{ fontSize: 16 }}>{f.icon}</span>}
                 <span style={{ fontSize: 11, color: isVip ? '#f4d03f' : '#666', fontWeight: 600 }}>
                   {!isVip && '🔒 '}{f.label}
                 </span>
@@ -554,45 +813,13 @@ function ShopScreen() {
           </div>
         </div>
 
-        
-        {!isVip && (<>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#9b59b6', marginBottom: 8 }}>{t('vip_heroes_label')}</div>
-            {[
-                { type: 'paladin', icon: '⚔️', name: t('u_paladin'), atk: 80, def: 60, cost: 100 },
-                { type: 'dragon_rider', icon: '🐉', name: t('u_dragon_rider'), atk: 250, def: 150, cost: 300 },
-            ].map(h => (<div key={h.type} style={{
-                    background: 'linear-gradient(135deg,rgba(20,0,40,0.9),rgba(30,0,60,0.8))',
-                    border: '1px solid rgba(155,89,182,0.15)',
-                    borderRadius: 12, padding: '12px 14px', marginBottom: 10,
-                    display: 'flex', alignItems: 'center', gap: 12, opacity: 0.65,
-                }}>
-                <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(135deg,#5b2c6f,#3a1a45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{h.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#9b59b6' }}>🔒 {h.name}</div>
-                  <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2, display: 'flex', gap: 10 }}>
-                    <span>⚔️ {h.atk}</span><span>🛡️ {h.def}</span><span>💎 {h.cost}{t('per_unit')}</span>
-                  </div>
-                </div>
-              </div>))}
-
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#9b59b6', marginBottom: 8, marginTop: 4 }}>{t('vip_buildings_label')}</div>
-            <div style={{
-                background: 'linear-gradient(135deg,rgba(30,0,60,0.9),rgba(20,0,40,0.8))',
-                border: '1px solid rgba(155,89,182,0.15)',
-                borderRadius: 12, padding: '12px 14px', marginBottom: 16,
-                display: 'flex', alignItems: 'center', gap: 12, opacity: 0.65,
-            }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: 'linear-gradient(135deg,#5b2c6f,#3a1a45)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🔮</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#9b59b6' }}>🔒 {t('b_arcane_tower')}</div>
-                <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>{t('bd_arcane_tower')}</div>
-              </div>
-            </div>
-          </>)}
 
       </SECTION>
 
       
+      
+      <BuyGemsSection refresh={refresh}/>
+
       <SECTION title={t('gems_section', { n: gems })}>
         
         {upgrading.length > 0 && (<>
@@ -606,8 +833,8 @@ function ShopScreen() {
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{t('b_' + b.type)}</div>
                     <div style={{ fontSize: 11, color: '#3498db' }}>⏳ <Countdown_1.default endsAt={b.upgradeEndsAt}/></div>
                   </div>
-                  <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px', opacity: canAfford ? 1 : 0.4 }} disabled={speeding === b.type || !canAfford} onClick={() => speedUp(b.type, b.id)}>
-                    {speeding === b.type ? '...' : `⚡ ${gemCost} 💎`}
+                  <button className="btn btn-gold" style={{ fontSize: 12, padding: '8px 12px', opacity: canAfford ? 1 : 0.4, display: 'flex', alignItems: 'center', gap: 4 }} disabled={speeding === b.type || !canAfford} onClick={() => speedUp(b.type, b.id)}>
+                    {speeding === b.type ? '...' : <><span>⚡ {gemCost}</span><img src="/assets/icon_gem.png" style={{ width: 14, height: 14 }}/></>}
                   </button>
                 </div>);
             })}
@@ -615,54 +842,62 @@ function ShopScreen() {
           </>)}
 
         {[
-            { id: 'shield', icon: '🛡️', label: t('shield_label'), desc: t('shield_desc'), cost: '50 💎', action: () => client_1.api.post('/kingdom/shield').then(r => showMsg(t('shield_active_until', { time: new Date(r.shieldUntil).toLocaleString() }))) },
-            { id: 'storage', icon: '📦', label: t('storage_label'), desc: t('storage_desc'), cost: '100 💎', action: () => client_1.api.post('/kingdom/expand-storage').then(r => showMsg(t('storage_expanded', { n: (0, format_1.fmt)(r.maxGold) }))) },
+            { id: 'shield', icon: '🛡️', label: t('shield_label'), desc: t('shield_desc'), gems: 50, action: () => client_1.api.post('/kingdom/shield').then(r => showMsg(t('shield_active_until', { time: new Date(r.shieldUntil).toLocaleString() }))) },
+            { id: 'storage', icon: '📦', label: t('storage_label'), desc: t('storage_desc'), gems: 100, action: () => client_1.api.post('/kingdom/expand-storage').then(r => showMsg(t('storage_expanded', { n: (0, format_1.fmt)(r.maxGold) }))) },
         ].map(item => (<div key={item.id} style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(244,208,63,0.12)', borderRadius: 12, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 26 }}>{item.icon}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{item.label}</div>
               <div style={{ fontSize: 11, color: '#a0845a' }}>{item.desc}</div>
             </div>
-            <button className="btn btn-gold" style={{ fontSize: 12, padding: '9px 13px', whiteSpace: 'nowrap' }} disabled={loading === 'action'} onClick={() => doAction(item.action)}>
-              {item.cost}
+            <button className="btn btn-gold" style={{ fontSize: 12, padding: '9px 13px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }} disabled={loading === 'action'} onClick={() => doAction(item.action)}>
+              {item.gems} <img src="/assets/icon_gem.png" style={{ width: 14, height: 14 }}/>
             </button>
           </div>))}
       </SECTION>
 
       
-      <SECTION title={t('ads_section', { n: ads ? String(ads.adsWatchedToday) : '...' })}>
-        {ads?.boostActive && (<div style={{ background: 'rgba(26,58,26,0.8)', border: '1px solid #27ae6066', borderRadius: 10, padding: '10px 14px', marginBottom: 12, textAlign: 'center', fontSize: 13, color: '#27ae60' }}>
-            {t('double_prod_active', { time: new Date(ads.boostUntil).toLocaleTimeString() })}
+      <SECTION title={t('ads_section', { n: ads ? String(ads.adsWatchedToday) : '...', max: String(adsMax) })}>
+        
+        {(ads?.boostActive || ads?.attackBoostActive) && (<div style={{ background: 'rgba(26,58,26,0.8)', border: '1px solid #27ae6066', borderRadius: 10, padding: '8px 14px', marginBottom: 10, fontSize: 12, color: '#27ae60' }}>
+            {ads?.boostActive && <div>🚀 {t('double_prod_active', { time: new Date(ads.boostUntil).toLocaleTimeString() })}</div>}
+            {ads?.attackBoostActive && <div>⚡ {t('double_attack_speed_active', { time: new Date(ads.attackBoostUntil).toLocaleTimeString() })}</div>}
           </div>)}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { type: 'double_production', icon: '🚀', label: t('double_prod'), desc: t('double_prod_desc'), boosted: ads?.boostActive && ads?.boostUntil && new Date(ads.boostUntil) > new Date(), boostUntil: ads?.boostUntil },
-            { type: 'double_attack_speed', icon: '⚡', label: t('double_attack_speed'), desc: t('double_attack_speed_desc'), boosted: ads?.attackBoostActive && ads?.attackBoostUntil && new Date(ads.attackBoostUntil) > new Date(), boostUntil: ads?.attackBoostUntil },
-            { type: 'usdt_bonus', icon: '💵', label: '+0.0001 USDT', desc: t('instantly') },
-            { type: 'gems', icon: '💎', label: '+10 Gems', desc: t('instantly') },
-            { type: 'gold_bonus', icon: '💰', label: `+500 ${t('gold')}`, desc: t('instantly') },
-            { type: 'wood_bonus', icon: '🪵', label: `+500 ${t('wood')}`, desc: t('instantly') },
-            { type: 'stone_bonus', icon: '🪨', label: `+500 ${t('stone')}`, desc: t('instantly') },
-            { type: 'food_bonus', icon: '🌾', label: `+500 ${t('food')}`, desc: t('instantly') },
-        ].map(({ type, icon, label, desc, boosted, boostUntil }) => (<div key={type} style={{
-                background: boosted ? 'rgba(39,174,96,0.1)' : 'rgba(0,0,0,0.35)',
-                border: `1px solid ${boosted ? 'rgba(39,174,96,0.4)' : 'rgba(39,174,96,0.15)'}`,
-                borderRadius: 12, padding: '10px 12px',
-                display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', textAlign: 'center',
-            }}>
-              <span style={{ fontSize: 26 }}>{icon}</span>
+            { type: 'double_production', icon: '🚀', label: t('double_prod'), desc: t('double_prod_desc'), boostUntil: ads?.boostUntil, boostActive: ads?.boostActive },
+            { type: 'double_attack_speed', icon: '⚡', label: t('double_attack_speed'), desc: t('double_attack_speed_desc'), boostUntil: ads?.attackBoostUntil, boostActive: ads?.attackBoostActive },
+            { type: 'usdt_bonus', icon: '/assets/icon_dollar.png', label: '+0.001 USDT', desc: t('instantly') },
+            { type: 'gems', icon: '/assets/icon_gem.png', label: `+10 ${t('gems')}`, desc: t('instantly') },
+            { type: 'gold_bonus', icon: '/assets/icon_gold.png', label: `+500 ${t('gold')}`, desc: t('instantly') },
+            { type: 'wood_bonus', icon: '/assets/icon_wood.png', label: `+500 ${t('wood')}`, desc: t('instantly') },
+            { type: 'stone_bonus', icon: '/assets/icon_stone.png', label: `+500 ${t('stone')}`, desc: t('instantly') },
+            { type: 'food_bonus', icon: '/assets/icon_food.png', label: `+500 ${t('food')}`, desc: t('instantly') },
+        ].map(({ type, icon, label, desc, boostUntil, boostActive }) => {
+            const isBoostActive = boostActive && boostUntil && new Date(boostUntil) > new Date();
+            const isDisabled = adsLeft === 0 || loading === type || isBoostActive;
+            return (<div key={type} style={{
+                    background: isBoostActive ? 'rgba(39,174,96,0.1)' : 'rgba(0,0,0,0.35)',
+                    border: `1px solid ${isBoostActive ? 'rgba(39,174,96,0.4)' : 'rgba(39,174,96,0.15)'}`,
+                    borderRadius: 12, padding: '10px 12px',
+                    display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', textAlign: 'center',
+                }}>
+              {icon.startsWith('/') ? <img src={icon} style={{ width: 28, height: 28 }}/> : <span style={{ fontSize: 26 }}>{icon}</span>}
               <div>
                 <div style={{ fontWeight: 700, fontSize: 12 }}>{label}</div>
-                <div style={{ fontSize: 10, color: '#a0845a' }}>{boosted ? <Countdown_1.default endsAt={boostUntil} onEnd={load}/> : desc}</div>
+                <div style={{ fontSize: 10, color: '#a0845a' }}>
+                  {isBoostActive ? <Countdown_1.default endsAt={boostUntil} onEnd={load}/> : desc}
+                </div>
               </div>
-              <button className="btn btn-green" style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: (adsLeft === 0 || boosted) ? 0.4 : 1 }} disabled={adsLeft === 0 || loading === type || boosted} onClick={() => watchAd(type)}>
-                {loading === type ? '...' : boosted ? '✓ פעיל' : t('watch_ad')}
+              <button className="btn btn-green" style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: isDisabled ? 0.4 : 1 }} disabled={isDisabled} onClick={() => watchAd(type)}>
+                {loading === type ? '...' : t('watch_ad')}
               </button>
-            </div>))}
+            </div>);
+        })}
         </div>
         {adsLeft === 0 && (<div style={{ textAlign: 'center', fontSize: 12, color: '#a0845a', marginTop: 10 }}>
-            {t('ads_limit')}
+            {t('ads_limit', { max: String(adsMax) })}
           </div>)}
       </SECTION>
 

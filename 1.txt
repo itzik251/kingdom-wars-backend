@@ -1,7 +1,7 @@
 https://kingdomwars.cloud/api/admin
-kw_admin_2026
+KingdomAdmin2024!
 
-j?UA.&ypMI0,MpbH - vps + Link
+j?UA.&ypMI0,MpbH - vps
 
 https://t.me/Kingdomw_bot/kingdomwars
 Bot ID
@@ -11,3 +11,7 @@ token API טלגרם בוט
 8848286918:AAFToWCC4ZNb0N45opEkTNaiqhF0X3EmlQk
 
 swift catch achieve express road purpose runway upper switch sea surge palm rare desert symbol idle blade mechanic small coral rude pen crunch pig
+
+
+http://localhost:5173/
+http://localhost:5173/api/admin

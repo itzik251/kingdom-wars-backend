@@ -15,6 +15,7 @@ function WorkersPanel({ onClose }) {
     const maxWorkers = kingdom?.maxWorkers ?? 5;
     const workerBonus = workers * 4;
     const workerSalary = workers * 5;
+    const workerFoodPerHour = workers * 2;
     async function hire() {
         setLoading('hire');
         setMsg('');
@@ -80,6 +81,7 @@ function WorkersPanel({ onClose }) {
             <div style={{ textAlign: 'right', fontSize: 12, color: '#a0845a' }}>
               <div>{t('production_bonus')}: <span style={{ color: '#f4d03f', fontWeight: 700 }}>+{workerBonus}%</span></div>
               <div>{t('salary')}: <span style={{ color: '#e74c3c', fontWeight: 700 }}>-{(0, format_1.fmt)(workerSalary)} 💰{t('per_hour')}</span></div>
+              {workerFoodPerHour > 0 && <div>אוכל: <span style={{ color: '#e74c3c', fontWeight: 700 }}>-{workerFoodPerHour} 🌾{t('per_hour')}</span></div>}
             </div>
           </div>
 

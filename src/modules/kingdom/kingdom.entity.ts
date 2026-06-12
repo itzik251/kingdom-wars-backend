@@ -97,6 +97,9 @@ export class Kingdom {
   @Column({ name: 'withdrawal_status', default: 'none' }) // 'none' | 'pending' | 'approved' | 'rejected'
   withdrawalStatus: string;
 
+  @Column({ name: 'ragnar_hero_granted_count', default: 0 })
+  ragnarHeroGrantedCount: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

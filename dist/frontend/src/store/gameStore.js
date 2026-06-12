@@ -11,6 +11,10 @@ exports.useGameStore = (0, zustand_1.create)((set, get) => ({
     productionRates: {},
     isLoading: false,
     activeScreen: 'home',
+    marchingSquads: {},
+    marchMeta: {},
+    pendingBattleReport: null,
+    pendingError: null,
     setToken: (token) => {
         set({ token });
         localStorage.setItem('kw_token', token);
@@ -34,7 +38,16 @@ exports.useGameStore = (0, zustand_1.create)((set, get) => ({
                     productionBoostUntil: data.kingdom?.productionBoostUntil ?? null,
                 },
                 buildings: data.buildings ?? prev.buildings,
-                units: data.units ?? prev.units,
+                units: (() => {
+                    const raw = data.units ?? prev.units;
+                    const squads = Object.values(get().marchingSquads);
+                    if (!squads.length)
+                        return raw;
+                    return raw.map(u => {
+                        const totalMarching = squads.reduce((s, sq) => s + (sq[u.type] ?? 0), 0);
+                        return { ...u, count: Math.max(0, u.count - totalMarching) };
+                    });
+                })(),
                 productionRates: data.productionRates && Object.keys(data.productionRates).length > 0
                     ? data.productionRates
                     : prev.productionRates,
@@ -48,5 +61,22 @@ exports.useGameStore = (0, zustand_1.create)((set, get) => ({
         const { loadKingdom } = get();
         await loadKingdom();
     },
+    addMarchingSquad: (kingdomId, squad, heroType, endsAt) => set(state => ({
+        marchingSquads: { ...state.marchingSquads, [kingdomId]: squad ?? {} },
+        marchMeta: { ...state.marchMeta, [kingdomId]: { squad, heroType, endsAt } },
+        units: squad ? state.units.map(u => ({
+            ...u,
+            count: Math.max(0, u.count - (squad[u.type] ?? 0)),
+        })) : state.units,
+    })),
+    removeMarchingSquad: (kingdomId) => set(state => {
+        const { [kingdomId]: _s, ...squads } = state.marchingSquads;
+        const { [kingdomId]: _m, ...meta } = state.marchMeta;
+        return { marchingSquads: squads, marchMeta: meta };
+    }),
+    setPendingBattleReport: (report) => set({ pendingBattleReport: report }),
+    clearPendingBattleReport: () => set({ pendingBattleReport: null }),
+    setPendingError: (msg) => set({ pendingError: msg }),
+    clearPendingError: () => set({ pendingError: null }),
 }));
 //# sourceMappingURL=gameStore.js.map

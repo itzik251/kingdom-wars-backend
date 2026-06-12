@@ -8,7 +8,9 @@ const Countdown_1 = require("../components/Countdown");
 const client_1 = require("../api/client");
 const useT_1 = require("../i18n/useT");
 const REGULAR_UNITS = ['spearman', 'archer', 'swordsman', 'cavalry', 'catapult', 'elite_guard'];
+const GOLD_HEROES = ['knight'];
 const VIP_UNITS = ['paladin', 'dragon_rider'];
+const SPECIAL_UNITS = ['titan'];
 const UNIT_CONFIG = {
     spearman: { icon: '🗡️', gold: 10, power: 1, def: 1, color: '#aaa', upkeep: 1 },
     archer: { icon: '🏹', gold: 20, power: 2, def: 1, color: '#7dbb3f', upkeep: 1 },
@@ -16,8 +18,11 @@ const UNIT_CONFIG = {
     cavalry: { icon: '🐴', gold: 80, power: 9, def: 5, color: '#9b59b6', upkeep: 3 },
     catapult: { icon: '💣', gold: 200, power: 15, def: 2, color: '#e67e22', upkeep: 5 },
     elite_guard: { icon: '🛡️', gold: 500, power: 25, def: 20, color: '#f4d03f', upkeep: 8 },
-    paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5 },
-    dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15 },
+    knight: { icon: '🗡️', gold: 800, power: 40, def: 30, color: '#85c1e9', upkeep: 2, isHero: true },
+    paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5, isHero: true, dailySalaryGems: 3 },
+    dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15, isHero: true, dailySalaryGems: 5 },
+    ragnar: { icon: '🦸', gold: 0, gems: 200, power: 400, def: 300, color: '#e67e22', referralHero: true, upkeep: 20, isHero: true, dailySalaryGems: 2 },
+    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 0, isHero: true, dailySalaryGems: 4, canSoloAttack: true },
 };
 const RAGNAR_REQUIRED = 10;
 function ArmyScreen() {
@@ -55,14 +60,27 @@ function ArmyScreen() {
     const totalFoodUpkeep = units.reduce((s, u) => s + u.count * (UNIT_CONFIG[u.type]?.upkeep || 0), 0);
     const foodProduction = productionRates.food || 0;
     const foodBalance = foodProduction - totalFoodUpkeep;
+    const ragnarUnit = units.find(u => u.type === 'ragnar');
+    const ragnarInArmy = ragnarUnit && ragnarUnit.count > 0;
     async function train(type) {
+        const cfg = UNIT_CONFIG[type];
         const amount = amounts[type] || 1;
         setLoading(type);
         setMsg('');
         try {
-            await client_1.api.post('/units/train', { type, amount });
-            await refresh();
-            setMsg(t('recruiting', { n: amount, unit: t('u_' + type) }));
+            if (cfg?.usdtUnit) {
+                for (let i = 0; i < amount; i++) {
+                    await client_1.api.post('/kingdom/buy-titan');
+                }
+                await refresh();
+                window.dispatchEvent(new Event('usdt-balance-refresh'));
+                setMsg(`⚔️ ${amount} ${t('u_' + type)} ${t('added_to_queue')}`);
+            }
+            else {
+                await client_1.api.post('/units/train', { type, amount });
+                await refresh();
+                setMsg(t('recruiting', { n: amount, unit: t('u_' + type) }));
+            }
         }
         catch (e) {
             const raw = e.response?.data?.message || '';
@@ -72,6 +90,9 @@ function ArmyScreen() {
             }
             else if (raw === 'VIP_REQUIRED') {
                 setMsg('❌ ' + t('vip_required_army'));
+            }
+            else if (raw === 'RAGNAR_NOT_UNLOCKED') {
+                setMsg('❌ ' + t('ragnar_required', { n: RAGNAR_REQUIRED }));
             }
             else {
                 setMsg('❌ ' + (raw || t('error')));
@@ -85,15 +106,21 @@ function ArmyScreen() {
         const cfg = UNIT_CONFIG[u.type];
         const isTraining = !!(u.trainingEndsAt && new Date() < new Date(u.trainingEndsAt));
         const isVipUnit = !!cfg?.vip;
+        const isRagnar = !!cfg?.referralHero;
+        const isUsdtUnit = !!cfg?.usdtUnit;
         const vipLocked = isVipUnit && !isVip;
         const qty = amounts[u.type] || 1;
-        const cost = qty * (isVipUnit ? (cfg?.gems || 0) : (cfg?.gold || 0));
-        const have = isVipUnit ? (kingdom?.gems || 0) : (kingdom?.gold || 0);
-        const canAfford = have >= cost && !vipLocked;
+        const usdtBal = kingdom?.usdtBalance ?? 0;
+        const usdtCostTotal = isUsdtUnit ? parseFloat((qty * (cfg?.usdtCost || 0.1)).toFixed(4)) : 0;
+        const cost = isUsdtUnit ? 0 : qty * ((isVipUnit || isRagnar) ? (cfg?.gems || 0) : (cfg?.gold || 0));
+        const have = (isVipUnit || isRagnar) ? (kingdom?.gems || 0) : (kingdom?.gold || 0);
+        const canAfford = isUsdtUnit ? usdtBal >= usdtCostTotal : (have >= cost && !vipLocked);
         return (<div style={{
-                background: isVipUnit
-                    ? 'linear-gradient(135deg,rgba(30,10,0,0.9),rgba(50,20,0,0.8))'
-                    : 'linear-gradient(135deg,var(--bg-card),var(--bg-card2))',
+                background: isRagnar
+                    ? 'linear-gradient(135deg,rgba(180,80,10,0.25),rgba(120,50,5,0.2))'
+                    : isVipUnit
+                        ? 'linear-gradient(135deg,rgba(30,10,0,0.9),rgba(50,20,0,0.8))'
+                        : 'linear-gradient(135deg,var(--bg-card),var(--bg-card2))',
                 border: `1px solid ${vipLocked ? 'rgba(241,196,15,0.2)' : cfg?.color || '#f4d03f'}33`,
                 borderRadius: 12, padding: 14,
                 boxShadow: isTraining ? '0 0 10px rgba(52,152,219,0.2)' : isVipUnit ? '0 0 10px rgba(241,196,15,0.1)' : 'none',
@@ -119,9 +146,14 @@ function ArmyScreen() {
                 <span>⚔️ {cfg?.power}</span>
                 <span>🛡️ {cfg?.def}</span>
                 <span style={{ color: '#7dbb3f' }}>🌾 {t('upkeep_per_hr', { n: cfg?.upkeep ?? 0 })}</span>
-                {isVipUnit ? <span style={{ color: '#f1c40f' }}>💎 {cfg?.gems}{t('per_unit')}</span>
-                : <span>💰 {cfg?.gold}{t('per_unit')}</span>}
+                {isUsdtUnit ? <span style={{ color: '#27ae60' }}>💵 ${cfg?.usdtCost}{t('per_unit')}</span>
+                : isVipUnit ? <span style={{ color: '#f1c40f' }}>💎 {cfg?.gems}{t('per_unit')}</span>
+                    : <span>💰 {cfg?.gold}{t('per_unit')}</span>}
               </div>
+              {cfg?.isHero && cfg.dailySalaryGems && (<div style={{ fontSize: 10, color: '#a78bfa', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>{t('hero_salary', { n: cfg.dailySalaryGems })}</span>
+                  {cfg.canSoloAttack && <span style={{ color: '#f87171', marginLeft: 4 }}>· {t('titan_solo')}</span>}
+                </div>)}
               {(u.woundedCount || 0) > 0 && (<div style={{ fontSize: 10, color: '#e74c3c', marginTop: 2 }}>{t('wounded', { n: (0, format_1.fmt)(u.woundedCount || 0) })}</div>)}
             </div>
           </div>
@@ -152,13 +184,18 @@ function ArmyScreen() {
                 </button>))}
             </div>
 
-            <button className="btn btn-gold" style={{ width: '100%', padding: '10px', fontSize: 14, opacity: canAfford ? 1 : 0.5, borderRadius: 10 }} disabled={loading === u.type || !canAfford} onClick={() => train(u.type)}>
+            <button className={isUsdtUnit ? 'btn' : 'btn btn-gold'} style={{ width: '100%', padding: '10px', fontSize: 14, opacity: canAfford ? 1 : 0.5, borderRadius: 10,
+                    ...(isUsdtUnit ? { background: 'linear-gradient(135deg,#7b1515,#c0392b)', border: '1px solid #e74c3c', color: '#fff' } : {}) }} disabled={loading === u.type || !canAfford} onClick={() => train(u.type)}>
               {loading === u.type ? '...' : isTraining
                     ? t('add_to_queue', { n: amounts[u.type] || 1 })
-                    : `${t('recruit')} ${amounts[u.type] || 1} (${isVipUnit ? `💎 ${(0, format_1.fmt)(cost)}` : `💰 ${(0, format_1.fmt)(cost)}`})`}
+                    : isUsdtUnit
+                        ? `${t('recruit')} ${amounts[u.type] || 1} (💵 $${usdtCostTotal})`
+                        : `${t('recruit')} ${amounts[u.type] || 1} (${isVipUnit ? `💎 ${(0, format_1.fmt)(cost)}` : `💰 ${(0, format_1.fmt)(cost)}`})`}
             </button>
             {!canAfford && (<div style={{ fontSize: 11, color: '#e74c3c', textAlign: 'center' }}>
-                {isVipUnit ? t('missing_gems', { n: (0, format_1.fmt)(cost - (kingdom?.gems || 0)) }) : t('missing_gold', { n: (0, format_1.fmt)(cost - (kingdom?.gold || 0)) })}
+                {isUsdtUnit
+                        ? `💵 ${t('missing_usdt_balance') || 'יתרת USDT לא מספיקה'} (${usdtBal.toFixed(4)}/$${usdtCostTotal})`
+                        : isVipUnit ? t('missing_gems', { n: (0, format_1.fmt)(cost - (kingdom?.gems || 0)) }) : t('missing_gold', { n: (0, format_1.fmt)(cost - (kingdom?.gold || 0)) })}
               </div>)}
           </div>)}
       </div>);
@@ -219,6 +256,23 @@ function ArmyScreen() {
         {regularUnits.map(u => <UnitCard key={u.type} u={u}/>)}
       </div>
 
+      
+      {(() => {
+            const goldHeroUnits = units.filter(u => GOLD_HEROES.includes(u.type));
+            if (goldHeroUnits.length === 0)
+                return null;
+            return (<>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#85c1e9' }}>🗡️ {t('gold_heroes')}</div>
+              <span style={{ fontSize: 10, color: '#85c1e9', background: 'rgba(133,193,233,0.12)', borderRadius: 8, padding: '2px 8px', fontWeight: 700 }}>💰 {t('gold')}</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#555', marginBottom: 10 }}>{t('gold_heroes_desc')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {goldHeroUnits.map(u => <UnitCard key={u.type} u={u}/>)}
+            </div>
+          </>);
+        })()}
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: '#f1c40f' }}>{t('vip_heroes')}</div>
         {isVip
@@ -230,6 +284,29 @@ function ArmyScreen() {
         {vipUnits.map(u => <UnitCard key={u.type} u={u}/>)}
       </div>
 
+      
+      {(() => {
+            const specialUnitsInArmy = units.filter(u => SPECIAL_UNITS.includes(u.type));
+            if (specialUnitsInArmy.length === 0)
+                return null;
+            return (<>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#c0392b' }}>⚔️ {t('special_heroes') || 'גיבורים מיוחדים'}</div>
+              <span style={{ fontSize: 10, color: '#27ae60', background: 'rgba(39,174,96,0.15)', borderRadius: 8, padding: '2px 8px', fontWeight: 700 }}>💵 USDT</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {specialUnitsInArmy.map(u => <UnitCard key={u.type} u={u}/>)}
+            </div>
+          </>);
+        })()}
+
+      
+      {ragnarInArmy && ragnarUnit && (<div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#e67e22', marginBottom: 8 }}>🦸 {t('ragnar_name')} <span style={{ fontSize: 10, color: '#e67e22', background: 'rgba(230,126,34,0.15)', borderRadius: 5, padding: '1px 6px', marginRight: 6 }}>🔗 {t('referral_hero')}</span></div>
+          <UnitCard key="ragnar" u={ragnarUnit}/>
+        </div>)}
+
+      
       <div style={{ fontSize: 13, fontWeight: 700, color: '#e67e22', marginBottom: 8 }}>{t('referral_hero')}</div>
       <div style={{
             background: ragnarUnlocked
@@ -285,6 +362,68 @@ function ArmyScreen() {
                 {t('invite_more_friends', { n: RAGNAR_REQUIRED - referredCount })}
               </div>)}
           </>)}
+
+
+      </div>
+
+    </div>);
+}
+function TitanPurchaseSection() {
+    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
+    const t = (0, useT_1.useT)();
+    const [loading, setLoading] = (0, react_1.useState)(false);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
+    const bal = kingdom?.usdtBalance ?? 0;
+    const COST = 0.1;
+    const canAfford = bal >= COST;
+    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 4000); }
+    async function buy() {
+        setLoading(true);
+        try {
+            const r = await client_1.api.post('/kingdom/buy-titan');
+            await refresh();
+            window.dispatchEvent(new Event('usdt-balance-refresh'));
+            show(`⚔️ Titan הצטרף לצבאך! סה"כ: ${r.titanCount} Titans`);
+        }
+        catch (e) {
+            show('❌ ' + (e.response?.data?.message || t('error')), false);
+        }
+        finally {
+            setLoading(false);
+        }
+    }
+    return (<div style={{ marginTop: 20, paddingBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#e74c3c', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(231,76,60,0.15)' }}>
+        ⚔️ גיבור מיוחד — Titan
+      </div>
+      <div style={{ background: 'linear-gradient(135deg,rgba(231,76,60,0.1),rgba(120,30,20,0.05))', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 14, padding: 14 }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#7b1515,#c0392b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, flexShrink: 0 }}>⚔️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#e74c3c' }}>Titan</div>
+            <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>גיבור אגדי — הלוחם החזק ביותר</div>
+            <div style={{ display: 'flex', gap: 14, marginTop: 6, fontSize: 12, fontWeight: 700 }}>
+              <span style={{ color: '#e74c3c' }}>⚔️ 600</span>
+              <span style={{ color: '#3498db' }}>🛡️ 450</span>
+              <span style={{ color: '#a0845a' }}>🍞 20/שעה</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 12, color: '#a0845a' }}>
+            עלות: <strong style={{ color: canAfford ? '#27ae60' : '#e74c3c' }}>0.1 USDT</strong>
+            {' '}· יתרה: <strong style={{ color: '#27ae60' }}>${bal.toFixed(4)}</strong>
+          </div>
+          {!canAfford && <div style={{ fontSize: 10, color: '#e74c3c' }}>יתרה לא מספיקה</div>}
+        </div>
+        <div style={{ fontSize: 10, color: '#666', marginBottom: 10 }}>
+          כל רכישה מוסיפה 1 Titan · ניתן לרכוש מספר פעמים · תשלום מיתרת USDT
+        </div>
+        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
+        <button onClick={buy} disabled={loading || !canAfford} style={{ width: '100%', padding: '11px', borderRadius: 10, background: canAfford && !loading ? 'linear-gradient(135deg,#7b1515,#c0392b)' : 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.4)', color: canAfford ? '#fff' : '#666', fontWeight: 800, fontSize: 13, cursor: !canAfford || loading ? 'not-allowed' : 'pointer', opacity: !canAfford || loading ? 0.6 : 1 }}>
+          {loading ? '⏳ מוסיף לתור אימון...' : `⚔️ רכוש Titan — 0.1 USDT (אימון 10 דק׳)`}
+        </button>
       </div>
     </div>);
 }

@@ -47,10 +47,24 @@ interface GameState {
     productionRates: Record<string, number>;
     isLoading: boolean;
     activeScreen: 'home' | 'repair' | 'army' | 'attack' | 'alliance' | 'referral' | 'shop' | 'leaderboard' | 'quests' | 'worldmap';
+    marchingSquads: Record<string, Record<string, number>>;
+    marchMeta: Record<string, {
+        squad?: Record<string, number>;
+        heroType?: string;
+        endsAt: number;
+    }>;
+    pendingBattleReport: any | null;
+    pendingError: string | null;
     setToken: (token: string) => void;
     setScreen: (screen: GameState['activeScreen']) => void;
     loadKingdom: () => Promise<void>;
     refresh: () => Promise<void>;
+    addMarchingSquad: (kingdomId: string, squad: Record<string, number> | undefined, heroType: string | undefined, endsAt: number) => void;
+    removeMarchingSquad: (kingdomId: string) => void;
+    setPendingBattleReport: (report: any) => void;
+    clearPendingBattleReport: () => void;
+    setPendingError: (msg: string) => void;
+    clearPendingError: () => void;
 }
 export declare const useGameStore: import("zustand").UseBoundStore<import("zustand").StoreApi<GameState>>;
 export {};

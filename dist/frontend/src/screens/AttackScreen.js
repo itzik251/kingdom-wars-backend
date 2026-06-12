@@ -8,26 +8,43 @@ const client_1 = require("../api/client");
 const KingdomProfileSheet_1 = require("../components/KingdomProfileSheet");
 const useT_1 = require("../i18n/useT");
 const KINGDOM_AVATARS = ['🏰', '🗺️', '⚔️', '🏯', '🛡️', '👑', '🌋', '🏔️', '🗡️', '⚡'];
+const runningMarches = new Set();
 function AttackScreen() {
-    const { refresh, kingdom } = (0, gameStore_1.useGameStore)();
+    const { refresh, kingdom, addMarchingSquad, removeMarchingSquad, marchingSquads, setPendingBattleReport, setPendingError } = (0, gameStore_1.useGameStore)();
+    const marchMeta = (0, gameStore_1.useGameStore)(s => s.marchMeta);
     const attackBoostActive = !!(kingdom?.attackSpeedBoostUntil &&
         new Date() < new Date(kingdom.attackSpeedBoostUntil));
     const [targets, setTargets] = (0, react_1.useState)([]);
     const [loading, setLoading] = (0, react_1.useState)(true);
-    const [attacking, setAttacking] = (0, react_1.useState)(null);
-    const [marchCountdown, setMarchCountdown] = (0, react_1.useState)(0);
-    const [report, setReport] = (0, react_1.useState)(null);
-    const [showBattle, setShowBattle] = (0, react_1.useState)(false);
+    const [marches, setMarches] = (0, react_1.useState)({});
     const [profileId, setProfileId] = (0, react_1.useState)(null);
     const [history, setHistory] = (0, react_1.useState)([]);
     const [showHistory, setShowHistory] = (0, react_1.useState)(false);
     const t = (0, useT_1.useT)();
-    const cancelMarchRef = (0, react_1.useRef)(false);
+    const cancelRefs = (0, react_1.useRef)({});
+    (0, react_1.useEffect)(() => {
+        if (Object.keys(marchMeta).length === 0) {
+            setMarches({});
+            return;
+        }
+        const snap = { ...marchMeta };
+        const tick = () => {
+            const n = Date.now();
+            setMarches(Object.fromEntries(Object.entries(snap).map(([k, m]) => [k, Math.max(0, Math.ceil((m.endsAt - n) / 1000))])));
+        };
+        tick();
+        const id = setInterval(tick, 500);
+        return () => clearInterval(id);
+    }, [marchMeta]);
     (0, react_1.useEffect)(() => {
         loadTargets();
         loadHistory();
-        cancelMarchRef.current = false;
-        return () => { cancelMarchRef.current = true; };
+        Object.entries(marchMeta).forEach(([kId, meta]) => {
+            if (runningMarches.has(kId))
+                return;
+            cancelRefs.current[kId] = false;
+            runCountdownAndAttack(kId, meta.squad, meta.heroType, meta.endsAt);
+        });
     }, []);
     async function loadHistory() {
         try {
@@ -38,56 +55,60 @@ function AttackScreen() {
     async function loadTargets() {
         setLoading(true);
         try {
-            const data = await client_1.api.get('/combat/targets');
-            setTargets(data);
+            setTargets(await client_1.api.get('/combat/targets'));
         }
         finally {
             setLoading(false);
         }
     }
-    async function attack(profile) {
-        if (attacking)
+    async function runCountdownAndAttack(kingdomId, squad, heroType, endsAt) {
+        if (runningMarches.has(kingdomId))
             return;
-        setAttacking(profile.id);
-        setReport(null);
-        cancelMarchRef.current = false;
+        runningMarches.add(kingdomId);
+        const removeMarch = () => {
+            runningMarches.delete(kingdomId);
+            removeMarchingSquad(kingdomId);
+            delete cancelRefs.current[kingdomId];
+        };
         try {
-            const baseMarch = profile.marchSeconds || 5;
-            const marchSecs = attackBoostActive ? Math.max(1, Math.ceil(baseMarch / 2)) : baseMarch;
-            setMarchCountdown(marchSecs);
-            await new Promise((res, rej) => {
-                let remaining = marchSecs;
-                const tick = setInterval(() => {
-                    if (cancelMarchRef.current) {
-                        clearInterval(tick);
-                        rej(new Error('CANCELLED'));
-                        return;
-                    }
-                    remaining -= 1;
-                    setMarchCountdown(remaining);
-                    if (remaining <= 0) {
-                        clearInterval(tick);
-                        res();
-                    }
-                }, 1000);
-            });
-            setMarchCountdown(0);
-            const result = await client_1.api.post('/combat/attack', { defenderKingdomId: profile.id });
+            if (Date.now() < endsAt) {
+                await new Promise((res, rej) => {
+                    const tick = setInterval(() => {
+                        if (cancelRefs.current[kingdomId]) {
+                            clearInterval(tick);
+                            rej(new Error('CANCELLED'));
+                            return;
+                        }
+                        if (Date.now() >= endsAt) {
+                            clearInterval(tick);
+                            res();
+                        }
+                    }, 500);
+                });
+            }
+            const result = await client_1.api.post('/combat/attack', { defenderKingdomId: kingdomId, heroType, squad });
+            removeMarch();
             setProfileId(null);
-            setReport(result);
-            setShowBattle(true);
+            setPendingBattleReport(result);
             await refresh();
-            setTargets(prev => prev.filter(t => t.id !== profile.id));
+            setTargets(prev => prev.filter(t => t.id !== kingdomId));
         }
         catch (e) {
+            removeMarch();
             if (e?.message !== 'CANCELLED') {
-                alert(e.response?.data?.message || t('error'));
+                setPendingError(e?.response?.data?.message || t('error'));
             }
         }
-        finally {
-            setAttacking(null);
-            setMarchCountdown(0);
-        }
+    }
+    async function attack(profile, squadOptions) {
+        if (runningMarches.has(profile.id))
+            return;
+        const baseMarch = profile.marchSeconds || 5;
+        const marchSecs = attackBoostActive ? Math.max(1, Math.ceil(baseMarch / 2)) : baseMarch;
+        const endsAt = Date.now() + marchSecs * 1000;
+        cancelRefs.current[profile.id] = false;
+        addMarchingSquad(profile.id, squadOptions?.squad, squadOptions?.heroType, endsAt);
+        runCountdownAndAttack(profile.id, squadOptions?.squad, squadOptions?.heroType, endsAt);
     }
     return (<div style={{ background: 'linear-gradient(180deg,#0a0a1a 0%,#0d1529 100%)', minHeight: '100vh', paddingBottom: 130 }}>
 
@@ -112,90 +133,9 @@ function AttackScreen() {
           </div>
         </div>)}
 
-      {showBattle && report && (<div style={{
-                position: 'fixed', inset: 0, zIndex: 100,
-                background: 'rgba(0,0,0,0.92)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: 16, padding: 24,
-            }}>
-          <div style={{ fontSize: 64, animation: 'pulse 0.5s infinite', textAlign: 'center' }}>
-            {report.attackerWins ? '🏆' : '💀'}
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: report.attackerWins ? '#f4d03f' : '#e74c3c' }}>
-            {report.attackerWins ? t('battle_win') : t('battle_loss')}
-          </div>
+      
 
-          {report.attackerWins && (report.winStreak ?? 0) >= 2 && (<div style={{ background: 'rgba(244,208,63,0.15)', border: '1px solid #f4d03f', borderRadius: 20, padding: '5px 16px', color: '#f4d03f', fontWeight: 700, fontSize: 14, animation: 'pulse-glow 2s infinite' }}>
-              {t('win_streak', { n: report.winStreak ?? 0 })}
-              {(report.streakBonus ?? 0) > 0 && <span> · +{(0, format_1.fmt)(report.streakBonus)} 💰</span>}
-            </div>)}
-
-          <div style={{ display: 'flex', gap: 24, alignItems: 'center', fontSize: 15 }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#f4d03f', fontWeight: 700, fontSize: 20 }}>⚔️ {report.attackerPower}</div>
-              <div style={{ color: '#a0845a', fontSize: 12 }}>{t('your_power')}</div>
-            </div>
-            <div style={{ fontSize: 20, color: '#6b3a00' }}>VS</div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#e74c3c', fontWeight: 700, fontSize: 20 }}>🛡️ {report.defenderPower}</div>
-              <div style={{ color: '#a0845a', fontSize: 12 }}>{t('defender_power')}</div>
-            </div>
-          </div>
-
-          {report.attackerWins && (<div style={{
-                    background: 'rgba(244,208,63,0.1)', border: '1px solid rgba(244,208,63,0.3)',
-                    borderRadius: 12, padding: '14px 28px', textAlign: 'center',
-                }}>
-              <div style={{ fontSize: 13, color: '#a0845a', marginBottom: 8 }}>{t('loot_label')}</div>
-              <div style={{ display: 'flex', gap: 16, fontSize: 16, fontWeight: 700, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <span>💰 {(0, format_1.fmt)(report.loot.gold)}</span>
-                <span>🪵 {(0, format_1.fmt)(report.loot.wood)}</span>
-                <span>🪨 {(0, format_1.fmt)(report.loot.stone)}</span>
-                {(report.loot.usdt ?? 0) > 0 && (<span style={{ color: '#27ae60' }}>💵 {report.loot.usdt.toFixed(4)} USDT</span>)}
-              </div>
-            </div>)}
-
-          
-          {report.attackerLosses && Object.values(report.attackerLosses).some(v => v > 0) && (<div style={{ background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', width: '100%', maxWidth: 360 }}>
-              <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 5 }}>⚔️ {t('your_losses')}</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', fontSize: 12 }}>
-                {Object.entries(report.attackerLosses).filter(([, v]) => v > 0).map(([type, v]) => (<span key={type} style={{ color: '#e74c3c' }}>-{(0, format_1.fmt)(v)} {t('u_' + type)}</span>))}
-              </div>
-            </div>)}
-
-          
-          {report.defenderLosses && Object.values(report.defenderLosses).some(v => v > 0) && (<div style={{ background: 'rgba(39,174,96,0.08)', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', width: '100%', maxWidth: 360 }}>
-              <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 5 }}>🛡️ {t('enemy_losses')}</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', fontSize: 12 }}>
-                {Object.entries(report.defenderLosses).filter(([, v]) => v > 0).map(([type, v]) => (<span key={type} style={{ color: '#27ae60' }}>-{(0, format_1.fmt)(v)} {t('u_' + type)}</span>))}
-              </div>
-            </div>)}
-
-          {report.buildingDamaged && (<div style={{ background: 'rgba(230,126,34,0.12)', border: '1px solid rgba(230,126,34,0.4)', borderRadius: 12, padding: '12px 20px', textAlign: 'center', color: '#e67e22', fontWeight: 700, fontSize: 14 }}>
-              💥 {t('building_damaged', { name: t('b_' + report.buildingDamaged.type), n: report.buildingDamaged.newLevel })}
-            </div>)}
-
-          <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
-            <button className="btn btn-gold" style={{ padding: '12px 24px', fontSize: 15 }} onClick={() => { setReport(null); setShowBattle(false); loadTargets(); }}>
-              {t('attack_again')}
-            </button>
-            {report.attackerWins && (<button className="btn btn-green" style={{ padding: '12px 20px', fontSize: 14 }} onClick={() => {
-                    const tg = window.Telegram?.WebApp;
-                    const loot = `💰${(0, format_1.fmt)(report.loot.gold)} 🪵${(0, format_1.fmt)(report.loot.wood)} 🪨${(0, format_1.fmt)(report.loot.stone)}`;
-                    const text = `⚔️ I won a battle in Kingdom Wars!\n🏆 Loot: ${loot}\n💪 Power: ${report.attackerPower} vs ${report.defenderPower}\n\n🎮 Join me!`;
-                    if (tg?.openTelegramLink) {
-                        tg.openTelegramLink(`https://t.me/share/url?url=https://t.me/Kingdomw_bot&text=${encodeURIComponent(text)}`);
-                    }
-                }}>
-                {t('battle_share')}
-              </button>)}
-            <button className="btn btn-ghost" style={{ padding: '12px 24px', fontSize: 15 }} onClick={() => { setReport(null); setShowBattle(false); }}>
-              {t('back_home')}
-            </button>
-          </div>
-        </div>)}
-
-      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={attacking === profileId} marchCountdown={marchCountdown} onClose={() => setProfileId(null)} onAttack={attack}/>)}
+      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={profileId !== null && marches[profileId] !== undefined} marchCountdown={profileId !== null ? (marches[profileId] ?? 0) : 0} sentSquad={profileId !== null ? marchingSquads[profileId] : undefined} onClose={() => setProfileId(null)} onAttack={attack}/>)}
 
       <div style={{ padding: '16px', textAlign: 'center', background: 'rgba(0,0,0,0.4)' }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: '#e74c3c' }}>{t('attack_title')}</div>
@@ -230,11 +170,11 @@ function AttackScreen() {
                 return (<div key={tgt.id} onClick={() => setProfileId(tgt.id)} style={{
                         position: 'absolute', left: `${x}%`, top: `${y}%`,
                         display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        cursor: 'pointer', transform: attacking === tgt.id ? 'scale(0.9)' : 'scale(1)',
+                        cursor: 'pointer', transform: marches[tgt.id] !== undefined ? 'scale(0.9)' : 'scale(1)',
                         transition: 'transform 0.15s',
                     }}>
                     <div style={{ fontSize: 32, filter: 'drop-shadow(0 0 6px rgba(255,100,100,0.6))' }}>
-                      {attacking === tgt.id ? '💥' : avatar}
+                      {marches[tgt.id] !== undefined ? '💥' : avatar}
                     </div>
                     <div style={{ fontSize: 9, color: '#f4d03f', fontWeight: 700, background: 'rgba(0,0,0,0.7)', borderRadius: 4, padding: '1px 5px', marginTop: 2, whiteSpace: 'nowrap' }}>
                       {(tgt.user?.firstName || tgt.name).substring(0, 8)}
@@ -274,15 +214,15 @@ function AttackScreen() {
                   </div>
                 </div>
                 <button onClick={() => setProfileId(tgt.id)} style={{
-                    background: attacking === tgt.id
+                    background: marches[tgt.id] !== undefined
                         ? 'linear-gradient(135deg,#b8860b,#f4d03f)'
                         : 'linear-gradient(135deg,#c0392b,#e74c3c)',
                     border: 'none', borderRadius: 10, padding: '10px 16px',
-                    color: attacking === tgt.id ? '#000' : 'white',
+                    color: marches[tgt.id] !== undefined ? '#000' : 'white',
                     fontWeight: 700, fontSize: 14, cursor: 'pointer',
                     boxShadow: '0 3px 10px rgba(231,76,60,0.4)',
                 }}>
-                  {attacking === tgt.id ? `⚔️ ${marchCountdown}s` : t('check_btn')}
+                  {marches[tgt.id] !== undefined ? `⚔️ ${marches[tgt.id]}s` : t('check_btn')}
                 </button>
               </div>))}
           </div>

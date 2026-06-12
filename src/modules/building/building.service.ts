@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Building, BuildingType } from './building.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import {
@@ -17,14 +17,17 @@ export class BuildingService {
   constructor(
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
+    @InjectDataSource() private dataSource: DataSource,
   ) {}
 
   async upgradeBuilding(kingdomId: string, buildingType: BuildingType, isVip = false, buildingId?: string) {
+    // ── Wrap in DB transaction to prevent resource deduction without upgrade ─
+    return this.dataSource.transaction(async (manager) => {
     const [building, kingdom] = await Promise.all([
       buildingId
-        ? this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } })
-        : this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: buildingType } }),
-      this.kingdomRepo.findOne({ where: { id: kingdomId } }),
+        ? manager.findOne(Building, { where: { id: buildingId, kingdom: { id: kingdomId } } })
+        : manager.findOne(Building, { where: { kingdom: { id: kingdomId }, type: buildingType } }),
+      manager.findOne(Kingdom, { where: { id: kingdomId } }),
     ]);
 
     if (!building) throw new BadRequestException('Building not found');
@@ -37,18 +40,30 @@ export class BuildingService {
     if (kingdom.wood < cost.wood) throw new BadRequestException('Not enough wood');
     if (kingdom.stone < cost.stone) throw new BadRequestException('Not enough stone');
 
-    // Deduct cost
-    kingdom.gold  -= cost.gold;
-    kingdom.wood  -= cost.wood;
-    kingdom.stone -= cost.stone;
-    await this.kingdomRepo.save(kingdom);
+    // Atomic resource deduction using UPDATE WHERE to prevent race condition
+    const deductResult = await manager
+      .createQueryBuilder()
+      .update(Kingdom)
+      .set({
+        gold:  () => `gold - ${cost.gold}`,
+        wood:  () => `wood - ${cost.wood}`,
+        stone: () => `stone - ${cost.stone}`,
+      })
+      .where('id = :id AND gold >= :g AND wood >= :w AND stone >= :s', {
+        id: kingdomId, g: cost.gold, w: cost.wood, s: cost.stone,
+      })
+      .execute();
+
+    if (!deductResult.affected || deductResult.affected === 0) {
+      throw new BadRequestException('Not enough resources');
+    }
 
     // Start upgrade timer
     let buildTime = this.getBuildTime(building.type as BuildingType, building.level);
     if (isVip) buildTime = Math.floor(buildTime * (1 - VIP_BUILD_TIME_REDUCTION));
 
     building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
-    await this.buildingRepo.save(building);
+    await manager.save(Building, building);
 
     return {
       building,
@@ -56,6 +71,7 @@ export class BuildingService {
       upgradeEndsAt: building.upgradeEndsAt,
       durationSeconds: buildTime,
     };
+    }); // end transaction
   }
 
   async speedUpUpgrade(kingdomId: string, buildingType: BuildingType, buildingId?: string) {
@@ -78,7 +94,7 @@ export class BuildingService {
     building.upgradeEndsAt = null;
     await Promise.all([this.kingdomRepo.save(kingdom), this.buildingRepo.save(building)]);
 
-    // Town Hall level-up must expand storage caps (same logic as completeBuildingUpgrades)
+    // Expand storage caps on level-up
     if (building.type === BuildingType.TOWN_HALL) {
       const mult = 1 + (building.level - 1) * 0.3;
       await this.kingdomRepo.update({ id: kingdomId }, {
@@ -87,6 +103,15 @@ export class BuildingService {
         maxStone: Math.floor(3000 * mult),
         maxFood:  Math.floor(2000 * mult),
       });
+    } else {
+      const STORAGE_BUMP: Partial<Record<BuildingType, { field: string; perLevel: number }>> = {
+        [BuildingType.GOLD_MINE]:    { field: 'maxGold',  perLevel: 300 },
+        [BuildingType.LUMBER_MILL]:  { field: 'maxWood',  perLevel: 250 },
+        [BuildingType.STONE_QUARRY]: { field: 'maxStone', perLevel: 200 },
+        [BuildingType.FARM]:         { field: 'maxFood',  perLevel: 150 },
+      };
+      const bump = STORAGE_BUMP[building.type as BuildingType];
+      if (bump) await this.kingdomRepo.increment({ id: kingdomId }, bump.field, bump.perLevel);
     }
 
     return { gemCost, newLevel: building.level };

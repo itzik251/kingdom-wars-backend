@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
+import { Unit, UnitType } from '../units/unit.entity';
 
 /**
  * Recurring referral rewards:
@@ -33,6 +34,7 @@ export class ReferralService {
   constructor(
     @InjectRepository(User)    private userRepo: Repository<User>,
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
+    @InjectRepository(Unit)    private unitRepo: Repository<Unit>,
   ) {}
 
   private async getActiveReferralCount(userId: string): Promise<number> {
@@ -46,9 +48,47 @@ export class ReferralService {
     return result;
   }
 
+  private async getTotalReferralCount(userId: string): Promise<number> {
+    // All referred users, even those who haven't played yet (score = 0)
+    const result = await this.userRepo
+      .createQueryBuilder('u')
+      .innerJoin('u.referredBy', 'ref')
+      .where('ref.id = :userId', { userId })
+      .getCount();
+    return result;
+  }
+
+  private async autoGrantReferralHeroes(userId: string, referredCount: number) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: userId } } });
+    if (!kingdom) return;
+    const granted = kingdom.ragnarHeroGrantedCount ?? 0;
+    const shouldGrant = Math.floor(referredCount / 10);
+    const toGrant = shouldGrant - granted;
+    if (toGrant <= 0) return;
+
+    let ragnar = await this.unitRepo.findOne({
+      where: { kingdom: { id: kingdom.id }, type: UnitType.RAGNAR },
+    });
+    if (!ragnar) {
+      ragnar = this.unitRepo.create({ kingdom: { id: kingdom.id } as any, type: UnitType.RAGNAR, count: toGrant, trainingCount: 0, trainingEndsAt: null });
+    } else {
+      ragnar.count += toGrant;
+    }
+    await this.unitRepo.save(ragnar);
+    kingdom.ragnarHeroGrantedCount = shouldGrant;
+    await this.kingdomRepo.save(kingdom);
+  }
+
   async getStats(userId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
-    const referredCount = await this.getActiveReferralCount(userId);
+    const [referredCount, totalReferredCount] = await Promise.all([
+      this.getActiveReferralCount(userId),
+      this.getTotalReferralCount(userId),
+    ]);
+
+    // Auto-grant Ragnar hero at every 10 referrals (no claim needed)
+    await this.autoGrantReferralHeroes(userId, referredCount);
+
     const claimedCount = user.referralClaimedCount ?? 0;
 
     // Pending rewards since last claim
@@ -66,7 +106,8 @@ export class ReferralService {
     return {
       referralCode: user.referralCode,
       link,
-      referredCount,
+      referredCount,       // active (score > 0) — used for rewards
+      totalReferredCount,  // all referred including inactive — shown in UI
       claimedCount,
       pendingRewards: pending,
       hasPending: pending.gems > 0 || pending.skins > 0 || pending.vipDays > 0,
@@ -119,6 +160,25 @@ export class ReferralService {
     }
 
     await this.kingdomRepo.save(kingdom);
+
+    // For each skin earned → add 1 Ragnar hero unit (referral hero unlock)
+    if (skins > 0) {
+      let ragnar = await this.unitRepo.findOne({
+        where: { kingdom: { id: kingdom.id }, type: UnitType.RAGNAR },
+      });
+      if (!ragnar) {
+        ragnar = this.unitRepo.create({
+          kingdom: { id: kingdom.id } as any,
+          type: UnitType.RAGNAR,
+          count: skins,
+          trainingCount: 0,
+          trainingEndsAt: null,
+        });
+      } else {
+        ragnar.count += skins;
+      }
+      await this.unitRepo.save(ragnar);
+    }
 
     return {
       claimed: true,

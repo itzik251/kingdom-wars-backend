@@ -19,6 +19,8 @@ import { AdsModule } from './modules/ads/ads.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CryptoBotFullModule } from './modules/cryptobot/cryptobot.full.module';
+import { AntiBotModule } from './modules/antibot/antibot.module';
+import { DevModule } from './modules/dev/dev.module';
 
 @Module({
   imports: [
@@ -42,9 +44,10 @@ import { CryptoBotFullModule } from './modules/cryptobot/cryptobot.full.module';
           type: 'postgres',
           url: config.get('DATABASE_URL'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: true,
+          synchronize: false,
           logging: false,
           ssl: { rejectUnauthorized: false },
+          extra: { max: 15, idleTimeoutMillis: 30000 },
         };
       },
     }),
@@ -67,6 +70,8 @@ import { CryptoBotFullModule } from './modules/cryptobot/cryptobot.full.module';
     TelegramModule,
     AdminModule,
     CryptoBotFullModule,
+    AntiBotModule,
+    DevModule,
   ],
 })
 export class AppModule {}

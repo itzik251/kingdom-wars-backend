@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.useAdsGram = useAdsGram;
 const react_1 = require("react");
 const BLOCK_IDS = {
-    reward: '34207',
-    interstitial: 'int-34204',
+    reward: '34710',
+    interstitial: 'int-34711',
 };
 function useAdsGram(type, onReward, onError) {
     const controllerRef = (0, react_1.useRef)(null);

@@ -184,6 +184,7 @@ async function doLogin() {
     loadUsers();
     loadWithdrawals();
     loadWalletBalance();
+    startAutoRefresh();
   } catch(e) { document.getElementById('loginError').textContent = '❌ שגיאת חיבור'; }
 }
 
@@ -275,8 +276,8 @@ function renderStats(data) {
     <div class="stat-card"><div class="val" style="color:#27ae60">$${data.totalUsdtInGame}</div><div class="lbl">💵 USDT בשחקנים</div></div>
     <div class="stat-card"><div class="val" style="color:#f4d03f">${data.vipCount || 0}</div><div class="lbl">👑 VIP פעילים</div></div>
     <div class="stat-card"><div class="val">${data.totalKingdoms}</div><div class="lbl">ממלכות</div></div>
-    <div class="stat-card" id="walletBalanceCard"><div class="val" style="color:#0088cc" id="walletUsdtVal">...</div><div class="lbl">💳 CryptoBot USDT</div></div>
-    <div class="stat-card"><div class="val" style="color:#5bc8f5" id="walletTonVal">...</div><div class="lbl">💎 CryptoBot TON</div></div>
+    <div class="stat-card" id="walletBalanceCard"><div class="val" style="color:#27ae60" id="walletUsdtVal">...</div><div class="lbl">💵 USDT על TON</div></div>
+    <div class="stat-card"><div class="val" style="color:#5bc8f5" id="walletTonVal">...</div><div class="lbl">💎 TON Balance</div></div>
   `;
   // Update wallet display
   if (data.gameWalletAddress !== undefined) {
@@ -335,7 +336,10 @@ function renderUsers(users) {
       <td style="color:${parseFloat(u.usdtBalance) > 0 ? '#27ae60' : '#555'}">$${u.usdtBalance}</td>
       <td>${vipBadge}</td>
       <td>${u.termsAccepted ? '<span class="badge badge-green">✅</span>' : '<span class="badge badge-red">❌</span>'}</td>
-      <td><span style="color:#27ae60">${u.referralsActive}</span>/<span style="color:#666">${u.referralsTotal}</span></td>
+      <td>
+        <span style="color:#27ae60">${u.referralsActive}</span><span style="color:#555">/${u.referralsTotal}</span>
+        ${u.referralsTotal > 0 ? `<br><button class="btn-sm" style="font-size:9px;padding:2px 6px;background:#0d2233;color:#3498db;border:1px solid #3498db;margin-top:2px" onclick="toggleReferrals('${u.telegramId}')">👥 פרט</button>` : ''}
+      </td>
       <td style="color:#555;font-size:11px">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('he') : '—'}</td>
       <td>
         <div class="actions">
@@ -358,8 +362,43 @@ function renderUsers(users) {
           <button class="btn-sm" style="background:#1a0a0a;color:#e74c3c;border:1px solid #e74c3c" onclick="deleteUser('${u.telegramId}','${u.name||'?'}')">🗑️ מחק</button>
         </div>
       </td>
+    </tr>
+    <tr id="ref_row_${u.telegramId}" style="display:none">
+      <td colspan="15" style="background:#0a1a2e;padding:0">
+        <div id="ref_content_${u.telegramId}" style="padding:10px 16px"></div>
+      </td>
     </tr>`;
   }).join('');
+}
+
+async function toggleReferrals(telegramId) {
+  const row = document.getElementById('ref_row_' + telegramId);
+  const content = document.getElementById('ref_content_' + telegramId);
+  if (row.style.display !== 'none') { row.style.display = 'none'; return; }
+  content.innerHTML = '<span style="color:#555;font-size:12px">טוען...</span>';
+  row.style.display = 'table-row';
+  try {
+    const r = await fetch(API + '/users/' + telegramId + '/referrals', { headers: h() });
+    const refs = await r.json();
+    if (!refs.length) { content.innerHTML = '<span style="color:#555;font-size:12px">אין הפניות</span>'; return; }
+    content.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:#555">
+          <th style="text-align:right;padding:4px 8px">שם</th>
+          <th style="text-align:right;padding:4px 8px">Telegram ID</th>
+          <th style="text-align:right;padding:4px 8px">הצטרף</th>
+          <th style="text-align:right;padding:4px 8px">ניקוד</th>
+          <th style="text-align:right;padding:4px 8px">סטטוס</th>
+        </tr></thead>
+        <tbody>${refs.map(u => `<tr style="border-top:1px solid #1a2a3a">
+          <td style="padding:5px 8px;color:#e0e0e0">${u.username || '?'}</td>
+          <td style="padding:5px 8px;color:#555">${u.telegramId}</td>
+          <td style="padding:5px 8px;color:#555">${new Date(u.joinedAt).toLocaleDateString('he')}</td>
+          <td style="padding:5px 8px"><strong style="color:${u.score>0?'#f4d03f':'#555'}">${u.score.toLocaleString()}</strong></td>
+          <td style="padding:5px 8px">${u.active ? '<span style="color:#27ae60">✅ פעיל</span>' : '<span style="color:#e67e22">⏳ לא פעיל</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  } catch(e) { content.innerHTML = '<span style="color:#e74c3c">שגיאה בטעינה</span>'; }
 }
 
 function showToast(msg) {
@@ -451,19 +490,36 @@ async function loadWalletBalance() {
     const tonEl  = document.getElementById('walletTonVal');
     if (!usdtEl) return;
     if (d.error) { usdtEl.textContent = '—'; if (tonEl) tonEl.textContent = '—'; return; }
-    usdtEl.textContent = '$' + (d.usdtBalance ?? 0).toFixed(2) + ' USDT';
-    if (tonEl) tonEl.textContent = (d.tonBalance ?? 0).toFixed(3) + ' TON';
+    // Show chain wallet balances (actual TON wallet), not CryptoBot
+    const usdt = d.chainUsdtBalance ?? d.usdtBalance ?? 0;
+    const ton  = d.chainTonBalance  ?? d.tonBalance  ?? 0;
+    usdtEl.textContent = '$' + parseFloat(usdt).toFixed(4) + ' USDT';
+    if (tonEl) tonEl.textContent = parseFloat(ton).toFixed(3) + ' TON';
   } catch {}
 }
 
 function logout() {
   SECRET = '';
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('dashboard').style.display = 'none';
 }
 
-// Auto-refresh every 60 seconds
-setInterval(() => { if (SECRET) loadAll(); }, 60000);
+// Auto-refresh every 60 seconds — data only, no page reload
+let autoRefreshTimer = null;
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(async () => {
+    if (!SECRET) return;
+    try {
+      // Refresh stats + wallet balance silently (no spinner)
+      const r = await fetch(API + '/stats', { headers: h() });
+      if (r.ok) { const data = await r.json(); renderStats(data); }
+      loadWalletBalance();
+      document.getElementById('lastRefresh').textContent = 'עודכן: ' + new Date().toLocaleTimeString('he');
+    } catch {}
+  }, 60000);
+}
 </script>
 </body>
 </html>

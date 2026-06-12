@@ -7,7 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building } from '../building/building.entity';
-import { Unit } from '../units/unit.entity';
+import { Unit, UnitType } from '../units/unit.entity';
 import { INITIAL_BUILDINGS, INITIAL_UNITS } from '../../constants/game.constants';
 
 @Injectable()
@@ -24,10 +24,13 @@ export class AuthService {
   // Validate Telegram WebApp initData
   // https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
   validateTelegramData(initData: string): Record<string, string> {
-    // Dev bypass
-    if (this.config.get('NODE_ENV') !== 'production' && initData === 'dev') {
+    // Dev bypass — supports 'dev' or 'dev_1'..'dev_5'
+    if (this.config.get('NODE_ENV') !== 'production' && initData.startsWith('dev')) {
+      const idx = initData === 'dev' ? 1 : (parseInt(initData.replace('dev_', ''), 10) || 1);
+      const names = ['', 'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Iris', 'Jack', 'Kate'];
+      const name = names[idx] || `Dev${idx}`;
       return {
-        user: JSON.stringify({ id: 123456789, username: 'dev_user', first_name: 'Dev' }),
+        user: JSON.stringify({ id: 100000000 + idx, username: `dev_user_${idx}`, first_name: name }),
         auth_date: String(Math.floor(Date.now() / 1000)),
       };
     }
@@ -129,10 +132,10 @@ export class AuthService {
       ),
     );
 
-    // Create unit slots (all at 0)
+    // Create unit slots — knight starts at 1 (free starter hero), others at 0
     await this.unitRepo.save(
       INITIAL_UNITS.map((type) =>
-        this.unitRepo.create({ kingdom, type, count: 0 }),
+        this.unitRepo.create({ kingdom, type, count: type === UnitType.KNIGHT ? 1 : 0 }),
       ),
     );
 

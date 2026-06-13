@@ -7,6 +7,8 @@ import { Unit, UnitType } from '../units/unit.entity';
 import { User } from '../user/user.entity';
 import { EconomyService } from '../economy/economy.service';
 import { NotificationService } from '../notifications/notification.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-log.entity';
 
 @Injectable()
 export class KingdomService {
@@ -17,6 +19,7 @@ export class KingdomService {
     @InjectRepository(User) private userRepo: Repository<User>,
     private economyService: EconomyService,
     private notifService: NotificationService,
+    private auditService: AuditService,
   ) {}
 
   async getKingdomByUser(userId: string) {
@@ -142,6 +145,7 @@ export class KingdomService {
     kingdom.withdrawalPending = kingdom.usdtBalance;
     kingdom.withdrawalStatus = 'pending';
     await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.WITHDRAW, kingdomId, { amount: kingdom.withdrawalPending, wallet: kingdom.withdrawalWallet });
     return { success: true, amount: kingdom.withdrawalPending, wallet: kingdom.withdrawalWallet, status: 'pending' };
   }
 
@@ -168,6 +172,7 @@ export class KingdomService {
     kingdom.shieldUntil = new Date(Date.now() + 24 * 3600 * 1000);
     kingdom.shieldExpiredNotifiedAt = null; // reset so we notify again when this shield expires
     await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.BUY_SHIELD, kingdomId, { gemsSpent: SHIELD_COST, shieldUntil: kingdom.shieldUntil });
     return { shieldUntil: kingdom.shieldUntil };
   }
 
@@ -220,6 +225,7 @@ export class KingdomService {
       throw new BadRequestException('נדרש 0.1 USDT לרכישת Titan');
     kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
     await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.SPEND_USDT, kingdomId, { action: 'buy_titan', usdtSpent: COST, usdtBalance: kingdom.usdtBalance });
     let titan = await this.unitRepo.findOne({ where: { kingdom: { id: kingdomId }, type: UnitType.TITAN } });
     if (!titan)
       titan = this.unitRepo.create({ kingdom: { id: kingdomId } as any, type: UnitType.TITAN, count: 0, trainingCount: 0, woundedCount: 0 });
@@ -239,6 +245,7 @@ export class KingdomService {
       throw new BadRequestException('נדרש 0.5 USDT לרכישת Giant');
     kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
     await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.SPEND_USDT, kingdomId, { action: 'buy_giant', usdtSpent: COST, usdtBalance: kingdom.usdtBalance });
     let giant = await this.unitRepo.findOne({ where: { kingdom: { id: kingdomId }, type: UnitType.GIANT } });
     if (!giant)
       giant = this.unitRepo.create({ kingdom: { id: kingdomId } as any, type: UnitType.GIANT, count: 0, trainingCount: 0, woundedCount: 0 });
@@ -259,6 +266,7 @@ export class KingdomService {
     kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - cost).toFixed(6));
     kingdom.gems = (kingdom.gems || 0) + gems;
     await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.SPEND_USDT, kingdomId, { action: 'buy_gems', usdtSpent: cost, gemsAdded: gems, gems: kingdom.gems });
     return { gemsAdded: gems, gems: kingdom.gems, usdtBalance: kingdom.usdtBalance };
   }
 
@@ -278,6 +286,7 @@ export class KingdomService {
       slot: existingForges,
     });
     await this.buildingRepo.save(forge);
+    this.auditService.log(AuditAction.BUILD, kingdomId, { type: 'gem_forge', usdtSpent: COST, usdtBalance: kingdom.usdtBalance });
     return { id: forge.id, level: forge.level, usdtBalance: kingdom.usdtBalance };
   }
 
@@ -297,6 +306,7 @@ export class KingdomService {
     forge.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
     await this.kingdomRepo.save(kingdom);
     await this.buildingRepo.save(forge);
+    this.auditService.log(AuditAction.UPGRADE, kingdomId, { type: 'gem_forge', buildingId, fromLevel: forge.level, usdtSpent: COST, upgradeEndsAt: forge.upgradeEndsAt });
     return { id: forge.id, level: forge.level, upgradeEndsAt: forge.upgradeEndsAt, usdtBalance: kingdom.usdtBalance };
   }
 
@@ -310,6 +320,7 @@ export class KingdomService {
     kingdom.maxStone = Math.floor(kingdom.maxStone * 1.5);
     kingdom.maxFood = Math.floor(kingdom.maxFood * 1.5);
     await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.EXPAND_STORAGE, kingdomId, { gemsSpent: COST, maxGold: kingdom.maxGold, maxWood: kingdom.maxWood });
     return { maxGold: kingdom.maxGold, maxWood: kingdom.maxWood };
   }
 }

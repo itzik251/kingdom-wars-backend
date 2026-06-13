@@ -7,9 +7,10 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building } from '../building/building.entity';
 import { KingdomModule } from '../kingdom/kingdom.module';
 import { QuestModule } from '../quest/quest.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Unit, Kingdom, Building]), KingdomModule, QuestModule],
+  imports: [TypeOrmModule.forFeature([Unit, Kingdom, Building]), KingdomModule, QuestModule, AuditModule],
   controllers: [UnitsController],
   providers: [UnitsService],
 })

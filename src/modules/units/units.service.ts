@@ -5,6 +5,8 @@ import { Unit, UnitType } from './unit.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { UNIT_STATS } from '../../constants/game.constants';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-log.entity';
 
 @Injectable()
 export class UnitsService {
@@ -12,6 +14,7 @@ export class UnitsService {
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
+    private auditService: AuditService,
   ) {}
 
   async trainUnits(kingdomId: string, unitType: UnitType, amount: number) {
@@ -73,6 +76,16 @@ export class UnitsService {
       unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
     }
     await this.unitRepo.save(unitRow);
+
+    const costType = (stats.requiresVip || stats.requiresReferralHero) ? 'gems' : 'gold';
+    const costAmount = costType === 'gems' ? (stats.gemsCost ?? 0) * amount : stats.goldCost * amount;
+    this.auditService.log(AuditAction.TRAIN_UNITS, kingdomId, {
+      unitType,
+      amount,
+      costType,
+      costAmount,
+      trainingEndsAt: unitRow.trainingEndsAt,
+    });
 
     return { unit: unitRow, trainingEndsAt: unitRow.trainingEndsAt, durationSeconds: trainingSeconds };
   }

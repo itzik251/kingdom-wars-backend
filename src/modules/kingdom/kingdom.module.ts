@@ -8,9 +8,10 @@ import { Unit } from '../units/unit.entity';
 import { User } from '../user/user.entity';
 import { EconomyModule } from '../economy/economy.module';
 import { NotificationModule } from '../notifications/notification.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule],
+  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule, AuditModule],
   controllers: [KingdomController],
   providers: [KingdomService],
   exports: [KingdomService],

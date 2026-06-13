@@ -11,6 +11,8 @@ import {
   MAX_BUILDING_LEVEL,
   VIP_BUILD_TIME_REDUCTION,
 } from '../../constants/game.constants';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-log.entity';
 
 @Injectable()
 export class BuildingService {
@@ -18,6 +20,7 @@ export class BuildingService {
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     @InjectDataSource() private dataSource: DataSource,
+    private auditService: AuditService,
   ) {}
 
   async upgradeBuilding(kingdomId: string, buildingType: BuildingType, isVip = false, buildingId?: string) {
@@ -64,6 +67,16 @@ export class BuildingService {
 
     building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
     await manager.save(Building, building);
+
+    this.auditService.log(AuditAction.UPGRADE, kingdomId, {
+      type: building.type,
+      buildingId: building.id,
+      fromLevel: building.level,
+      toLevel: building.level + 1,
+      cost,
+      upgradeEndsAt: building.upgradeEndsAt,
+      isVip,
+    });
 
     return {
       building,

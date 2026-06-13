@@ -11,6 +11,7 @@ import { NotificationService } from '../notifications/notification.service';
 import { TonService } from '../ton/ton.service';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AntiBotService } from '../antibot/antibot.service';
+import { AuditService } from '../audit/audit.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 
 const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
@@ -27,6 +28,7 @@ export class AdminController {
     private tonService: TonService,
     private cryptoBotService: CryptoBotService,
     private antiBotService: AntiBotService,
+    private auditService: AuditService,
   ) {}
 
   @Get()
@@ -280,6 +282,18 @@ export class AdminController {
     }
 
     return result;
+  }
+
+  @Get('audit-logs')
+  async getAuditLogs(@Headers() headers: any) {
+    this.guard(headers);
+    return this.auditService.getAll(500);
+  }
+
+  @Get('audit-logs/:kingdomId')
+  async getAuditLogsForKingdom(@Headers() headers: any, @Param('kingdomId') kingdomId: string) {
+    this.guard(headers);
+    return this.auditService.getForKingdom(kingdomId, 200);
   }
 
   @Get('withdrawals')

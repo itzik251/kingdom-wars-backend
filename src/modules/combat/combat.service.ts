@@ -7,6 +7,8 @@ import { Building, BuildingType } from '../building/building.entity';
 import { User } from '../user/user.entity';
 import { EconomyService } from '../economy/economy.service';
 import { NotificationService } from '../notifications/notification.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit-log.entity';
 import {
   UNIT_STATS,
   COMBAT_RANDOM_MIN,
@@ -44,6 +46,7 @@ export class CombatService {
     @InjectRepository(User) private userRepo: Repository<User>,
     private economyService: EconomyService,
     private notifService: NotificationService,
+    private auditService: AuditService,
   ) {}
 
   async attack(
@@ -64,13 +67,9 @@ export class CombatService {
     if (!attacker || !defender) throw new BadRequestException('Kingdom not found');
     if (defender.isShielded) throw new BadRequestException('Defender is shielded');
 
-    // Score-based protection — only when BOTH have meaningful scores (≥10)
+    // Anti-snowball protection (disabled — to be replaced with better logic)
     const attackerScore = attacker.score || 0;
     const defenderScore = defender.score || 0;
-    // Anti-snowball: active in production only
-    if (process.env.NODE_ENV === 'production' && attackerScore >= 10 && defenderScore >= 10 && attackerScore > defenderScore * 10) {
-      throw new BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
-    }
 
     // Atomic cooldown check — prevents truly parallel requests (race condition)
     const ATTACK_COOLDOWN_MS = 2_000;
@@ -335,6 +334,16 @@ export class CombatService {
     defender.shieldUntil = new Date(Date.now() + POST_ATTACK_SHIELD_HOURS * 3_600_000);
     attacker.lastAttackAt = new Date();
     await this.kingdomRepo.save([attacker, defender]);
+
+    this.auditService.log(AuditAction.COMBAT, attacker.id, {
+      defenderKingdomId: defender.id,
+      defenderName: defender.name,
+      won: report.attackerWins,
+      loot: report.loot,
+      usdtLooted: report.loot?.usdt ?? 0,
+      attackerLosses: report.attackerLosses,
+      defenderLosses: report.defenderLosses,
+    });
 
     // Notify the DEFENDER's user that they were attacked
     const defenderKingdomFull = await this.kingdomRepo.findOne({ where: { id: defender.id }, relations: ['user'] });

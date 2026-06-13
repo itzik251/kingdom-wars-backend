@@ -132,6 +132,16 @@ const MESSAGES: Record<string, Record<Lang, string>> = {
     pt: '💎 Poucas gemas ({gems} restantes)! Heróis não lutarão sem salário',
     ar: '💎 الجواهر تنفد ({gems} متبقية)! الأبطال لن يقاتلوا بدون راتب',
   },
+  explorer_returned: {
+    en: '🧭 Your explorer returned! {result}',
+    he: '🧭 החוקר שלך חזר! {result}',
+    es: '🧭 ¡Tu explorador regresó! {result}',
+    fr: '🧭 Votre explorateur est revenu! {result}',
+    de: '🧭 Dein Entdecker ist zurück! {result}',
+    ru: '🧭 Ваш исследователь вернулся! {result}',
+    pt: '🧭 Seu explorador voltou! {result}',
+    ar: '🧭 عاد مستكشفك! {result}',
+  },
   negative_production: {
     en: '📉 Production deficit! Your upkeep exceeds food production — upgrade Farms or reduce your army',
     he: '📉 גירעון ייצור! הצריכה עולה על ייצור האוכל — שדרג חוות או צמצם את הצבא',

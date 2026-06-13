@@ -8,9 +8,10 @@ import { Unit } from '../units/unit.entity';
 import { ExplorationService } from './exploration.service';
 import { ExplorationController } from './exploration.controller';
 import { KingdomModule } from '../kingdom/kingdom.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MapNode, ExplorationMission, Kingdom, Building, Unit]), KingdomModule],
+  imports: [TypeOrmModule.forFeature([MapNode, ExplorationMission, Kingdom, Building, Unit]), KingdomModule, NotificationModule],
   providers: [ExplorationService],
   controllers: [ExplorationController],
   exports: [ExplorationService],

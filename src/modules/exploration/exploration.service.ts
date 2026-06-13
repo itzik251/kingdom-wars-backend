@@ -8,6 +8,7 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
 import { UnitType } from '../units/unit.entity';
+import { NotificationService } from '../notifications/notification.service';
 
 // Academy level → max explorers
 function maxExplorers(academyLevel: number): number {
@@ -122,6 +123,7 @@ export class ExplorationService {
     @InjectRepository(Kingdom) private kingdomRepo: Repository<Kingdom>,
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
+    private notificationService: NotificationService,
   ) {}
 
   // ── Ensure map nodes exist for this kingdom ───────────────────────────────
@@ -325,6 +327,22 @@ export class ExplorationService {
     mission.status = MissionStatus.RETURNED;
     mission.discoveredNodeIds = discoveredNodeIds;
     await this.missionRepo.save(mission);
+
+    // Push notification
+    const kingdom2 = await this.kingdomRepo.findOne({ where: { id: mission.kingdomId }, relations: ['user'] });
+    if (kingdom2?.user) {
+      const icons: Record<string, string> = { gold: '💰', wood: '🪵', stone: '🪨', food: '🌾', magic: '🔮', gems: '💎' };
+      let result: string;
+      if (discoveredNodeIds.length === 0) {
+        result = '😔 nothing found this time';
+      } else {
+        const discoveredNodes = await this.nodeRepo.findByIds(discoveredNodeIds);
+        result = discoveredNodes.map(n =>
+          n.type === MapNodeType.HERO ? `🦸 Hero: ${n.heroType}` : `${icons[n.resourceType ?? ''] ?? '📦'} ${n.resourceType}`
+        ).join(', ');
+      }
+      this.notificationService.create(kingdom2.user.id, 'explorer_returned', { result }).catch(() => {});
+    }
   }
 
   // ── Raid a resource node ───────────────────────────────────────────────────

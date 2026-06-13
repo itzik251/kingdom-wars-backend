@@ -46,6 +46,18 @@ export declare class KingdomController {
         wallet: string;
         status: string;
     }>;
+    buildGemForge(req: any): Promise<{
+        id: string;
+        level: number;
+        usdtBalance: number;
+    }>;
+    upgradeGemForge(req: any, body: {
+        buildingId: string;
+    }): Promise<{
+        id: string;
+        newLevel: number;
+        usdtBalance: number;
+    }>;
     buyGems(req: any, body: {
         gems: number;
     }): Promise<{

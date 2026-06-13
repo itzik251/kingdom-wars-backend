@@ -10,7 +10,8 @@ export declare enum BuildingType {
     WALL = "wall",
     WATCH_TOWER = "watch_tower",
     HOSPITAL = "hospital",
-    ARCANE_TOWER = "arcane_tower"
+    ARCANE_TOWER = "arcane_tower",
+    GEM_FORGE = "gem_forge"
 }
 export declare class Building {
     id: string;

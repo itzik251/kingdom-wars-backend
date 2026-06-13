@@ -25,6 +25,7 @@ var BuildingType;
     BuildingType["WATCH_TOWER"] = "watch_tower";
     BuildingType["HOSPITAL"] = "hospital";
     BuildingType["ARCANE_TOWER"] = "arcane_tower";
+    BuildingType["GEM_FORGE"] = "gem_forge";
 })(BuildingType || (exports.BuildingType = BuildingType = {}));
 let Building = class Building {
     get isUpgrading() {

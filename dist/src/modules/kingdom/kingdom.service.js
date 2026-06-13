@@ -247,6 +247,45 @@ let KingdomService = class KingdomService {
         await this.kingdomRepo.save(kingdom);
         return { gemsAdded: gems, gems: kingdom.gems, usdtBalance: kingdom.usdtBalance };
     }
+    async buildGemForge(kingdomId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
+        const existingForges = await this.buildingRepo.count({ where: { kingdom: { id: kingdomId }, type: building_entity_1.BuildingType.GEM_FORGE } });
+        if (existingForges >= 3)
+            throw new common_1.BadRequestException('Max 3 gem mines');
+        const COST = 0.1;
+        if ((kingdom.usdtBalance ?? 0) < COST)
+            throw new common_1.BadRequestException(`נדרש $${COST} USDT`);
+        kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
+        await this.kingdomRepo.save(kingdom);
+        const forge = this.buildingRepo.create({
+            kingdom: { id: kingdomId },
+            type: building_entity_1.BuildingType.GEM_FORGE,
+            level: 1,
+            slot: existingForges,
+        });
+        await this.buildingRepo.save(forge);
+        return { id: forge.id, level: forge.level, usdtBalance: kingdom.usdtBalance };
+    }
+    async upgradeGemForge(kingdomId, buildingId) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
+        const forge = await this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId }, type: building_entity_1.BuildingType.GEM_FORGE } });
+        if (!forge)
+            throw new common_1.BadRequestException('Gem mine not found');
+        if (forge.level >= 10)
+            throw new common_1.BadRequestException('Max level reached');
+        const COST = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
+        if ((kingdom.usdtBalance ?? 0) < COST)
+            throw new common_1.BadRequestException(`נדרש $${COST} USDT`);
+        kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
+        forge.level += 1;
+        await this.kingdomRepo.save(kingdom);
+        await this.buildingRepo.save(forge);
+        return { id: forge.id, newLevel: forge.level, usdtBalance: kingdom.usdtBalance };
+    }
     async expandStorage(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         const COST = 100;

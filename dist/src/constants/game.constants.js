@@ -22,6 +22,7 @@ exports.BUILDING_BASE_COSTS = {
     [building_entity_1.BuildingType.WATCH_TOWER]: { gold: 150, wood: 200, stone: 100 },
     [building_entity_1.BuildingType.HOSPITAL]: { gold: 300, wood: 200, stone: 100 },
     [building_entity_1.BuildingType.ARCANE_TOWER]: { gold: 800, wood: 400, stone: 400 },
+    [building_entity_1.BuildingType.GEM_FORGE]: { gold: 0, wood: 0, stone: 0 },
 };
 exports.UPGRADE_COST_MULTIPLIER = 1.35;
 exports.BUILDING_BASE_TIMES = {
@@ -36,6 +37,7 @@ exports.BUILDING_BASE_TIMES = {
     [building_entity_1.BuildingType.WATCH_TOWER]: 35,
     [building_entity_1.BuildingType.HOSPITAL]: 45,
     [building_entity_1.BuildingType.ARCANE_TOWER]: 120,
+    [building_entity_1.BuildingType.GEM_FORGE]: 0,
 };
 exports.BUILD_TIME_MULTIPLIER = 1.4;
 exports.MAX_BUILDING_LEVEL = 30;

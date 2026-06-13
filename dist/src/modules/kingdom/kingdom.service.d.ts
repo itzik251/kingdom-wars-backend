@@ -72,6 +72,16 @@ export declare class KingdomService {
         gems: number;
         usdtBalance: number;
     }>;
+    buildGemForge(kingdomId: string): Promise<{
+        id: string;
+        level: number;
+        usdtBalance: number;
+    }>;
+    upgradeGemForge(kingdomId: string, buildingId: string): Promise<{
+        id: string;
+        newLevel: number;
+        usdtBalance: number;
+    }>;
     expandStorage(kingdomId: string): Promise<{
         maxGold: number;
         maxWood: number;

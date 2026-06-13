@@ -73,7 +73,9 @@ export class EconomyService {
     const vipBonus = kingdom.isVip ? 0.5 : 0; // VIP = +50% production
     const workerCount = kingdom.workers || 0;
     const workerProductionBonus = 1 + workerCount * 0.04; // +4% per worker
-    const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
+    const academy = buildings.find(b => b.type === BuildingType.ACADEMY && !b.needsRepair);
+    const academyBonus = academy ? academy.level * 0.02 : 0; // +2% per academy level
+    const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus) * workerProductionBonus;
 
     // Worker salary: 5 gold/hour per worker
     const workerSalary = workerCount * 5 * hoursElapsed;
@@ -310,7 +312,9 @@ export class EconomyService {
     const vipBonus = kingdom?.isVip ? 0.5 : 0;
     const workerCount = kingdom?.workers || 0;
     const workerProductionBonus = 1 + workerCount * 0.04;
-    const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
+    const academyInRates = buildings.find((b: Building) => b.type === BuildingType.ACADEMY && !b.needsRepair);
+    const academyBonusInRates = academyInRates ? academyInRates.level * 0.02 : 0;
+    const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonusInRates) * workerProductionBonus;
     const workerSalary = workerCount * 5;
 
     return {

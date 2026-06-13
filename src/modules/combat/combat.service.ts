@@ -165,10 +165,11 @@ export class CombatService {
     const myUnits = await this.unitRepo.find({ where: { kingdom: { id: myKingdomId } } });
 
     const wallLevel = targetBuildings.find(b => b.type === BuildingType.WALL)?.level ?? 0;
+    const watchTowerLevelScout = targetBuildings.find(b => b.type === BuildingType.WATCH_TOWER)?.level ?? 0;
     const myAttackPower = myUnits.reduce((s, u) => s + u.count * (UNIT_STATS[u.type]?.attackPower ?? 0), 0);
     const defPower =
-      targetUnits.reduce((s, u) => s + u.count * (UNIT_STATS[u.type]?.defensePower ?? 0), 0) +
-      wallLevel * WALL_DEFENSE_BONUS_PER_LEVEL;
+      (targetUnits.reduce((s, u) => s + u.count * (UNIT_STATS[u.type]?.defensePower ?? 0), 0) +
+      wallLevel * WALL_DEFENSE_BONUS_PER_LEVEL) * (1 + watchTowerLevelScout * 0.1);
 
     const lootable = {
       gold:  Math.floor(target.gold  * LOOT_PERCENTAGE),
@@ -223,9 +224,13 @@ export class CombatService {
     const arcaneLevel = attackerBuildings.find(b => b.type === BuildingType.ARCANE_TOWER)?.level ?? 0;
     const arcaneMult = 1 + arcaneLevel * 0.1;
 
+    // Watch Tower: +10% defense power multiplier per level
+    const watchTowerLevel = defenderBuildings.find(b => b.type === BuildingType.WATCH_TOWER)?.level ?? 0;
+    const watchTowerMult = 1 + watchTowerLevel * 0.1;
+
     let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * (UNIT_STATS[u.type]?.attackPower ?? 0), 0) * arcaneMult;
     let defensePower =
-      defenderUnits.reduce((sum, u) => sum + u.count * (UNIT_STATS[u.type]?.defensePower ?? 0), 0) + wallBonus;
+      (defenderUnits.reduce((sum, u) => sum + u.count * (UNIT_STATS[u.type]?.defensePower ?? 0), 0) + wallBonus) * watchTowerMult;
 
     attackPower  *= this.random(COMBAT_RANDOM_MIN, COMBAT_RANDOM_MAX);
     defensePower *= this.random(COMBAT_RANDOM_MIN, COMBAT_RANDOM_MAX);

@@ -210,6 +210,30 @@ let AdminController = class AdminController {
         }).catch(() => { });
         return { success: true, type, amount };
     }
+    async giveResourceAll(type, amount, headers) {
+        this.guard(headers);
+        if (!type || !amount || amount <= 0)
+            return { error: 'Invalid params' };
+        const kingdoms = await this.kingdomRepo.find({ relations: ['user'] });
+        let count = 0;
+        for (const kingdom of kingdoms) {
+            if (type === 'gems')
+                kingdom.gems = Math.max(0, (kingdom.gems || 0) + amount);
+            else if (type === 'gold')
+                kingdom.gold = Math.min(kingdom.maxGold, Math.max(0, (kingdom.gold || 0) + amount));
+            else if (type === 'wood')
+                kingdom.wood = Math.min(kingdom.maxWood, Math.max(0, (kingdom.wood || 0) + amount));
+            else if (type === 'stone')
+                kingdom.stone = Math.min(kingdom.maxStone, Math.max(0, (kingdom.stone || 0) + amount));
+            else if (type === 'food')
+                kingdom.food = Math.min(kingdom.maxFood, Math.max(0, (kingdom.food || 0) + amount));
+            else if (type === 'usdt')
+                kingdom.usdtBalance = parseFloat(Math.max(0, (kingdom.usdtBalance || 0) + amount).toFixed(6));
+            await this.kingdomRepo.save(kingdom);
+            count++;
+        }
+        return { success: true, type, amount, affectedKingdoms: count };
+    }
     getWallet(headers) {
         this.guard(headers);
         return this.getWalletConfig();
@@ -344,14 +368,14 @@ let AdminController = class AdminController {
             : [];
         const totalRefMap = new Map(totalRefRows.map((r) => [r.referrerId, parseInt(r.cnt)]));
         const activeRefRows = userIds.length
-            ? await this.kingdomRepo
-                .createQueryBuilder('k')
-                .innerJoin('k.user', 'u')
-                .select('u.referredBy', 'referrerId')
+            ? await this.userRepo
+                .createQueryBuilder('u')
+                .select('u.referred_by', 'referrerId')
                 .addSelect('COUNT(*)', 'cnt')
-                .where('u.referredBy IN (:...ids)', { ids: userIds })
-                .andWhere('k.score > 0')
-                .groupBy('u.referredBy')
+                .innerJoin('kingdoms', 'k', 'k.user_id = u.id')
+                .where('u.referred_by IN (:...ids)', { ids: userIds })
+                .andWhere('((SELECT COUNT(*) FROM buildings b WHERE b.kingdom_id = k.id) > 6 OR (SELECT COUNT(*) FROM buildings b WHERE b.kingdom_id = k.id AND b.level > 1) > 0)')
+                .groupBy('u.referred_by')
                 .getRawMany()
             : [];
         const activeRefMap = new Map(activeRefRows.map((r) => [r.referrerId, parseInt(r.cnt)]));
@@ -493,6 +517,15 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Number, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "giveResource", null);
+__decorate([
+    (0, common_1.Post)('give-resource-all'),
+    __param(0, (0, common_1.Body)('type')),
+    __param(1, (0, common_1.Body)('amount')),
+    __param(2, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "giveResourceAll", null);
 __decorate([
     (0, common_1.Get)('wallet'),
     __param(0, (0, common_1.Headers)()),

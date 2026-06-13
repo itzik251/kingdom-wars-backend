@@ -46,7 +46,7 @@ let ReferralService = class ReferralService {
             .innerJoin('u.referredBy', 'ref')
             .innerJoin('kingdoms', 'k', 'k.user_id = u.id')
             .where('ref.id = :userId', { userId })
-            .andWhere('(SELECT COUNT(*) FROM buildings b WHERE b.kingdom_id = k.id) > 6')
+            .andWhere('((SELECT COUNT(*) FROM buildings b WHERE b.kingdom_id = k.id) > 6 OR (SELECT COUNT(*) FROM buildings b WHERE b.kingdom_id = k.id AND b.level > 1) > 0)')
             .getCount();
         return result;
     }

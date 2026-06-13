@@ -7,10 +7,12 @@ import { Building } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
 import { ExplorationService } from './exploration.service';
 import { ExplorationController } from './exploration.controller';
+import { KingdomService } from '../kingdom/kingdom.service';
+import { User } from '../user/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MapNode, ExplorationMission, Kingdom, Building, Unit])],
-  providers: [ExplorationService],
+  imports: [TypeOrmModule.forFeature([MapNode, ExplorationMission, Kingdom, Building, Unit, User])],
+  providers: [ExplorationService, KingdomService],
   controllers: [ExplorationController],
   exports: [ExplorationService],
 })

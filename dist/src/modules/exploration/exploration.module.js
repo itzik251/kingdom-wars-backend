@@ -16,13 +16,15 @@ const building_entity_1 = require("../building/building.entity");
 const unit_entity_1 = require("../units/unit.entity");
 const exploration_service_1 = require("./exploration.service");
 const exploration_controller_1 = require("./exploration.controller");
+const kingdom_service_1 = require("../kingdom/kingdom.service");
+const user_entity_1 = require("../user/user.entity");
 let ExplorationModule = class ExplorationModule {
 };
 exports.ExplorationModule = ExplorationModule;
 exports.ExplorationModule = ExplorationModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([map_node_entity_1.MapNode, exploration_mission_entity_1.ExplorationMission, kingdom_entity_1.Kingdom, building_entity_1.Building, unit_entity_1.Unit])],
-        providers: [exploration_service_1.ExplorationService],
+        imports: [typeorm_1.TypeOrmModule.forFeature([map_node_entity_1.MapNode, exploration_mission_entity_1.ExplorationMission, kingdom_entity_1.Kingdom, building_entity_1.Building, unit_entity_1.Unit, user_entity_1.User])],
+        providers: [exploration_service_1.ExplorationService, kingdom_service_1.KingdomService],
         controllers: [exploration_controller_1.ExplorationController],
         exports: [exploration_service_1.ExplorationService],
     })

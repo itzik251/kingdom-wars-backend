@@ -15,25 +15,31 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExplorationController = void 0;
 const common_1 = require("@nestjs/common");
 const exploration_service_1 = require("./exploration.service");
+const kingdom_service_1 = require("../kingdom/kingdom.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let ExplorationController = class ExplorationController {
-    constructor(explorationService) {
+    constructor(explorationService, kingdomService) {
         this.explorationService = explorationService;
+        this.kingdomService = kingdomService;
     }
-    getMap(req) {
-        return this.explorationService.getMap(req.user.kingdomId);
+    async getKingdomId(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return kingdom.id;
     }
-    hireExplorer(req) {
-        return this.explorationService.hireExplorer(req.user.kingdomId);
+    async getMap(req) {
+        return this.explorationService.getMap(await this.getKingdomId(req));
     }
-    sendMission(req, body) {
-        return this.explorationService.sendMission(req.user.kingdomId, body.targetX, body.targetY);
+    async hireExplorer(req) {
+        return this.explorationService.hireExplorer(await this.getKingdomId(req));
     }
-    raidNode(req, nodeId) {
-        return this.explorationService.raidNode(req.user.kingdomId, nodeId);
+    async sendMission(req, body) {
+        return this.explorationService.sendMission(await this.getKingdomId(req), body.targetX, body.targetY);
     }
-    recruitHero(req, nodeId) {
-        return this.explorationService.recruitHero(req.user.kingdomId, nodeId);
+    async raidNode(req, nodeId) {
+        return this.explorationService.raidNode(await this.getKingdomId(req), nodeId);
+    }
+    async recruitHero(req, nodeId) {
+        return this.explorationService.recruitHero(await this.getKingdomId(req), nodeId);
     }
 };
 exports.ExplorationController = ExplorationController;
@@ -42,14 +48,14 @@ __decorate([
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExplorationController.prototype, "getMap", null);
 __decorate([
     (0, common_1.Post)('hire-explorer'),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExplorationController.prototype, "hireExplorer", null);
 __decorate([
     (0, common_1.Post)('mission'),
@@ -57,7 +63,7 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExplorationController.prototype, "sendMission", null);
 __decorate([
     (0, common_1.Post)('raid/:nodeId'),
@@ -65,7 +71,7 @@ __decorate([
     __param(1, (0, common_1.Param)('nodeId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExplorationController.prototype, "raidNode", null);
 __decorate([
     (0, common_1.Post)('recruit/:nodeId'),
@@ -73,11 +79,12 @@ __decorate([
     __param(1, (0, common_1.Param)('nodeId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExplorationController.prototype, "recruitHero", null);
 exports.ExplorationController = ExplorationController = __decorate([
     (0, common_1.Controller)('exploration'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [exploration_service_1.ExplorationService])
+    __metadata("design:paramtypes", [exploration_service_1.ExplorationService,
+        kingdom_service_1.KingdomService])
 ], ExplorationController);
 //# sourceMappingURL=exploration.controller.js.map

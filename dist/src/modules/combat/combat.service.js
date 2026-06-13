@@ -49,7 +49,7 @@ let CombatService = class CombatService {
         if (process.env.NODE_ENV === 'production' && attackerScore >= 10 && defenderScore >= 10 && attackerScore > defenderScore * 10) {
             throw new common_1.BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
         }
-        const ATTACK_COOLDOWN_MS = 10_000;
+        const ATTACK_COOLDOWN_MS = 2_000;
         const cooldownCutoff = new Date(Date.now() - ATTACK_COOLDOWN_MS);
         const claimResult = await this.kingdomRepo
             .createQueryBuilder()

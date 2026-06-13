@@ -72,8 +72,8 @@ export class CombatService {
       throw new BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
     }
 
-    // Atomic cooldown check — prevents parallel attacks from the same kingdom
-    const ATTACK_COOLDOWN_MS = 10_000;
+    // Atomic cooldown check — prevents truly parallel requests (race condition)
+    const ATTACK_COOLDOWN_MS = 2_000;
     const cooldownCutoff = new Date(Date.now() - ATTACK_COOLDOWN_MS);
     const claimResult = await this.kingdomRepo
       .createQueryBuilder()

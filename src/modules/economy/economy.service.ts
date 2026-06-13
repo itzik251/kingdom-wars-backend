@@ -110,6 +110,13 @@ export class EconomyService {
       kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
     }
 
+    // Gem Mine: each mine generates level*2 gems/hour
+    const gemMines = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair);
+    const gemMineRate = gemMines.reduce((sum, b) => sum + b.level * 2, 0);
+    if (gemMineRate > 0) {
+      kingdom.gems = Math.floor((kingdom.gems || 0) + gemMineRate * hoursElapsed);
+    }
+
     kingdom.lastResourceTick = now;
 
     // Food shortage: soldiers desert (lose 0.5% per food unit short, max 5% per tick)

@@ -41,12 +41,11 @@ let ReferralService = class ReferralService {
         this.unitRepo = unitRepo;
     }
     async getActiveReferralCount(userId) {
-        const result = await this.kingdomRepo
-            .createQueryBuilder('k')
-            .innerJoin('k.user', 'u')
+        const result = await this.userRepo
+            .createQueryBuilder('u')
             .innerJoin('u.referredBy', 'ref')
             .where('ref.id = :userId', { userId })
-            .andWhere('k.score > 0')
+            .andWhere('u.lastLogin IS NOT NULL')
             .getCount();
         return result;
     }

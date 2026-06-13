@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Kingdom } from './kingdom.entity';
-import { Building } from '../building/building.entity';
+import { Building, BuildingType } from '../building/building.entity';
 import { Unit, UnitType } from '../units/unit.entity';
 import { User } from '../user/user.entity';
 import { EconomyService } from '../economy/economy.service';
@@ -260,6 +260,40 @@ export class KingdomService {
     kingdom.gems = (kingdom.gems || 0) + gems;
     await this.kingdomRepo.save(kingdom);
     return { gemsAdded: gems, gems: kingdom.gems, usdtBalance: kingdom.usdtBalance };
+  }
+
+  async buildGemForge(kingdomId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+    const existingForges = await this.buildingRepo.count({ where: { kingdom: { id: kingdomId }, type: BuildingType.GEM_FORGE } });
+    if (existingForges >= 3) throw new BadRequestException('Max 3 gem mines');
+    const COST = 0.1;
+    if ((kingdom.usdtBalance ?? 0) < COST) throw new BadRequestException(`נדרש $${COST} USDT`);
+    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
+    await this.kingdomRepo.save(kingdom);
+    const forge = this.buildingRepo.create({
+      kingdom: { id: kingdomId } as any,
+      type: BuildingType.GEM_FORGE,
+      level: 1,
+      slot: existingForges,
+    });
+    await this.buildingRepo.save(forge);
+    return { id: forge.id, level: forge.level, usdtBalance: kingdom.usdtBalance };
+  }
+
+  async upgradeGemForge(kingdomId: string, buildingId: string) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new BadRequestException('Kingdom not found');
+    const forge = await this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId }, type: BuildingType.GEM_FORGE } });
+    if (!forge) throw new BadRequestException('Gem mine not found');
+    if (forge.level >= 10) throw new BadRequestException('Max level reached');
+    const COST = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
+    if ((kingdom.usdtBalance ?? 0) < COST) throw new BadRequestException(`נדרש $${COST} USDT`);
+    kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
+    forge.level += 1;
+    await this.kingdomRepo.save(kingdom);
+    await this.buildingRepo.save(forge);
+    return { id: forge.id, newLevel: forge.level, usdtBalance: kingdom.usdtBalance };
   }
 
   async expandStorage(kingdomId: string) {

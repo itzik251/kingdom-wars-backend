@@ -54,6 +54,18 @@ export class KingdomController {
     return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
   }
 
+  @Post('build-gem-forge')
+  async buildGemForge(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.buildGemForge(kingdom.id);
+  }
+
+  @Post('upgrade-gem-forge')
+  async upgradeGemForge(@Request() req, @Body() body: { buildingId: string }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.upgradeGemForge(kingdom.id, body.buildingId);
+  }
+
   @Post('buy-gems')
   async buyGems(@Request() req, @Body() body: { gems: number }) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);

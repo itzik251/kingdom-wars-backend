@@ -15,6 +15,7 @@ export enum BuildingType {
   WATCH_TOWER  = 'watch_tower',
   HOSPITAL     = 'hospital',
   ARCANE_TOWER = 'arcane_tower',
+  GEM_FORGE    = 'gem_forge',
 }
 
 @Entity('buildings')

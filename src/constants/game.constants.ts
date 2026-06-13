@@ -26,6 +26,7 @@ export const BUILDING_BASE_COSTS: Record<BuildingType, { gold: number; wood: num
   [BuildingType.WATCH_TOWER]:  { gold: 150,  wood: 200,  stone: 100 },
   [BuildingType.HOSPITAL]:     { gold: 300,  wood: 200,  stone: 100 },
   [BuildingType.ARCANE_TOWER]: { gold: 800,  wood: 400,  stone: 400 },
+  [BuildingType.GEM_FORGE]:   { gold: 0,    wood: 0,    stone: 0   }, // USDT-based, handled in service
 };
 
 export const UPGRADE_COST_MULTIPLIER = 1.35;
@@ -43,6 +44,7 @@ export const BUILDING_BASE_TIMES: Record<BuildingType, number> = {
   [BuildingType.WATCH_TOWER]:  35,
   [BuildingType.HOSPITAL]:     45,
   [BuildingType.ARCANE_TOWER]: 120,
+  [BuildingType.GEM_FORGE]:   0,
 };
 
 export const BUILD_TIME_MULTIPLIER = 1.4;

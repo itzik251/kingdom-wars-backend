@@ -306,9 +306,9 @@ export class CombatService {
     defender.stone = Math.max(0, defender.stone - report.loot.stone);
     defender.gems  = Math.max(0, (defender.gems ?? 0) - (report.loot.gems ?? 0));
 
-    // VIP players also loot 20% of defender's USDT — always set field so frontend shows it
+    // VIP players also loot 2% of defender's USDT — always set field so frontend shows it
     if (report.attackerWins && attacker.isVip) {
-      const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.20).toFixed(6));
+      const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.02).toFixed(6));
       report.loot.usdt = usdtLoot;
       if (usdtLoot > 0) {
         attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));

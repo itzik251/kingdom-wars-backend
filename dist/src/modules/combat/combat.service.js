@@ -231,7 +231,7 @@ let CombatService = class CombatService {
         defender.stone = Math.max(0, defender.stone - report.loot.stone);
         defender.gems = Math.max(0, (defender.gems ?? 0) - (report.loot.gems ?? 0));
         if (report.attackerWins && attacker.isVip) {
-            const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.20).toFixed(6));
+            const usdtLoot = parseFloat(((defender.usdtBalance ?? 0) * 0.02).toFixed(6));
             report.loot.usdt = usdtLoot;
             if (usdtLoot > 0) {
                 attacker.usdtBalance = parseFloat(((attacker.usdtBalance ?? 0) + usdtLoot).toFixed(6));

@@ -17,6 +17,16 @@ function maxExplorers(academyLevel: number): number {
   return 1;
 }
 
+// Academy level → training time in seconds
+function explorerTrainingSecs(academyLevel: number, isVip: boolean): number {
+  let secs: number;
+  if (academyLevel >= 10) secs = 30 * 60;
+  else if (academyLevel >= 6) secs = 60 * 60;
+  else if (academyLevel >= 3) secs = 2 * 60 * 60;
+  else secs = 4 * 60 * 60;
+  return isVip ? Math.floor(secs * 0.75) : secs;
+}
+
 // Academy level → raid cooldown in days
 function raidCooldownDays(academyLevel: number): number {
   if (academyLevel >= 11) return 1;
@@ -157,11 +167,19 @@ export class ExplorationService {
         canRaid: this.canRaid(n, academyLevel),
       }));
 
+    // Complete training if timer expired
+    if (kingdom.explorerTrainingEndsAt && new Date() >= new Date(kingdom.explorerTrainingEndsAt)) {
+      kingdom.explorerCount += 1;
+      kingdom.explorerTrainingEndsAt = null;
+      await this.kingdomRepo.save(kingdom);
+    }
+
     return {
       fogRadius: radius,
       academyLevel,
       explorerCount: kingdom.explorerCount,
       maxExplorers: maxExplorers(academyLevel),
+      explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt ?? null,
       activeMissions,
       returnedMissions,
       nodes: visibleNodes,
@@ -176,7 +194,11 @@ export class ExplorationService {
 
     if (!academy || academy.level < 1) throw new BadRequestException('Academy required');
     const max = maxExplorers(academy.level);
-    if (kingdom.explorerCount >= max) throw new BadRequestException(`Max explorers for Academy level: ${max}`);
+    const totalExplorers = kingdom.explorerCount + (kingdom.explorerTrainingEndsAt ? 1 : 0);
+    if (totalExplorers >= max) throw new BadRequestException(`Max explorers for Academy level: ${max}`);
+    if (kingdom.explorerTrainingEndsAt && new Date() < new Date(kingdom.explorerTrainingEndsAt)) {
+      throw new BadRequestException('חוקר כבר באימון — המתן לסיום');
+    }
 
     const COST_GOLD = 200;
     const COST_GEMS = 20;
@@ -185,9 +207,18 @@ export class ExplorationService {
 
     kingdom.gold -= COST_GOLD;
     kingdom.gems = (kingdom.gems ?? 0) - COST_GEMS;
-    kingdom.explorerCount += 1;
+
+    const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
+    const trainSecs = explorerTrainingSecs(academy.level, !!isVip);
+    kingdom.explorerTrainingEndsAt = new Date(Date.now() + trainSecs * 1000);
+
     await this.kingdomRepo.save(kingdom);
-    return { explorerCount: kingdom.explorerCount, maxExplorers: max };
+    return {
+      explorerCount: kingdom.explorerCount,
+      maxExplorers: max,
+      explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt,
+      trainingSecs: trainSecs,
+    };
   }
 
   // ── Send explorer on mission ──────────────────────────────────────────────

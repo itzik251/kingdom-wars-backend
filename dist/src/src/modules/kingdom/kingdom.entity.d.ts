@@ -34,6 +34,7 @@ export declare class Kingdom {
     magic: number;
     maxMagic: number;
     explorerCount: number;
+    explorerTrainingEndsAt: Date;
     createdAt: Date;
     get isShielded(): boolean;
     get isVip(): boolean;

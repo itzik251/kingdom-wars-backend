@@ -109,6 +109,9 @@ export class Kingdom {
   @Column({ name: 'explorer_count', default: 0 })
   explorerCount: number;
 
+  @Column({ name: 'explorer_training_ends_at', nullable: true })
+  explorerTrainingEndsAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

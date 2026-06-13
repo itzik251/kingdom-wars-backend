@@ -74,7 +74,7 @@ export declare class AdminController {
         amount?: undefined;
     } | {
         success: boolean;
-        type: "gold" | "wood" | "stone" | "food" | "gems" | "usdt";
+        type: "gems" | "gold" | "wood" | "stone" | "food" | "usdt";
         amount: number;
         error?: undefined;
         vipUntil?: undefined;
@@ -104,7 +104,7 @@ export declare class AdminController {
         amount?: undefined;
     } | {
         success: boolean;
-        type: "gold" | "wood" | "stone" | "food" | "gems" | "usdt";
+        type: "gems" | "gold" | "wood" | "stone" | "food" | "usdt";
         amount: number;
         error?: undefined;
         vipUntil?: undefined;
@@ -180,7 +180,7 @@ export declare class AdminController {
         amount?: undefined;
     } | {
         success: boolean;
-        type: "gold" | "wood" | "stone" | "food" | "gems" | "usdt";
+        type: "gems" | "gold" | "wood" | "stone" | "food" | "usdt";
         amount: number;
         error?: undefined;
         vipUntil?: undefined;

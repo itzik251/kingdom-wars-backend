@@ -34,6 +34,18 @@ function maxExplorers(academyLevel) {
         return 2;
     return 1;
 }
+function explorerTrainingSecs(academyLevel, isVip) {
+    let secs;
+    if (academyLevel >= 10)
+        secs = 30 * 60;
+    else if (academyLevel >= 6)
+        secs = 60 * 60;
+    else if (academyLevel >= 3)
+        secs = 2 * 60 * 60;
+    else
+        secs = 4 * 60 * 60;
+    return isVip ? Math.floor(secs * 0.75) : secs;
+}
 function raidCooldownDays(academyLevel) {
     if (academyLevel >= 11)
         return 1;
@@ -155,11 +167,17 @@ let ExplorationService = class ExplorationService {
             raidCooldownDays: raidCooldownDays(academyLevel),
             canRaid: this.canRaid(n, academyLevel),
         }));
+        if (kingdom.explorerTrainingEndsAt && new Date() >= new Date(kingdom.explorerTrainingEndsAt)) {
+            kingdom.explorerCount += 1;
+            kingdom.explorerTrainingEndsAt = null;
+            await this.kingdomRepo.save(kingdom);
+        }
         return {
             fogRadius: radius,
             academyLevel,
             explorerCount: kingdom.explorerCount,
             maxExplorers: maxExplorers(academyLevel),
+            explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt ?? null,
             activeMissions,
             returnedMissions,
             nodes: visibleNodes,
@@ -172,8 +190,12 @@ let ExplorationService = class ExplorationService {
         if (!academy || academy.level < 1)
             throw new common_1.BadRequestException('Academy required');
         const max = maxExplorers(academy.level);
-        if (kingdom.explorerCount >= max)
+        const totalExplorers = kingdom.explorerCount + (kingdom.explorerTrainingEndsAt ? 1 : 0);
+        if (totalExplorers >= max)
             throw new common_1.BadRequestException(`Max explorers for Academy level: ${max}`);
+        if (kingdom.explorerTrainingEndsAt && new Date() < new Date(kingdom.explorerTrainingEndsAt)) {
+            throw new common_1.BadRequestException('חוקר כבר באימון — המתן לסיום');
+        }
         const COST_GOLD = 200;
         const COST_GEMS = 20;
         if (kingdom.gold < COST_GOLD)
@@ -182,9 +204,16 @@ let ExplorationService = class ExplorationService {
             throw new common_1.BadRequestException('Not enough gems (20 required)');
         kingdom.gold -= COST_GOLD;
         kingdom.gems = (kingdom.gems ?? 0) - COST_GEMS;
-        kingdom.explorerCount += 1;
+        const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
+        const trainSecs = explorerTrainingSecs(academy.level, !!isVip);
+        kingdom.explorerTrainingEndsAt = new Date(Date.now() + trainSecs * 1000);
         await this.kingdomRepo.save(kingdom);
-        return { explorerCount: kingdom.explorerCount, maxExplorers: max };
+        return {
+            explorerCount: kingdom.explorerCount,
+            maxExplorers: max,
+            explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt,
+            trainingSecs: trainSecs,
+        };
     }
     async sendMission(kingdomId, targetX, targetY) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });

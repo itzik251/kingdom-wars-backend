@@ -120,7 +120,7 @@ let KingdomService = class KingdomService {
             throw new common_1.BadRequestException('כתובת ארנק TON לא תקינה — חייבת להתחיל ב-UQ או EQ');
         }
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-        const MIN_WITHDRAW = 20;
+        const MIN_WITHDRAW = 50;
         if ((kingdom?.usdtBalance ?? 0) < MIN_WITHDRAW) {
             throw new common_1.BadRequestException(`מינימום ${MIN_WITHDRAW} USDT למשיכה`);
         }

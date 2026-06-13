@@ -1,0 +1,44 @@
+import { BuildingType } from '../modules/building/building.entity';
+import { UnitType } from '../modules/units/unit.entity';
+export declare const BASE_PRODUCTION: Record<string, number>;
+export declare const PRODUCTION_MULTIPLIER = 1.12;
+export declare const BUILDING_BASE_COSTS: Record<BuildingType, {
+    gold: number;
+    wood: number;
+    stone: number;
+}>;
+export declare const UPGRADE_COST_MULTIPLIER = 1.35;
+export declare const BUILDING_BASE_TIMES: Record<BuildingType, number>;
+export declare const BUILD_TIME_MULTIPLIER = 1.4;
+export declare const MAX_BUILDING_LEVEL = 30;
+export declare const TOWN_HALL_GATES: Record<number, number>;
+export interface UnitStats {
+    goldCost: number;
+    foodCost: number;
+    upkeep: number;
+    attackPower: number;
+    defensePower: number;
+    trainingTime: number;
+    requiredBarracksLevel: number;
+    gemsCost?: number;
+    requiresVip?: boolean;
+}
+export declare const UNIT_STATS: Record<UnitType, UnitStats>;
+export declare const COMBAT_RANDOM_MIN = 0.85;
+export declare const COMBAT_RANDOM_MAX = 1.15;
+export declare const LOOT_PERCENTAGE = 0.3;
+export declare const DEFENDER_LOSS_MAX = 0.2;
+export declare const WALL_DEFENSE_BONUS_PER_LEVEL = 50;
+export declare const NEWBIE_SHIELD_HOURS = 72;
+export declare const POST_ATTACK_SHIELD_HOURS = 1;
+export declare const SNOWBALL_SCORE_RATIO = 3;
+export declare const SNOWBALL_LOOT_PENALTY = 0.5;
+export declare const WEAK_PLAYER_RESOURCE_BONUS = 0.2;
+export declare const INITIAL_BUILDINGS: BuildingType[];
+export declare const INITIAL_UNITS: UnitType[];
+export declare const VIP_BUILD_TIME_REDUCTION = 0.3;
+export declare const VIP_PRICE_TON = 5;
+export declare const VIP_PRICE_USDT = 5;
+export declare const VIP_DURATION_DAYS = 30;
+export declare const PAYMENT_WALLET_ADDRESS = "TYourTRC20WalletAddressHere";
+export declare const VIP_GAME_PRODUCTION_MULTIPLIER = 1.5;

@@ -1,0 +1,79 @@
+import { Repository } from 'typeorm';
+import { Kingdom } from '../kingdom/kingdom.entity';
+import { Unit } from '../units/unit.entity';
+import { Building, BuildingType } from '../building/building.entity';
+import { User } from '../user/user.entity';
+import { EconomyService } from '../economy/economy.service';
+import { NotificationService } from '../notifications/notification.service';
+import { AuditService } from '../audit/audit.service';
+export interface BattleReport {
+    attackerWins: boolean;
+    attackerPower: number;
+    defenderPower: number;
+    loot: {
+        gold: number;
+        wood: number;
+        stone: number;
+        gems?: number;
+        usdt?: number;
+        game?: number;
+    };
+    attackerLosses: Record<string, number>;
+    defenderLosses: Record<string, number>;
+    attackerWounded: Record<string, number>;
+    defenderWounded: Record<string, number>;
+    winStreak?: number;
+    streakBonus?: number;
+    buildingDamaged?: {
+        type: string;
+        newLevel: number;
+    };
+    heroType?: string;
+    squadSize?: number;
+}
+export declare class CombatService {
+    private kingdomRepo;
+    private unitRepo;
+    private buildingRepo;
+    private userRepo;
+    private economyService;
+    private notifService;
+    private auditService;
+    constructor(kingdomRepo: Repository<Kingdom>, unitRepo: Repository<Unit>, buildingRepo: Repository<Building>, userRepo: Repository<User>, economyService: EconomyService, notifService: NotificationService, auditService: AuditService);
+    attack(attackerKingdomId: string, defenderKingdomId: string, heroType?: string, squadInput?: Record<string, number>): Promise<BattleReport>;
+    getTargets(myKingdom: Kingdom): Promise<Kingdom[]>;
+    getKingdomProfile(myKingdomId: string, targetKingdomId: string): Promise<{
+        id: string;
+        name: string;
+        username: string;
+        score: number;
+        isShielded: boolean;
+        shieldUntil: Date;
+        usdtBalance: number;
+        resources: {
+            gold: number;
+            wood: number;
+            stone: number;
+        };
+        lootable: {
+            gold: number;
+            wood: number;
+            stone: number;
+            gems: number;
+        };
+        defPower: number;
+        myAttackPower: number;
+        winChance: number;
+        marchSeconds: number;
+        wallLevel: number;
+        armySize: number;
+        buildings: {
+            type: BuildingType;
+            level: number;
+        }[];
+    }>;
+    private simulate;
+    private calculateLosses;
+    private applyBattleResults;
+    private random;
+}

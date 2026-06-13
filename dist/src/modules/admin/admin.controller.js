@@ -418,19 +418,25 @@ let AdminController = class AdminController {
             .innerJoin('k.user', 'u')
             .select('u.id', 'userId')
             .addSelect('k.score', 'score')
+            .addSelect('k.id', 'kingdomId')
             .where('u.id IN (:...ids)', { ids: referred.map(u => u.id) })
             .getRawMany();
-        const scoreMap = new Map(kingdomRows.map((r) => [r.userId, Number(r.score ?? 0)]));
-        return referred.map(u => {
-            const score = scoreMap.get(u.id) ?? 0;
-            return {
-                telegramId: u.telegramId,
-                username: u.username || u.firstName,
-                joinedAt: u.createdAt,
-                score,
-                active: score > 0,
-            };
-        });
+        const scoreMap = new Map(kingdomRows.map((r) => [r.userId, { score: Number(r.score ?? 0), kingdomId: r.kingdomId }]));
+        const result = [];
+        for (const u of referred) {
+            const kData = scoreMap.get(u.id);
+            const score = kData?.score ?? 0;
+            const kingdomId = kData?.kingdomId;
+            let active = false;
+            if (kingdomId) {
+                const rows = await this.kingdomRepo.query(`SELECT COUNT(*) as total, SUM(CASE WHEN level > 1 THEN 1 ELSE 0 END) as upgraded FROM buildings WHERE kingdom_id = $1`, [kingdomId]);
+                const total = parseInt(rows[0]?.total ?? '0');
+                const upgraded = parseInt(rows[0]?.upgraded ?? '0');
+                active = total > 6 || upgraded > 0;
+            }
+            result.push({ telegramId: u.telegramId, username: u.username || u.firstName, joinedAt: u.createdAt, score, active });
+        }
+        return result;
     }
     async getAntiBotStatus(headers, telegramId) {
         this.guard(headers);

@@ -233,7 +233,7 @@ let NotificationService = class NotificationService {
                 reply_markup: {
                     inline_keyboard: [[{
                                 text: OPEN_GAME[lang] ?? OPEN_GAME['en'],
-                                url: `https://t.me/${botUsername}`,
+                                web_app: { url: this.config.get('FRONTEND_URL') || 'https://kingdomwars.cloud' },
                             }]],
                 },
             }),

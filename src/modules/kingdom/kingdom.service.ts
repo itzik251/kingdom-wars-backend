@@ -284,8 +284,8 @@ export class KingdomService {
   async upgradeGemForge(kingdomId: string, buildingId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     if (!kingdom) throw new BadRequestException('Kingdom not found');
-    const forge = await this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId }, type: BuildingType.GEM_FORGE } });
-    if (!forge) throw new BadRequestException('Gem mine not found');
+    const forge = await this.buildingRepo.findOne({ where: { id: buildingId }, relations: ['kingdom'] });
+    if (!forge || forge.kingdom?.id !== kingdomId || forge.type !== BuildingType.GEM_FORGE) throw new BadRequestException('Gem mine not found');
     if (forge.level >= 10) throw new BadRequestException('Max level reached');
     const COST = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
     if ((kingdom.usdtBalance ?? 0) < COST) throw new BadRequestException(`נדרש $${COST} USDT`);

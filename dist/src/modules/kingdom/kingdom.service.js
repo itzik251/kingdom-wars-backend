@@ -272,8 +272,8 @@ let KingdomService = class KingdomService {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
         if (!kingdom)
             throw new common_1.BadRequestException('Kingdom not found');
-        const forge = await this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId }, type: building_entity_1.BuildingType.GEM_FORGE } });
-        if (!forge)
+        const forge = await this.buildingRepo.findOne({ where: { id: buildingId }, relations: ['kingdom'] });
+        if (!forge || forge.kingdom?.id !== kingdomId || forge.type !== building_entity_1.BuildingType.GEM_FORGE)
             throw new common_1.BadRequestException('Gem mine not found');
         if (forge.level >= 10)
             throw new common_1.BadRequestException('Max level reached');

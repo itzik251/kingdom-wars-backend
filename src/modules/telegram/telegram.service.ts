@@ -217,7 +217,7 @@ export class TelegramService {
 
     if (cmd('/leaderboard')) {
       // Deep-link directly to the leaderboard tab
-      const lbUrl = `${miniAppUrl}?startapp=tab_leaderboard`;
+      const lbUrl = `${miniAppUrl}?screen=leaderboard`;
       await this.sendMessage(chatId, BOT_MESSAGES.leaderboard_msg[lang], {
         reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: lbUrl } }]] },
       });

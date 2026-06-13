@@ -19,11 +19,14 @@ const typeorm_2 = require("typeorm");
 const building_entity_1 = require("./building.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const game_constants_1 = require("../../constants/game.constants");
+const audit_service_1 = require("../audit/audit.service");
+const audit_log_entity_1 = require("../audit/audit-log.entity");
 let BuildingService = class BuildingService {
-    constructor(buildingRepo, kingdomRepo, dataSource) {
+    constructor(buildingRepo, kingdomRepo, dataSource, auditService) {
         this.buildingRepo = buildingRepo;
         this.kingdomRepo = kingdomRepo;
         this.dataSource = dataSource;
+        this.auditService = auditService;
     }
     async upgradeBuilding(kingdomId, buildingType, isVip = false, buildingId) {
         return this.dataSource.transaction(async (manager) => {
@@ -66,6 +69,15 @@ let BuildingService = class BuildingService {
                 buildTime = Math.floor(buildTime * (1 - game_constants_1.VIP_BUILD_TIME_REDUCTION));
             building.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
             await manager.save(building_entity_1.Building, building);
+            this.auditService.log(audit_log_entity_1.AuditAction.UPGRADE, kingdomId, {
+                type: building.type,
+                buildingId: building.id,
+                fromLevel: building.level,
+                toLevel: building.level + 1,
+                cost,
+                upgradeEndsAt: building.upgradeEndsAt,
+                isVip,
+            });
             return {
                 building,
                 cost,
@@ -231,6 +243,7 @@ exports.BuildingService = BuildingService = __decorate([
     __param(2, (0, typeorm_1.InjectDataSource)()),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.DataSource])
+        typeorm_2.DataSource,
+        audit_service_1.AuditService])
 ], BuildingService);
 //# sourceMappingURL=building.service.js.map

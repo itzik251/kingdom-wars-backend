@@ -7,6 +7,7 @@ import { NotificationService } from '../notifications/notification.service';
 import { TonService } from '../ton/ton.service';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AntiBotService } from '../antibot/antibot.service';
+import { AuditService } from '../audit/audit.service';
 type ResourceType = 'gems' | 'gold' | 'wood' | 'stone' | 'food' | 'usdt' | 'vip';
 export declare class AdminController {
     private userRepo;
@@ -16,7 +17,8 @@ export declare class AdminController {
     private tonService;
     private cryptoBotService;
     private antiBotService;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService, antiBotService: AntiBotService);
+    private auditService;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService, antiBotService: AntiBotService, auditService: AuditService);
     dashboard(res: Response): void;
     private getWalletConfig;
     private guard;
@@ -107,6 +109,19 @@ export declare class AdminController {
         error?: undefined;
         vipUntil?: undefined;
     }>;
+    giveResourceAll(type: string, amount: number, headers: any): Promise<{
+        error: string;
+        success?: undefined;
+        type?: undefined;
+        amount?: undefined;
+        affectedKingdoms?: undefined;
+    } | {
+        success: boolean;
+        type: string;
+        amount: number;
+        affectedKingdoms: number;
+        error?: undefined;
+    }>;
     getWallet(headers: any): {
         address: string;
     };
@@ -117,6 +132,8 @@ export declare class AdminController {
         success: boolean;
     };
     getWalletBalance(headers: any): Promise<any>;
+    getAuditLogs(headers: any): Promise<import("../audit/audit-log.entity").AuditLog[]>;
+    getAuditLogsForKingdom(headers: any, kingdomId: string): Promise<import("../audit/audit-log.entity").AuditLog[]>;
     getPendingWithdrawals(headers: any): Promise<{
         kingdomId: string;
         kingdomName: string;
@@ -196,13 +213,7 @@ export declare class AdminController {
         referralsTotal: number;
         referralsActive: number;
     }[]>;
-    getUserReferrals(headers: any, telegramId: string): Promise<{
-        telegramId: string;
-        username: string;
-        joinedAt: Date;
-        score: number;
-        active: boolean;
-    }[]>;
+    getUserReferrals(headers: any, telegramId: string): Promise<any[]>;
     getAntiBotStatus(headers: any, telegramId: string): Promise<{
         isBanned: boolean;
         bannedUntil: Date;

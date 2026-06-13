@@ -55,7 +55,8 @@ export declare class KingdomController {
         buildingId: string;
     }): Promise<{
         id: string;
-        newLevel: number;
+        level: number;
+        upgradeEndsAt: Date;
         usdtBalance: number;
     }>;
     buyGems(req: any, body: {

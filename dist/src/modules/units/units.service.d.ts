@@ -2,11 +2,13 @@ import { Repository } from 'typeorm';
 import { Unit, UnitType } from './unit.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building } from '../building/building.entity';
+import { AuditService } from '../audit/audit.service';
 export declare class UnitsService {
     private unitRepo;
     private kingdomRepo;
     private buildingRepo;
-    constructor(unitRepo: Repository<Unit>, kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>);
+    private auditService;
+    constructor(unitRepo: Repository<Unit>, kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, auditService: AuditService);
     trainUnits(kingdomId: string, unitType: UnitType, amount: number): Promise<{
         unit: Unit;
         trainingEndsAt: Date;

@@ -22,15 +22,18 @@ const building_entity_1 = require("../building/building.entity");
 const user_entity_1 = require("../user/user.entity");
 const economy_service_1 = require("../economy/economy.service");
 const notification_service_1 = require("../notifications/notification.service");
+const audit_service_1 = require("../audit/audit.service");
+const audit_log_entity_1 = require("../audit/audit-log.entity");
 const game_constants_1 = require("../../constants/game.constants");
 let CombatService = class CombatService {
-    constructor(kingdomRepo, unitRepo, buildingRepo, userRepo, economyService, notifService) {
+    constructor(kingdomRepo, unitRepo, buildingRepo, userRepo, economyService, notifService, auditService) {
         this.kingdomRepo = kingdomRepo;
         this.unitRepo = unitRepo;
         this.buildingRepo = buildingRepo;
         this.userRepo = userRepo;
         this.economyService = economyService;
         this.notifService = notifService;
+        this.auditService = auditService;
     }
     async attack(attackerKingdomId, defenderKingdomId, heroType, squadInput) {
         if (attackerKingdomId === defenderKingdomId) {
@@ -46,9 +49,6 @@ let CombatService = class CombatService {
             throw new common_1.BadRequestException('Defender is shielded');
         const attackerScore = attacker.score || 0;
         const defenderScore = defender.score || 0;
-        if (process.env.NODE_ENV === 'production' && attackerScore >= 10 && defenderScore >= 10 && attackerScore > defenderScore * 10) {
-            throw new common_1.BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
-        }
         const ATTACK_COOLDOWN_MS = 2_000;
         const cooldownCutoff = new Date(Date.now() - ATTACK_COOLDOWN_MS);
         const claimResult = await this.kingdomRepo
@@ -255,6 +255,15 @@ let CombatService = class CombatService {
         defender.shieldUntil = new Date(Date.now() + game_constants_1.POST_ATTACK_SHIELD_HOURS * 3_600_000);
         attacker.lastAttackAt = new Date();
         await this.kingdomRepo.save([attacker, defender]);
+        this.auditService.log(audit_log_entity_1.AuditAction.COMBAT, attacker.id, {
+            defenderKingdomId: defender.id,
+            defenderName: defender.name,
+            won: report.attackerWins,
+            loot: report.loot,
+            usdtLooted: report.loot?.usdt ?? 0,
+            attackerLosses: report.attackerLosses,
+            defenderLosses: report.defenderLosses,
+        });
         const defenderKingdomFull = await this.kingdomRepo.findOne({ where: { id: defender.id }, relations: ['user'] });
         if (defenderKingdomFull?.user) {
             this.notifService.create(defenderKingdomFull.user.id, 'attacked', {
@@ -317,6 +326,7 @@ exports.CombatService = CombatService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         economy_service_1.EconomyService,
-        notification_service_1.NotificationService])
+        notification_service_1.NotificationService,
+        audit_service_1.AuditService])
 ], CombatService);
 //# sourceMappingURL=combat.service.js.map

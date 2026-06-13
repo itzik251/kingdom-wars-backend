@@ -17,12 +17,13 @@ const unit_entity_1 = require("../units/unit.entity");
 const user_entity_1 = require("../user/user.entity");
 const economy_module_1 = require("../economy/economy.module");
 const notification_module_1 = require("../notifications/notification.module");
+const audit_module_1 = require("../audit/audit.module");
 let KingdomModule = class KingdomModule {
 };
 exports.KingdomModule = KingdomModule;
 exports.KingdomModule = KingdomModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom, building_entity_1.Building, unit_entity_1.Unit, user_entity_1.User]), economy_module_1.EconomyModule, notification_module_1.NotificationModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom, building_entity_1.Building, unit_entity_1.Unit, user_entity_1.User]), economy_module_1.EconomyModule, notification_module_1.NotificationModule, audit_module_1.AuditModule],
         controllers: [kingdom_controller_1.KingdomController],
         providers: [kingdom_service_1.KingdomService],
         exports: [kingdom_service_1.KingdomService],

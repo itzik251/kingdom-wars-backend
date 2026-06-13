@@ -19,6 +19,7 @@ export declare class ExplorationService {
         academyLevel: number;
         explorerCount: number;
         maxExplorers: number;
+        explorerTrainingEndsAt: Date;
         activeMissions: ExplorationMission[];
         returnedMissions: ExplorationMission[];
         nodes: {
@@ -39,6 +40,8 @@ export declare class ExplorationService {
     hireExplorer(kingdomId: string): Promise<{
         explorerCount: number;
         maxExplorers: number;
+        explorerTrainingEndsAt: Date;
+        trainingSecs: number;
     }>;
     sendMission(kingdomId: string, targetX: number, targetY: number): Promise<{
         mission: ExplorationMission;

@@ -5,6 +5,7 @@ import { Unit } from '../units/unit.entity';
 import { User } from '../user/user.entity';
 import { EconomyService } from '../economy/economy.service';
 import { NotificationService } from '../notifications/notification.service';
+import { AuditService } from '../audit/audit.service';
 export declare class KingdomService {
     private kingdomRepo;
     private buildingRepo;
@@ -12,7 +13,8 @@ export declare class KingdomService {
     private userRepo;
     private economyService;
     private notifService;
-    constructor(kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>, userRepo: Repository<User>, economyService: EconomyService, notifService: NotificationService);
+    private auditService;
+    constructor(kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>, userRepo: Repository<User>, economyService: EconomyService, notifService: NotificationService, auditService: AuditService);
     getKingdomByUser(userId: string): Promise<{
         kingdom: Kingdom;
         buildings: Building[];
@@ -79,7 +81,8 @@ export declare class KingdomService {
     }>;
     upgradeGemForge(kingdomId: string, buildingId: string): Promise<{
         id: string;
-        newLevel: number;
+        level: number;
+        upgradeEndsAt: Date;
         usdtBalance: number;
     }>;
     expandStorage(kingdomId: string): Promise<{

@@ -20,11 +20,14 @@ const unit_entity_1 = require("./unit.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const building_entity_1 = require("../building/building.entity");
 const game_constants_1 = require("../../constants/game.constants");
+const audit_service_1 = require("../audit/audit.service");
+const audit_log_entity_1 = require("../audit/audit-log.entity");
 let UnitsService = class UnitsService {
-    constructor(unitRepo, kingdomRepo, buildingRepo) {
+    constructor(unitRepo, kingdomRepo, buildingRepo, auditService) {
         this.unitRepo = unitRepo;
         this.kingdomRepo = kingdomRepo;
         this.buildingRepo = buildingRepo;
+        this.auditService = auditService;
     }
     async trainUnits(kingdomId, unitType, amount) {
         const [unit, kingdom, barracks] = await Promise.all([
@@ -81,6 +84,15 @@ let UnitsService = class UnitsService {
             unitRow.trainingEndsAt = new Date(Date.now() + trainingSeconds * 1000);
         }
         await this.unitRepo.save(unitRow);
+        const costType = (stats.requiresVip || stats.requiresReferralHero) ? 'gems' : 'gold';
+        const costAmount = costType === 'gems' ? (stats.gemsCost ?? 0) * amount : stats.goldCost * amount;
+        this.auditService.log(audit_log_entity_1.AuditAction.TRAIN_UNITS, kingdomId, {
+            unitType,
+            amount,
+            costType,
+            costAmount,
+            trainingEndsAt: unitRow.trainingEndsAt,
+        });
         return { unit: unitRow, trainingEndsAt: unitRow.trainingEndsAt, durationSeconds: trainingSeconds };
     }
     getAvailableUnits(barracksLevel) {
@@ -97,6 +109,7 @@ exports.UnitsService = UnitsService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        audit_service_1.AuditService])
 ], UnitsService);
 //# sourceMappingURL=units.service.js.map

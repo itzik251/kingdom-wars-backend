@@ -19,12 +19,13 @@ const economy_module_1 = require("../economy/economy.module");
 const kingdom_module_1 = require("../kingdom/kingdom.module");
 const notification_module_1 = require("../notifications/notification.module");
 const quest_module_1 = require("../quest/quest.module");
+const audit_module_1 = require("../audit/audit.module");
 let CombatModule = class CombatModule {
 };
 exports.CombatModule = CombatModule;
 exports.CombatModule = CombatModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom, unit_entity_1.Unit, building_entity_1.Building, user_entity_1.User]), economy_module_1.EconomyModule, kingdom_module_1.KingdomModule, notification_module_1.NotificationModule, quest_module_1.QuestModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([kingdom_entity_1.Kingdom, unit_entity_1.Unit, building_entity_1.Building, user_entity_1.User]), economy_module_1.EconomyModule, kingdom_module_1.KingdomModule, notification_module_1.NotificationModule, quest_module_1.QuestModule, audit_module_1.AuditModule],
         controllers: [combat_controller_1.CombatController],
         providers: [combat_service_1.CombatService],
     })

@@ -159,6 +159,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Kingdom.prototype, "explorerCount", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'explorer_training_ends_at', nullable: true }),
+    __metadata("design:type", Date)
+], Kingdom.prototype, "explorerTrainingEndsAt", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "createdAt", void 0);

@@ -25,10 +25,11 @@ const notification_service_1 = require("../notifications/notification.service");
 const ton_service_1 = require("../ton/ton.service");
 const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 const antibot_service_1 = require("../antibot/antibot.service");
+const audit_service_1 = require("../audit/audit.service");
 const game_constants_1 = require("../../constants/game.constants");
 const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService, antiBotService) {
+    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService, antiBotService, auditService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
@@ -36,6 +37,7 @@ let AdminController = class AdminController {
         this.tonService = tonService;
         this.cryptoBotService = cryptoBotService;
         this.antiBotService = antiBotService;
+        this.auditService = auditService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -267,6 +269,14 @@ let AdminController = class AdminController {
             result.chainTonBalance = chainTon;
         }
         return result;
+    }
+    async getAuditLogs(headers) {
+        this.guard(headers);
+        return this.auditService.getAll(500);
+    }
+    async getAuditLogsForKingdom(headers, kingdomId) {
+        this.guard(headers);
+        return this.auditService.getForKingdom(kingdomId, 200);
     }
     async getPendingWithdrawals(headers) {
         this.guard(headers);
@@ -555,6 +565,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getWalletBalance", null);
 __decorate([
+    (0, common_1.Get)('audit-logs'),
+    __param(0, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAuditLogs", null);
+__decorate([
+    (0, common_1.Get)('audit-logs/:kingdomId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('kingdomId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAuditLogsForKingdom", null);
+__decorate([
     (0, common_1.Get)('withdrawals'),
     __param(0, (0, common_1.Headers)()),
     __metadata("design:type", Function),
@@ -645,6 +670,7 @@ exports.AdminController = AdminController = __decorate([
         notification_service_1.NotificationService,
         ton_service_1.TonService,
         cryptobot_service_1.CryptoBotService,
-        antibot_service_1.AntiBotService])
+        antibot_service_1.AntiBotService,
+        audit_service_1.AuditService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

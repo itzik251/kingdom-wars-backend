@@ -15,12 +15,13 @@ const building_entity_1 = require("./building.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const kingdom_module_1 = require("../kingdom/kingdom.module");
 const quest_module_1 = require("../quest/quest.module");
+const audit_module_1 = require("../audit/audit.module");
 let BuildingModule = class BuildingModule {
 };
 exports.BuildingModule = BuildingModule;
 exports.BuildingModule = BuildingModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([building_entity_1.Building, kingdom_entity_1.Kingdom]), kingdom_module_1.KingdomModule, quest_module_1.QuestModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([building_entity_1.Building, kingdom_entity_1.Kingdom]), kingdom_module_1.KingdomModule, quest_module_1.QuestModule, audit_module_1.AuditModule],
         controllers: [building_controller_1.BuildingController],
         providers: [building_service_1.BuildingService],
         exports: [building_service_1.BuildingService],

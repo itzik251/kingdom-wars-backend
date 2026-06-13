@@ -15,6 +15,7 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const notification_module_1 = require("../notifications/notification.module");
 const ton_module_1 = require("../ton/ton.module");
 const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
+const audit_module_1 = require("../audit/audit.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -24,6 +25,7 @@ exports.AdminModule = AdminModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, kingdom_entity_1.Kingdom]),
             notification_module_1.NotificationModule,
             ton_module_1.TonModule,
+            audit_module_1.AuditModule,
         ],
         controllers: [admin_controller_1.AdminController],
         providers: [cryptobot_service_1.CryptoBotService],

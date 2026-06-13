@@ -10,6 +10,7 @@ export declare class ExplorationController {
         academyLevel: number;
         explorerCount: number;
         maxExplorers: number;
+        explorerTrainingEndsAt: Date;
         activeMissions: import("./exploration-mission.entity").ExplorationMission[];
         returnedMissions: import("./exploration-mission.entity").ExplorationMission[];
         nodes: {
@@ -30,6 +31,8 @@ export declare class ExplorationController {
     hireExplorer(req: any): Promise<{
         explorerCount: number;
         maxExplorers: number;
+        explorerTrainingEndsAt: Date;
+        trainingSecs: number;
     }>;
     sendMission(req: any, body: {
         targetX: number;

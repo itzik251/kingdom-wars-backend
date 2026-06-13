@@ -44,8 +44,9 @@ let ReferralService = class ReferralService {
         const result = await this.userRepo
             .createQueryBuilder('u')
             .innerJoin('u.referredBy', 'ref')
+            .innerJoin('kingdoms', 'k', 'k.user_id = u.id')
             .where('ref.id = :userId', { userId })
-            .andWhere('u.lastLogin IS NOT NULL')
+            .andWhere('(SELECT COUNT(*) FROM buildings b WHERE b.kingdom_id = k.id) > 6')
             .getCount();
         return result;
     }

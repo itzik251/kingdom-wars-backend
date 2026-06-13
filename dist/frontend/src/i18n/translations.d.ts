@@ -175,6 +175,7 @@ declare const he: {
     loading_units: string;
     total_power: string;
     soldiers: string;
+    heroes: string;
     food_balance: string;
     food_prod: string;
     food_consumed: string;
@@ -695,6 +696,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -1214,6 +1216,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -1733,6 +1736,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -2252,6 +2256,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -2771,6 +2776,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -3290,6 +3296,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -3809,6 +3816,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;
@@ -4328,6 +4336,7 @@ export declare const TRANSLATIONS: {
         loading_units: string;
         total_power: string;
         soldiers: string;
+        heroes: string;
         food_balance: string;
         food_prod: string;
         food_consumed: string;

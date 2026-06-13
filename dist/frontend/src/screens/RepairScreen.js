@@ -54,7 +54,7 @@ function RepairScreen() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#f4d03f' }}>{t('b_' + b.type)} Lv.{b.level}</div>
                 <div style={{ fontSize: 11, color: '#a0845a', marginTop: 3 }}>
-                  🔨 {t('repair_done_in')}: <Countdown_1.default endsAt={b.repairEndsAt}/>
+                  🔨 {t('repair_done_in')}: <Countdown_1.default endsAt={b.repairEndsAt} onEnd={() => setTimeout(refresh, 1500)}/>
                 </div>
               </div>
             </div>))}

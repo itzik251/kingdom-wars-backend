@@ -10,7 +10,7 @@ exports.default = (0, vite_1.defineConfig)({
         emptyOutDir: true,
     },
     server: {
-        port: 5173,
+        port: Number(process.env.PORT) || 5173,
         proxy: {
             '/api': 'http://localhost:3000',
         },

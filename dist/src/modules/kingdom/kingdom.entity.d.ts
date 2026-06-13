@@ -31,6 +31,9 @@ export declare class Kingdom {
     withdrawalPending: number;
     withdrawalStatus: string;
     ragnarHeroGrantedCount: number;
+    magic: number;
+    maxMagic: number;
+    explorerCount: number;
     createdAt: Date;
     get isShielded(): boolean;
     get isVip(): boolean;

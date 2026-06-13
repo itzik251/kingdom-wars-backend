@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request, Get, Query, Param } from '@nestjs/common';
-import { IsUUID } from 'class-validator';
+import { IsUUID, IsOptional, IsString, IsObject } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AntiBotGuard, AntiBotAction } from '../antibot/antibot.guard';
 import { CombatService } from './combat.service';
@@ -10,10 +10,12 @@ class AttackDto {
   @IsUUID()
   defenderKingdomId: string;
 
-  // Optional hero commander (paladin/dragon_rider/ragnar/titan)
+  @IsOptional()
+  @IsString()
   heroType?: string;
 
-  // Optional squad — if omitted, uses full army
+  @IsOptional()
+  @IsObject()
   squad?: Record<string, number>;
 }
 

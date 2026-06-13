@@ -92,7 +92,7 @@ const he = {
     until_withdraw: 'עוד ${n} עד משיכה', usdt_info: '💡 USDT מצטבר מהפניית חברים — 20 חברים = 1 USDT',
     withdraw_info: '💸 משיכה מינימלית $20 USDT ישירות לארנק Telegram שלך',
     army_title: '⚔️ צבא', loading_units: 'טוען יחידות...',
-    total_power: 'כוח כולל', soldiers: 'חיילים', food_balance: 'מאזן אוכל לשעה',
+    total_power: 'כוח כולל', soldiers: 'חיילים', heroes: 'גיבורים', food_balance: 'מאזן אוכל לשעה',
     food_prod: 'ייצור: +{n}/שעה', food_consumed: 'צריכה: -{n}/שעה',
     desert_warning: '⚠️ חיילים עלולים לעזוב!', training_queue: '🏋️ תור אימון פעיל',
     regular_soldiers: '🪖 חיילים רגילים', vip_heroes: '👑 גיבורי VIP',
@@ -421,7 +421,7 @@ const en = {
     until_withdraw: '${n} more to withdraw', usdt_info: '💡 USDT accumulates from referrals — 20 friends = 1 USDT',
     withdraw_info: '💸 Minimum withdrawal $20 USDT directly to your Telegram wallet',
     army_title: '⚔️ Army', loading_units: 'Loading units...',
-    total_power: 'Total power', soldiers: 'Soldiers', food_balance: 'Hourly food balance',
+    total_power: 'Total power', soldiers: 'Soldiers', heroes: 'Heroes', food_balance: 'Hourly food balance',
     food_prod: 'Production: +{n}/hr', food_consumed: 'Consumption: -{n}/hr',
     desert_warning: '⚠️ Soldiers may desert!', training_queue: '🏋️ Training queue active',
     regular_soldiers: '🪖 Regular soldiers', vip_heroes: '👑 VIP Heroes',
@@ -662,6 +662,7 @@ const en = {
     stat_gem_forge_now: '💎 Produces {n} 💎/hr',
     stat_gem_forge_next: '⬆️ Level {level}: {gems} 💎/hr',
     stat_gem_forge_cost: '💵 Upgrade cost: {cost} USDT',
+    tut_next: 'Next', tut_start: 'Play now!', tut_skip: 'Skip tutorial',
 };
 const es = {
     nav_home: '🏰 Reino', nav_repair: '🔧 Reparar', nav_army: '⚔️ Ejército', nav_attack: '🗡️ Atacar',
@@ -976,6 +977,7 @@ const es = {
     stat_gem_forge_now: '💎 Produce {n} 💎/h',
     stat_gem_forge_next: '⬆️ Nivel {level}: {gems} 💎/h',
     stat_gem_forge_cost: '💵 Costo de mejora: {cost} USDT',
+    tut_next: 'Siguiente', tut_start: '¡Jugar ahora!', tut_skip: 'Saltar tutorial',
 };
 const fr = {
     nav_home: '🏰 Royaume', nav_repair: '🔧 Réparer', nav_army: '⚔️ Armée', nav_attack: '🗡️ Attaque',
@@ -1247,6 +1249,7 @@ const fr = {
     stat_gem_forge_now: '💎 Produit {n} 💎/h',
     stat_gem_forge_next: '⬆️ Niveau {level} : {gems} 💎/h',
     stat_gem_forge_cost: '💵 Coût de l\'amélioration : {cost} USDT',
+    tut_next: 'Suivant', tut_start: 'Jouer maintenant!', tut_skip: 'Passer le tutoriel',
 };
 const de = {
     nav_home: '🏰 Königreich', nav_repair: '🔧 Reparieren', nav_army: '⚔️ Armee', nav_attack: '🗡️ Angriff',
@@ -1518,6 +1521,7 @@ const de = {
     stat_gem_forge_now: '💎 Produziert {n} 💎/Std',
     stat_gem_forge_next: '⬆️ Level {level}: {gems} 💎/Std',
     stat_gem_forge_cost: '💵 Verbesserungskosten: {cost} USDT',
+    tut_next: 'Weiter', tut_start: 'Jetzt spielen!', tut_skip: 'Tutorial überspringen',
 };
 const ru = {
     nav_home: '🏰 Королевство', nav_repair: '🔧 Ремонт', nav_army: '⚔️ Армия', nav_attack: '🗡️ Атака',
@@ -1789,6 +1793,7 @@ const ru = {
     stat_gem_forge_now: '💎 Производит {n} 💎/ч',
     stat_gem_forge_next: '⬆️ Уровень {level}: {gems} 💎/ч',
     stat_gem_forge_cost: '💵 Стоимость улучшения: {cost} USDT',
+    tut_next: 'Далее', tut_start: 'Играть сейчас!', tut_skip: 'Пропустить',
 };
 const pt = {
     nav_home: '🏰 Reino', nav_repair: '🔧 Reparar', nav_army: '⚔️ Exército', nav_attack: '🗡️ Atacar',
@@ -2060,6 +2065,7 @@ const pt = {
     stat_gem_forge_now: '💎 Produz {n} 💎/h',
     stat_gem_forge_next: '⬆️ Nível {level}: {gems} 💎/h',
     stat_gem_forge_cost: '💵 Custo de melhoria: {cost} USDT',
+    tut_next: 'Próximo', tut_start: 'Jogar agora!', tut_skip: 'Pular tutorial',
 };
 const ar = {
     nav_home: '🏰 المملكة', nav_repair: '🔧 إصلاح', nav_army: '⚔️ الجيش', nav_attack: '🗡️ هجوم',
@@ -2331,6 +2337,7 @@ const ar = {
     stat_gem_forge_now: '💎 ينتج {n} 💎/ساعة',
     stat_gem_forge_next: '⬆️ المستوى {level}: {gems} 💎/ساعة',
     stat_gem_forge_cost: '💵 تكلفة الترقية: {cost} USDT',
+    tut_next: 'التالي', tut_start: 'العب الآن!', tut_skip: 'تخطي',
 };
 exports.TRANSLATIONS = { he, en, es, fr, de, ru, pt, ar };
 //# sourceMappingURL=translations.js.map

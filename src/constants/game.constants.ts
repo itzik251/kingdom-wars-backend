@@ -73,6 +73,7 @@ export interface UnitStats {
   gemsCost?:          number;   // VIP units cost gems instead of gold
   requiresVip?:       boolean;
   requiresReferralHero?: boolean; // Ragnar — unlocked only after referral milestone claim
+  requiresExploration?: boolean; // hero discovered on exploration map
 }
 
 export const UNIT_STATS: Record<UnitType, UnitStats> = {
@@ -89,9 +90,13 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   // Ragnar — referral hero (first unit given free on claim; additional units cost gems)
   [UnitType.RAGNAR]:      { goldCost: 0, gemsCost: 200, foodCost: 0, upkeep: 20, attackPower: 400, defensePower: 300, trainingTime: 900, requiredBarracksLevel: 3, requiresReferralHero: true },
   // Titan — USDT hero, can attack alone (no minimum squad)
-  [UnitType.TITAN]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 10, attackPower: 800,  defensePower: 600,  trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
+  [UnitType.TITAN]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 25, attackPower: 800,  defensePower: 600,  trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
   // Giant — USDT hero, can attack alone
   [UnitType.GIANT]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 50, attackPower: 2000, defensePower: 1200, trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
+  // Exploration-discovered heroes — unlocked only after finding them on the map
+  [UnitType.OGRE]:         { goldCost: 0, gemsCost: 150, foodCost: 0, upkeep: 18, attackPower: 350, defensePower: 500, trainingTime: 0, requiredBarracksLevel: 1, requiresExploration: true },
+  [UnitType.MAGE]:         { goldCost: 0, gemsCost: 180, foodCost: 0, upkeep: 12, attackPower: 600, defensePower: 200, trainingTime: 0, requiredBarracksLevel: 1, requiresExploration: true },
+  [UnitType.DWARF_FIGHTER]:{ goldCost: 0, gemsCost: 120, foodCost: 0, upkeep: 10, attackPower: 280, defensePower: 320, trainingTime: 0, requiredBarracksLevel: 1, requiresExploration: true },
 };
 
 // ─── Combat ──────────────────────────────────────────────────

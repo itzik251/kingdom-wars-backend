@@ -7,18 +7,20 @@ const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("./Countdown");
 const gameStore_1 = require("../store/gameStore");
-const HERO_TYPES = new Set(['knight', 'paladin', 'dragon_rider', 'ragnar', 'titan']);
-const HERO_POWER = { titan: 150, dragon_rider: 100, ragnar: 90, paladin: 80, knight: 40 };
+const HERO_TYPES = new Set(['knight', 'paladin', 'dragon_rider', 'ragnar', 'titan', 'giant']);
+const HERO_POWER = { giant: 300, titan: 150, dragon_rider: 100, ragnar: 90, paladin: 80, knight: 40 };
 const UNIT_ATK = {
     spearman: 1, archer: 2, swordsman: 3, cavalry: 5, catapult: 10, elite_guard: 8,
-    knight: 40, paladin: 80, dragon_rider: 100, ragnar: 90, titan: 150,
+    knight: 40, paladin: 80, dragon_rider: 100, ragnar: 90, titan: 150, giant: 300,
 };
+const HERO_SALARY = { giant: 10, titan: 0, dragon_rider: 5, paladin: 3, ragnar: 2, knight: 1 };
 const UNIT_META = {
     knight: { icon: '🗡️', nameKey: 'u_knight', heroColor: '#85c1e9' },
     paladin: { icon: '⚔️', nameKey: 'u_paladin', heroColor: '#f4d03f' },
     dragon_rider: { icon: '🐉', nameKey: 'u_dragon_rider', heroColor: '#e74c3c' },
     ragnar: { icon: '🪓', nameKey: 'u_ragnar', heroColor: '#e67e22' },
     titan: { icon: '🗿', nameKey: 'u_titan', heroColor: '#9b59b6' },
+    giant: { icon: '👹', nameKey: 'u_giant', heroColor: '#8e44ad' },
     spearman: { icon: '🏹', nameKey: 'u_spearman' },
     archer: { icon: '🏹', nameKey: 'u_archer' },
     swordsman: { icon: '🗡️', nameKey: 'u_swordsman' },
@@ -35,11 +37,16 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
     const myScore = (0, gameStore_1.useGameStore)(s => s.kingdom?.score ?? 0);
     const isVip = (0, gameStore_1.useGameStore)(s => !!s.kingdom?.isVip);
     const myUnits = (0, gameStore_1.useGameStore)(s => s.units ?? []);
+    const myGems = (0, gameStore_1.useGameStore)(s => s.kingdom?.gems ?? 0);
     const anyMarching = (0, gameStore_1.useGameStore)(s => Object.keys(s.marchingSquads).length > 0);
+    const heroCanFight = (type) => {
+        const salary = HERO_SALARY[type] ?? 0;
+        return salary === 0 || myGems >= salary;
+    };
     const sentTypes = (attacking && sentSquad) ? Object.keys(sentSquad).filter(k => (sentSquad[k] ?? 0) > 0) : [];
     const myHeroUnits = myUnits.filter(u => HERO_TYPES.has(u.type) && (u.count > 0 || sentTypes.includes(u.type)));
     const mySoldierUnits = myUnits.filter(u => !HERO_TYPES.has(u.type) && (u.count > 0 || sentTypes.includes(u.type)));
-    const hasAnyHero = myUnits.some(u => HERO_TYPES.has(u.type) && u.count > 0);
+    const hasAnyHero = myUnits.some(u => HERO_TYPES.has(u.type) && u.count > 0 && heroCanFight(u.type));
     const totalHeroCount = myUnits.filter(u => HERO_TYPES.has(u.type)).reduce((s, u) => s + u.count, 0);
     const displayCounts = (attacking && sentSquad) ? sentSquad : squadCounts;
     const squadTotal = Object.values(displayCounts).reduce((s, v) => s + v, 0);
@@ -53,8 +60,10 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             return myUnits.reduce((s, u) => s + (UNIT_ATK[u.type] ?? 0) * u.count, 0);
         return Object.entries(displayCounts).reduce((s, [type, cnt]) => s + (UNIT_ATK[type] ?? 0) * cnt, 0);
     }, [displayCounts, myUnits, squadTotal]);
-    const heroRequired = hasAnyHero && heroesInSquad.length === 0;
-    const soldierOk = commanderType === 'knight' ? soldiersInSquad >= 10 : true;
+    const effectiveCommander = commanderType
+        ?? (myHeroUnits.length > 0 ? myHeroUnits.reduce((best, u) => (HERO_POWER[u.type] ?? 0) > (HERO_POWER[best.type] ?? 0) ? u : best).type : undefined);
+    const heroRequired = false;
+    const soldierOk = effectiveCommander === 'knight' ? soldiersInSquad >= 10 : true;
     (0, react_1.useEffect)(() => {
         if (myUnits.length > 0) {
             const defaults = {};
@@ -89,7 +98,7 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
     const defScore = Number(profile.score) || 0;
     const toWeakToAttack = !import.meta.env.DEV && myScore >= 10 && defScore >= 10 && myScore > defScore * 10;
     const noFreeHero = !hasAnyHero;
-    const canAttack = hasAnyHero && !profile.isShielded && !toWeakToAttack && !heroRequired && soldierOk && !attacking;
+    const canAttack = hasAnyHero && !profile.isShielded && !toWeakToAttack && soldierOk && !attacking;
     const winPct = profile.defPower > 0
         ? Math.round(Math.min(95, Math.max(5, (squadPower / (squadPower + profile.defPower)) * 100)))
         : squadPower > 0 ? 90 : 10;
@@ -101,8 +110,13 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
     const handleAttack = () => {
         if (!canAttack)
             return;
-        const squad = squadTotal > 0 ? squadCounts : undefined;
-        onAttack(profile, { heroType: commanderType, squad });
+        const squad = squadTotal > 0 ? { ...squadCounts } : undefined;
+        if (squad && effectiveCommander) {
+            const heroUnit = myHeroUnits.find(u => u.type === effectiveCommander);
+            if (heroUnit && (squad[effectiveCommander] ?? 0) === 0)
+                squad[effectiveCommander] = heroUnit.count;
+        }
+        onAttack(profile, { heroType: effectiveCommander, squad });
     };
     const allUnitRows = [
         ...myHeroUnits.map(u => ({ ...u, isHero: true })),
@@ -198,6 +212,7 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
                 const isHeroRow = u.isHero;
                 const isCommander = u.type === commanderType;
                 const fillColor = isHeroRow ? (meta.heroColor ?? '#f4d03f') : '#e74c3c';
+                const noGems = isHeroRow && !heroCanFight(u.type);
                 const showSoldierSep = !isHeroRow && i > 0 && allUnitRows[i - 1]?.isHero;
                 return (<div key={u.type}>
                   {showSoldierSep && (<div style={{ margin: '6px 0 4px' }}>
@@ -209,11 +224,11 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
                       {meta.icon}
                       {isCommander && <span style={{ position: 'absolute', top: -5, right: -5, fontSize: 8 }}>👑</span>}
                     </span>
-                    <div style={{ fontSize: 11, width: 72, flexShrink: 0, color: isHeroRow ? (meta.heroColor ?? '#f4d03f') : '#999', fontWeight: isHeroRow ? 700 : 400, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      {t(meta.nameKey)}
+                    <div style={{ fontSize: 11, width: 72, flexShrink: 0, color: noGems ? '#666' : isHeroRow ? (meta.heroColor ?? '#f4d03f') : '#999', fontWeight: isHeroRow ? 700 : 400, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {t(meta.nameKey)}{noGems && <span style={{ fontSize: 9, color: '#e74c3c', marginRight: 3 }}> 💎✕</span>}
                     </div>
                     <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'visible', position: 'relative' }}>
-                      <input type="range" min={0} max={totalCount} value={val} onChange={e => setSquadCounts(prev => ({ ...prev, [u.type]: +e.target.value }))} disabled={attacking} style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: attacking ? 'not-allowed' : 'pointer', height: 20, top: -8, margin: 0 }}/>
+                      <input type="range" min={0} max={noGems ? 0 : totalCount} value={noGems ? 0 : val} onChange={e => !noGems && setSquadCounts(prev => ({ ...prev, [u.type]: +e.target.value }))} disabled={attacking || noGems} style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: attacking ? 'not-allowed' : 'pointer', height: 20, top: -8, margin: 0 }}/>
                       <div style={{ height: '100%', width: `${totalCount > 0 ? (val / totalCount) * 100 : 0}%`, background: fillColor, borderRadius: 2, transition: 'width 0.1s' }}/>
                     </div>
                     <div style={{ fontSize: 10, width: 36, textAlign: 'left', flexShrink: 0, color: val > 0 ? fillColor : '#444', fontWeight: val > 0 ? 700 : 400 }}>
@@ -252,11 +267,10 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             {attacking && marchCountdown > 0 ? `⚔️ ${t('marching')} ${marchCountdown}s...`
             : attacking ? t('attacking_label')
                 : noFreeHero ? t('all_heroes_out')
-                    : heroRequired ? t('send_one_hero_up')
-                        : !soldierOk ? t('squad_min_warn', { n: soldiersInSquad })
-                            : profile.isShielded ? `🛡️ ${t('protected_btn')}`
-                                : toWeakToAttack ? `⛔ ${t('too_weak_to_attack')}`
-                                    : t('attack_btn_time', { n: profile.marchSeconds })}
+                    : !soldierOk ? t('squad_min_warn', { n: soldiersInSquad })
+                        : profile.isShielded ? `🛡️ ${t('protected_btn')}`
+                            : toWeakToAttack ? `⛔ ${t('too_weak_to_attack')}`
+                                : t('attack_btn_time', { n: profile.marchSeconds })}
           </button>
         </div>
 

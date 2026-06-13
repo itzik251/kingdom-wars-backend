@@ -21,6 +21,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { CryptoBotFullModule } from './modules/cryptobot/cryptobot.full.module';
 import { AntiBotModule } from './modules/antibot/antibot.module';
 import { DevModule } from './modules/dev/dev.module';
+import { ExplorationModule } from './modules/exploration/exploration.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { DevModule } from './modules/dev/dev.module';
     CryptoBotFullModule,
     AntiBotModule,
     DevModule,
+    ExplorationModule,
   ],
 })
 export class AppModule {}

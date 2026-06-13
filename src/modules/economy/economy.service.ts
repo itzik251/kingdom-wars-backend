@@ -15,6 +15,9 @@ import {
 } from '../../constants/game.constants';
 import { HERO_TYPES, HERO_SALARY_GEMS } from '../units/unit.entity';
 
+const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+const lastNegativeProdNotif = new Map<string, number>(); // kingdomId → timestamp
+
 const PRODUCER_BUILDINGS: Partial<Record<BuildingType, keyof typeof BASE_PRODUCTION>> = {
   [BuildingType.GOLD_MINE]:    'gold_mine',
   [BuildingType.LUMBER_MILL]:  'lumber_mill',
@@ -76,7 +79,7 @@ export class EconomyService {
     const workerSalary = workerCount * 5 * hoursElapsed;
 
     // Hero salary: deduct gems daily; if not enough gems, deduct what we can (heroes stay)
-    const HERO_SALARY_INTERVAL_HOURS = 24;
+    const HERO_SALARY_INTERVAL_HOURS = 1;
     const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
     if (heroSalaryTicks > 0) {
       let gemsNeeded = 0;
@@ -112,7 +115,7 @@ export class EconomyService {
       const desertionRate = Math.min(0.05, foodShortfall * 0.005);
       let desertionChanged = false;
       for (const unit of units) {
-        if (unit.count > 0) {
+        if (unit.count > 0 && !HERO_TYPES.has(unit.type as any)) {
           const lost = Math.max(1, Math.floor(unit.count * desertionRate));
           unit.count = Math.max(0, unit.count - lost);
           desertionChanged = true;
@@ -151,10 +154,38 @@ export class EconomyService {
 
     // Send push notifications if we have a userId (from cron or passed by caller)
     const resolvedUserId = userId ?? (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
-    if (resolvedUserId && (completedBuildings.length > 0 || completedUnits.length > 0)) {
-      // Fetch user for telegramId + language (use passed userObj to avoid extra DB query)
+    if (resolvedUserId) {
       const user = userObj ?? await this.userRepo?.findOne({ where: { id: resolvedUserId } }).catch(() => null);
       const userPayload = user ? { telegramId: user.telegramId, language: user.language || 'en' } : {};
+
+      // Low food warning — only from cron (userId passed), once per ~5 ticks to avoid spam
+      const hasSoldiers = units.some(u => !HERO_TYPES.has(u.type) && u.count > 0);
+      if (userId && hasSoldiers && kingdom.food <= 0 && foodShortfall > 0) {
+        this.notifService.create(resolvedUserId, 'low_food', { ...userPayload }).catch(() => {});
+      }
+
+      // Low gems warning — when heroes exist and gems < 10h of salary
+      const hasHeroes = units.some(u => HERO_TYPES.has(u.type) && u.count > 0);
+      if (userId && hasHeroes) {
+        const hourlyGemsCost = units.reduce((s, u) =>
+          HERO_TYPES.has(u.type) && u.count > 0 ? s + (HERO_SALARY_GEMS[u.type] ?? 0) : s, 0);
+        if (hourlyGemsCost > 0 && (kingdom.gems ?? 0) < hourlyGemsCost * 10) {
+          this.notifService.create(resolvedUserId, 'low_gems', { ...userPayload, gems: kingdom.gems ?? 0 }).catch(() => {});
+        }
+      }
+
+      // Production deficit warning — once per 24h per kingdom
+      if (userId) {
+        const hourlyFoodProduction = this.calculateProduction(buildings, 1).food;
+        const hourlyUpkeep = this.calculateUpkeep(units, 1);
+        const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
+        if (hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
+          lastNegativeProdNotif.set(kingdomId, Date.now());
+          this.notifService.create(resolvedUserId, 'negative_production', { ...userPayload }).catch(() => {});
+        }
+      }
+
+    if (completedBuildings.length > 0 || completedUnits.length > 0) {
 
       // Group by type — one push per building type (e.g. 3 farms → one notification)
       if (completedBuildings.length > 0) {
@@ -176,6 +207,7 @@ export class EconomyService {
           this.notifService.create(resolvedUserId, 'training_done', { ...userPayload, unit: type, count }).catch(() => {});
         }
       }
+    }
     }
 
     (saved as any).__completedBuildings = completedBuildings;

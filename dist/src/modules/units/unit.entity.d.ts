@@ -11,9 +11,13 @@ export declare enum UnitType {
     DRAGON_RIDER = "dragon_rider",
     RAGNAR = "ragnar",
     TITAN = "titan",
-    GIANT = "giant"
+    GIANT = "giant",
+    OGRE = "ogre",
+    MAGE = "mage",
+    DWARF_FIGHTER = "dwarf_fighter"
 }
 export declare const HERO_TYPES: Set<UnitType>;
+export declare const EXPLORATION_HEROES: Set<UnitType>;
 export declare const HERO_SALARY_GEMS: Record<string, number>;
 export declare class Unit {
     id: string;

@@ -16,6 +16,10 @@ export enum UnitType {
   RAGNAR       = 'ragnar',
   TITAN        = 'titan',
   GIANT        = 'giant',
+  // Exploration-discovered heroes
+  OGRE         = 'ogre',
+  MAGE         = 'mage',
+  DWARF_FIGHTER = 'dwarf_fighter',
 }
 
 export const HERO_TYPES = new Set<UnitType>([
@@ -25,6 +29,16 @@ export const HERO_TYPES = new Set<UnitType>([
   UnitType.RAGNAR,
   UnitType.TITAN,
   UnitType.GIANT,
+  UnitType.OGRE,
+  UnitType.MAGE,
+  UnitType.DWARF_FIGHTER,
+]);
+
+// Heroes that require exploration discovery before they appear in army
+export const EXPLORATION_HEROES = new Set<UnitType>([
+  UnitType.OGRE,
+  UnitType.MAGE,
+  UnitType.DWARF_FIGHTER,
 ]);
 
 // Daily gem salary per hero type
@@ -35,6 +49,9 @@ export const HERO_SALARY_GEMS: Record<string, number> = {
   [UnitType.RAGNAR]:       2,
   [UnitType.TITAN]:        0,
   [UnitType.GIANT]:        10,
+  [UnitType.OGRE]:         4,
+  [UnitType.MAGE]:         6,
+  [UnitType.DWARF_FIGHTER]: 3,
 };
 
 @Entity('units')

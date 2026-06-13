@@ -3,359 +3,471 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = WorldMapScreen;
 const react_1 = require("react");
 const client_1 = require("../api/client");
-const format_1 = require("../utils/format");
 const gameStore_1 = require("../store/gameStore");
-const KingdomProfileSheet_1 = require("../components/KingdomProfileSheet");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("../components/Countdown");
-const TILE_W = 64, TILE_H = 32, WALL_H = 14;
-const STEP = 2;
+const TILE_W = 72, TILE_H = 36, WALL_H = 10;
+const MAP_R = 12;
+const GRID = MAP_R * 2 + 1;
+const CENTER = MAP_R;
 function isoXY(gx, gy) {
     return { x: (gx - gy) * (TILE_W / 2), y: (gx + gy) * (TILE_H / 2) };
 }
-const TERRAIN = {
-    grass1: { top: '#4aaa28', left: '#2d6818', right: '#1a400c' },
-    grass2: { top: '#3d9820', left: '#266014', right: '#163a0a' },
-    path: { top: '#c8a060', left: '#8a6030', right: '#503818' },
-    dirt: { top: '#9a7848', left: '#6a5030', right: '#3a2c18' },
-    rock: { top: '#7a7a80', left: '#4a4a58', right: '#2a2a38', icon: '🪨' },
-    forest: { top: '#2a6a10', left: '#164008', right: '#0a2004', icon: '🌲' },
-    water: { top: '#2a5890', left: '#183858', right: '#0c2038' },
-};
-function terrainFor(i, j) {
-    if ((i + j) % 7 === 0 && i % 2 === 1)
+function tileTypeAt(gx, gy) {
+    const dx = gx - CENTER, dy = gy - CENTER;
+    const d = Math.max(Math.abs(dx), Math.abs(dy));
+    if (d >= MAP_R)
         return 'water';
-    const h = ((i * 2654435761) ^ (j * 2246822519)) >>> 0;
-    const v = h % 100;
-    if (v < 8)
+    if (d >= MAP_R - 1)
         return 'forest';
-    if (v < 16)
+    if ((gx * 3 + gy * 7) % 11 === 0)
         return 'rock';
-    if (v < 26)
-        return 'grass2';
-    if (v < 36)
+    if ((gx + gy * 2) % 8 === 0)
         return 'dirt';
-    return 'grass1';
+    return 'grass';
 }
-function kingdomColors(k, isMe) {
-    if (isMe)
-        return { top: '#4aaa28', left: '#2d6818', right: '#1a400c' };
-    if (k.rank === 1)
-        return { top: '#c8a040', left: '#7a5c18', right: '#4a3808' };
-    if (k.rank === 2)
-        return { top: '#909090', left: '#585858', right: '#383838' };
-    if (k.rank === 3)
-        return { top: '#a06030', left: '#603818', right: '#382008' };
-    if (k.shieldActive)
-        return { top: '#2860a8', left: '#183868', right: '#0c2038' };
-    const hue = (k.rank * 47 + 160) % 360;
-    return { top: `hsl(${hue},45%,22%)`, left: `hsl(${hue},40%,13%)`, right: `hsl(${hue},35%,8%)` };
-}
-function IsoTile({ colors, icon, size = 1, glow = false, glowColor = '#f4d03f', zBase = 0, px, py, onClick, children }) {
-    const tW = TILE_W * size, tH = TILE_H * size;
-    const bodyH = size === 2 ? 28 : WALL_H;
-    return (<div onClick={onClick} style={{ position: 'absolute', left: px - tW / 2, top: py - bodyH, width: tW, height: tH + bodyH, zIndex: zBase, cursor: onClick ? 'pointer' : 'default' }}>
-      
-      <div style={{ position: 'absolute', left: 0, top: tH / 2, width: tW / 2, height: bodyH, background: `linear-gradient(180deg,${colors.left},${colors.right})`, transform: 'skewY(26.6deg)', transformOrigin: 'top left' }}/>
-      
-      <div style={{ position: 'absolute', right: 0, top: tH / 2, width: tW / 2, height: bodyH, background: `linear-gradient(180deg,${colors.right},rgba(0,0,0,0.85))`, transform: 'skewY(-26.6deg)', transformOrigin: 'top right' }}/>
-      
-      <div style={{ position: 'absolute', left: 0, top: 0, width: tW, height: tH, clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', background: `radial-gradient(ellipse at 40% 35%,${colors.top},${colors.left})`, boxShadow: glow ? `0 0 18px ${glowColor}88, 0 0 6px ${glowColor}44` : undefined, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {icon && <span style={{ fontSize: size === 2 ? 24 : 15, paddingTop: tH * 0.2, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))' }}>{icon}</span>}
-      </div>
-      {children}
-    </div>);
-}
+const TERRAIN_COLORS = {
+    grass: ['#4aaa28', '#2d6818', '#1a400c'],
+    dirt: ['#c8a060', '#8a6030', '#503818'],
+    rock: ['#7a7a80', '#4a4a58', '#2a2a38'],
+    forest: ['#2a7a10', '#164008', '#0a2004'],
+    water: ['#2a5890', '#183858', '#0c2038'],
+};
+const NODE_ICONS = {
+    gold: '💰', wood: '🌲', stone: '⛏️', food: '🌾',
+    magic: '✨', ogre: '👹', mage: '🧙', dwarf_fighter: '⚒️',
+};
 function WorldMapScreen() {
-    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
     const t = (0, useT_1.useT)();
-    const [kingdoms, setKingdoms] = (0, react_1.useState)([]);
-    const [selected, setSelected] = (0, react_1.useState)(null);
-    const [profileId, setProfileId] = (0, react_1.useState)(null);
-    const [attackingId, setAttackingId] = (0, react_1.useState)(null);
-    const [marchCountdown, setMarchCountdown] = (0, react_1.useState)(0);
-    const cancelMarchRef = (0, react_1.useRef)(false);
-    const [battle, setBattle] = (0, react_1.useState)(null);
-    const [loading, setLoading] = (0, react_1.useState)(true);
-    const [attackError, setAttackError] = (0, react_1.useState)('');
-    const [pan, setPan] = (0, react_1.useState)({ x: 0, y: 0 });
-    const [zoom, setZoom] = (0, react_1.useState)(1);
-    const dragRef = (0, react_1.useRef)(null);
-    const isDragging = (0, react_1.useRef)(false);
+    const { buildings, refresh } = (0, gameStore_1.useGameStore)();
+    const canvasRef = (0, react_1.useRef)(null);
     const containerRef = (0, react_1.useRef)(null);
-    const lastPinch = (0, react_1.useRef)(null);
-    (0, react_1.useEffect)(() => {
-        client_1.api.get('/leaderboard?all=true').then((data) => {
-            const raw = Array.isArray(data) ? data : data.leaderboard || [];
-            const norm = raw.map((k, i) => ({
-                id: k.id, rank: k.rank ?? i + 1,
-                kingdomName: k.kingdomName ?? k.name,
-                username: k.username ?? k.user?.username ?? k.user?.firstName,
-                score: k.score ?? 0, shieldActive: k.shieldActive ?? false,
-                shieldUntil: k.shieldUntil ?? null, usdtBalance: k.usdtBalance ?? 0,
-            }));
-            setKingdoms(norm);
-            setLoading(false);
-            setTimeout(() => {
-                const cW = containerRef.current?.clientWidth ?? window.innerWidth;
-                const cH = containerRef.current?.clientHeight ?? 400;
-                const COLS = Math.max(4, Math.ceil(Math.sqrt(norm.length)));
-                const myIdx = Math.max(0, norm.findIndex(k => k.kingdomName === kingdom?.name));
-                const gx = (myIdx % COLS) * STEP + 1;
-                const gy = Math.floor(myIdx / COLS) * STEP + 1;
-                const { x, y } = isoXY(gx, gy);
-                const ROWS = Math.ceil(norm.length / COLS);
-                const corners = [isoXY(0, 0), isoXY(COLS * STEP + 2, 0), isoXY(0, ROWS * STEP + 2), isoXY(COLS * STEP + 2, ROWS * STEP + 2)];
-                const mX = Math.min(...corners.map(c => c.x)) - TILE_W * 2;
-                setPan({ x: cW / 2 - (x - mX), y: cH / 2 - y - 40 });
-            }, 100);
-        }).catch(() => setLoading(false));
+    const [mapData, setMapData] = (0, react_1.useState)(null);
+    const [loading, setLoading] = (0, react_1.useState)(true);
+    const [pan, setPan] = (0, react_1.useState)({ x: 0, y: 0 });
+    const [zoom, setZoom] = (0, react_1.useState)(0.75);
+    const [selected, setSelected] = (0, react_1.useState)(null);
+    const [sendTarget, setSendTarget] = (0, react_1.useState)(null);
+    const [actionMsg, setActionMsg] = (0, react_1.useState)('');
+    const [hiring, setHiring] = (0, react_1.useState)(false);
+    const [sending, setSending] = (0, react_1.useState)(false);
+    const [tab, setTab] = (0, react_1.useState)('map');
+    const hasAcademy = buildings?.some(b => b.type === 'academy') ?? false;
+    async function load() {
+        try {
+            const data = await client_1.api.get('/exploration/map');
+            setMapData(data);
+        }
+        catch {
+            setMapData({ fogRadius: 0, academyLevel: 0, explorerCount: 0, maxExplorers: 0, nodes: [], activeMissions: [], returnedMissions: [], magic: 0 });
+        }
+        setLoading(false);
+    }
+    (0, react_1.useEffect)(() => { load(); }, []);
+    const sceneMetrics = (0, react_1.useMemo)(() => {
+        const corners = [isoXY(0, 0), isoXY(GRID, 0), isoXY(0, GRID), isoXY(GRID, GRID)];
+        const minX = Math.min(...corners.map(c => c.x));
+        const maxX = Math.max(...corners.map(c => c.x));
+        const minY = Math.min(...corners.map(c => c.y));
+        const maxY = Math.max(...corners.map(c => c.y)) + WALL_H;
+        return { minX, minY, sceneW: maxX - minX + TILE_W, sceneH: maxY - minY + TILE_H };
     }, []);
-    const onPointerDown = (0, react_1.useCallback)((e) => {
-        if (e.target.closest('[data-tile]'))
+    const panInitialized = (0, react_1.useRef)(false);
+    (0, react_1.useEffect)(() => {
+        if (loading || panInitialized.current)
             return;
-        isDragging.current = false;
+        panInitialized.current = true;
+        const cw = containerRef.current?.clientWidth ?? 380;
+        const ch = containerRef.current?.clientHeight ?? 400;
+        const cp = isoXY(CENTER, CENTER);
+        setPan({
+            x: cw / 2 - (cp.x - sceneMetrics.minX + TILE_W / 2) * zoom,
+            y: ch / 2 - (cp.y - sceneMetrics.minY + TILE_H / 2) * zoom - 20,
+        });
+    }, [loading]);
+    (0, react_1.useEffect)(() => {
+        if (loading || !canvasRef.current || !containerRef.current)
+            return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx)
+            return;
+        const cw = containerRef.current.clientWidth;
+        const ch = containerRef.current.clientHeight;
+        canvas.width = cw;
+        canvas.height = ch;
+        ctx.clearRect(0, 0, cw, ch);
+        const fogR = mapData?.fogRadius ?? 0;
+        const nodeMap = new Map();
+        mapData?.nodes.forEach(n => nodeMap.set(`${n.x},${n.y}`, n));
+        const missionSet = new Set(mapData?.activeMissions.map(m => `${m.targetX},${m.targetY}`));
+        const tiles = [];
+        for (let gy = 0; gy < GRID; gy++)
+            for (let gx = 0; gx < GRID; gx++)
+                tiles.push({ gx, gy });
+        tiles.sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
+        for (const { gx, gy } of tiles) {
+            const { x, y } = isoXY(gx, gy);
+            const px = (x - sceneMetrics.minX) * zoom + pan.x;
+            const py = (y - sceneMetrics.minY) * zoom + pan.y;
+            const hw = TILE_W * zoom / 2;
+            const hh = (TILE_H + WALL_H) * zoom;
+            if (px + hw < 0 || px - hw > cw || py + hh < 0 || py - TILE_H * zoom > ch)
+                continue;
+            const tw = TILE_W * zoom, th = TILE_H * zoom, wh = WALL_H * zoom;
+            const wxOff = gx - CENTER, wyOff = gy - CENTER;
+            const dist = Math.sqrt(wxOff * wxOff + wyOff * wyOff);
+            const fogged = dist > fogR;
+            const type = tileTypeAt(gx, gy);
+            const [topC, leftC, rightC] = fogged
+                ? ['#050e04', '#030903', '#020602']
+                : TERRAIN_COLORS[type];
+            const cx = px + tw / 2, topY = py, midY = py + th / 2, botY = py + th;
+            ctx.beginPath();
+            ctx.moveTo(cx, botY);
+            ctx.lineTo(px, midY);
+            ctx.lineTo(px, midY + wh);
+            ctx.lineTo(cx, botY + wh);
+            ctx.closePath();
+            ctx.fillStyle = leftC;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx, botY);
+            ctx.lineTo(px + tw, midY);
+            ctx.lineTo(px + tw, midY + wh);
+            ctx.lineTo(cx, botY + wh);
+            ctx.closePath();
+            ctx.fillStyle = rightC;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx, topY);
+            ctx.lineTo(px + tw, midY);
+            ctx.lineTo(cx, botY);
+            ctx.lineTo(px, midY);
+            ctx.closePath();
+            ctx.fillStyle = topC;
+            ctx.fill();
+            if (!fogged && type === 'forest') {
+                ctx.font = `${Math.round(12 * zoom)}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🌲', cx, midY - 4 * zoom);
+            }
+            if (fogged && dist <= MAP_R - 0.5) {
+                ctx.font = `${Math.round(8 * zoom)}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.globalAlpha = 0.12;
+                ctx.fillText('🌑', cx, midY);
+                ctx.globalAlpha = 1;
+            }
+            if (!fogged && missionSet.has(`${wxOff},${wyOff}`)) {
+                ctx.beginPath();
+                ctx.moveTo(cx, topY);
+                ctx.lineTo(px + tw, midY);
+                ctx.lineTo(cx, botY);
+                ctx.lineTo(px, midY);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(244,208,63,0.3)';
+                ctx.fill();
+                ctx.font = `${Math.round(16 * zoom)}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('🧭', cx, topY - 2 * zoom);
+            }
+            if (sendTarget && sendTarget.wx === wxOff && sendTarget.wy === wyOff) {
+                ctx.beginPath();
+                ctx.moveTo(cx, topY);
+                ctx.lineTo(px + tw, midY);
+                ctx.lineTo(cx, botY);
+                ctx.lineTo(px, midY);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(244,208,63,0.45)';
+                ctx.fill();
+            }
+            const node = nodeMap.get(`${wxOff},${wyOff}`);
+            if (node?.discovered) {
+                const icon = node.type === 'hero'
+                    ? (NODE_ICONS[node.heroType] ?? '🦸')
+                    : (NODE_ICONS[node.resourceType] ?? '📦');
+                const isSelected = selected?.id === node.id;
+                const r = 13 * zoom;
+                const circleX = cx, circleY = topY - 4 * zoom;
+                ctx.beginPath();
+                ctx.arc(circleX, circleY, r, 0, Math.PI * 2);
+                ctx.fillStyle = node.type === 'hero'
+                    ? 'rgba(155,89,182,0.9)'
+                    : node.type === 'rare_resource'
+                        ? 'rgba(22,160,133,0.9)'
+                        : 'rgba(184,134,11,0.9)';
+                ctx.fill();
+                if (isSelected) {
+                    ctx.strokeStyle = '#f4d03f';
+                    ctx.lineWidth = 2 * zoom;
+                    ctx.stroke();
+                }
+                ctx.font = `${Math.round(12 * zoom)}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.globalAlpha = (!node.canRaid && node.type !== 'hero') ? 0.5 : 1;
+                ctx.fillText(icon, circleX, circleY);
+                ctx.globalAlpha = 1;
+            }
+        }
+        const cp = isoXY(CENTER, CENTER);
+        const cpx = (cp.x - sceneMetrics.minX) * zoom + pan.x + TILE_W * zoom / 2;
+        const cpy = (cp.y - sceneMetrics.minY) * zoom + pan.y + TILE_H * zoom / 2;
+        ctx.font = `${Math.round(28 * zoom)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = 'rgba(244,208,63,0.7)';
+        ctx.shadowBlur = 10 * zoom;
+        ctx.fillText('🏰', cpx, cpy - TILE_H * zoom / 2);
+        ctx.shadowBlur = 0;
+    }, [loading, mapData, pan, zoom, selected, sendTarget]);
+    function screenToTile(sx, sy) {
+        const wx = (sx - pan.x) / zoom + sceneMetrics.minX;
+        const wy = (sy - pan.y) / zoom + sceneMetrics.minY;
+        const gx = Math.round((wx / (TILE_W / 2) + wy / (TILE_H / 2)) / 2);
+        const gy = Math.round((wy / (TILE_H / 2) - wx / (TILE_W / 2)) / 2);
+        if (gx < 0 || gy < 0 || gx >= GRID || gy >= GRID)
+            return null;
+        return { gx, gy };
+    }
+    const dragRef = (0, react_1.useRef)(null);
+    const moved = (0, react_1.useRef)(false);
+    const onPointerDown = (0, react_1.useCallback)((e) => {
+        moved.current = false;
         dragRef.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y };
         e.currentTarget.setPointerCapture(e.pointerId);
     }, [pan]);
     const onPointerMove = (0, react_1.useCallback)((e) => {
         if (!dragRef.current)
             return;
-        const dx = e.clientX - dragRef.current.sx, dy = e.clientY - dragRef.current.sy;
+        const dx = e.clientX - dragRef.current.sx;
+        const dy = e.clientY - dragRef.current.sy;
         if (Math.abs(dx) > 4 || Math.abs(dy) > 4)
-            isDragging.current = true;
-        if (isDragging.current)
+            moved.current = true;
+        if (moved.current)
             setPan({ x: dragRef.current.px + dx, y: dragRef.current.py + dy });
     }, []);
-    const onPointerUp = (0, react_1.useCallback)(() => {
+    const onPointerUp = (0, react_1.useCallback)((e) => {
+        if (!moved.current && dragRef.current) {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect)
+                return;
+            const sx = e.clientX - rect.left;
+            const sy = e.clientY - rect.top;
+            const tile = screenToTile(sx, sy);
+            if (tile)
+                handleTileClick(tile.gx, tile.gy);
+        }
         dragRef.current = null;
-        lastPinch.current = null;
-        setTimeout(() => { isDragging.current = false; }, 10);
-    }, []);
+    }, [pan, zoom, mapData, selected]);
     const onWheel = (0, react_1.useCallback)((e) => {
         e.preventDefault();
-        setZoom(z => Math.max(0.35, Math.min(3, z - e.deltaY * 0.001)));
+        setZoom(z => Math.max(0.3, Math.min(2.5, z * (e.deltaY > 0 ? 0.9 : 1.1))));
     }, []);
-    const onTouchMove = (0, react_1.useCallback)((e) => {
-        if (e.touches.length === 2) {
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (lastPinch.current !== null)
-                setZoom(z => Math.max(0.35, Math.min(3, z + (dist - lastPinch.current) * 0.005)));
-            lastPinch.current = dist;
+    function handleTileClick(gx, gy) {
+        const wxOff = gx - CENTER, wyOff = gy - CENTER;
+        const node = mapData?.nodes.find(n => n.x === wxOff && n.y === wyOff && n.discovered);
+        const dist = Math.sqrt(wxOff * wxOff + wyOff * wyOff);
+        const fogR = mapData?.fogRadius ?? 0;
+        if (node) {
+            setSelected(prev => prev?.id === node.id ? null : node);
+            setSendTarget(null);
         }
-    }, []);
-    async function doAttack(profile, squadOptions) {
-        if (attackingId)
-            return;
-        setAttackingId(profile.id);
-        setAttackError('');
-        cancelMarchRef.current = false;
-        try {
-            const boostActive = !!kingdom?.attackSpeedBoostUntil && new Date() < new Date(kingdom.attackSpeedBoostUntil);
-            const baseMarch = profile.marchSeconds || 5;
-            const marchSecs = boostActive ? Math.max(1, Math.ceil(baseMarch / 2)) : baseMarch;
-            setMarchCountdown(marchSecs);
-            await new Promise((res, rej) => {
-                let rem = marchSecs;
-                const tick = setInterval(() => {
-                    if (cancelMarchRef.current) {
-                        clearInterval(tick);
-                        rej(new Error('CANCELLED'));
-                        return;
-                    }
-                    rem--;
-                    setMarchCountdown(rem);
-                    if (rem <= 0) {
-                        clearInterval(tick);
-                        res();
-                    }
-                }, 1000);
-            });
-            setMarchCountdown(0);
-            const result = await client_1.api.post('/combat/attack', {
-                defenderKingdomId: profile.id,
-                heroType: squadOptions?.heroType,
-                squad: squadOptions?.squad,
-            });
-            setProfileId(null);
+        else if (dist > fogR && dist <= MAP_R - 1.5 && (mapData?.explorerCount ?? 0) > 0) {
+            setSendTarget({ wx: wxOff, wy: wyOff });
             setSelected(null);
-            setBattle({ ...result, targetName: profile.name });
-            await refresh();
         }
-        catch (e) {
-            if (e?.message === 'CANCELLED')
-                return;
-            setAttackError(e.response?.data?.message || t('attack_error'));
-            setTimeout(() => setAttackError(''), 5000);
-        }
-        finally {
-            setAttackingId(null);
-            setMarchCountdown(0);
+        else {
+            setSelected(null);
+            setSendTarget(null);
         }
     }
-    const COLS = Math.max(4, Math.ceil(Math.sqrt(kingdoms.length)));
-    const ROWS = Math.ceil(kingdoms.length / COLS);
-    const GCOLS = COLS * STEP + 2;
-    const GROWS = ROWS * STEP + 2;
-    const allCorners = [isoXY(0, 0), isoXY(GCOLS, 0), isoXY(0, GROWS), isoXY(GCOLS, GROWS)];
-    const minX = Math.min(...allCorners.map(c => c.x)) - TILE_W;
-    const maxX = Math.max(...allCorners.map(c => c.x)) + TILE_W;
-    const sceneW = maxX - minX;
-    const sceneH = (GCOLS + GROWS) * (TILE_H / 2) + TILE_H * 3 + 80;
-    const allTiles = (0, react_1.useMemo)(() => {
-        const list = [];
-        for (let j = 0; j < GROWS; j++)
-            for (let i = 0; i < GCOLS; i++) {
-                const col = (i - 1) / STEP;
-                const row = (j - 1) / STEP;
-                const isKingdom = Number.isInteger(col) && Number.isInteger(row) && col >= 0 && row >= 0;
-                const kIdx = isKingdom ? (row * COLS + col) : undefined;
-                list.push({ i, j, isKingdom: isKingdom && kIdx !== undefined && kIdx < kingdoms.length, kIdx });
-            }
-        return list.sort((a, b) => (a.i + a.j) - (b.i + b.j));
-    }, [GCOLS, GROWS, COLS, kingdoms.length]);
-    return (<div style={{ background: '#060e06', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', userSelect: 'none' }}>
+    async function hireExplorer() {
+        setHiring(true);
+        try {
+            const r = await client_1.api.post('/exploration/hire-explorer');
+            showMsg(`✅ Explorer hired! (${r.explorerCount}/${r.maxExplorers})`);
+            await load();
+        }
+        catch (e) {
+            showMsg('❌ ' + (e.response?.data?.message || t('error')));
+        }
+        finally {
+            setHiring(false);
+        }
+    }
+    async function sendMission() {
+        if (!sendTarget)
+            return;
+        setSending(true);
+        try {
+            const r = await client_1.api.post('/exploration/mission', { targetX: sendTarget.wx, targetY: sendTarget.wy });
+            showMsg(`🧭 Explorer sent! Returns in ${r.hoursUntilReturn}h`);
+            setSendTarget(null);
+            await load();
+        }
+        catch (e) {
+            showMsg('❌ ' + (e.response?.data?.message || t('error')));
+        }
+        finally {
+            setSending(false);
+        }
+    }
+    async function raidNode() {
+        if (!selected)
+            return;
+        try {
+            const r = await client_1.api.post(`/exploration/raid/${selected.id}`);
+            const gained = Object.entries(r.gained).map(([k, v]) => `+${v} ${k}`).join(', ');
+            showMsg(`✅ ${gained}`);
+            setSelected(null);
+            await Promise.all([load(), refresh()]);
+        }
+        catch (e) {
+            showMsg('❌ ' + (e.response?.data?.message || t('error')));
+        }
+    }
+    async function recruitHero() {
+        if (!selected)
+            return;
+        try {
+            await client_1.api.post(`/exploration/recruit/${selected.id}`);
+            showMsg(`✅ ${selected.heroType} recruited!`);
+            setSelected(null);
+            await Promise.all([load(), refresh()]);
+        }
+        catch (e) {
+            showMsg('❌ ' + (e.response?.data?.message || t('error')));
+        }
+    }
+    function showMsg(m) {
+        setActionMsg(m);
+        setTimeout(() => setActionMsg(''), 4000);
+    }
+    const explorerCount = mapData?.explorerCount ?? 0;
+    const maxExp = mapData?.maxExplorers ?? 0;
+    const activeCount = mapData?.activeMissions?.filter(m => m.status === 'active').length ?? 0;
+    const freeExplorers = explorerCount - activeCount;
+    const academyLevel = mapData?.academyLevel ?? 0;
+    if (loading)
+        return (<div style={{ textAlign: 'center', paddingTop: 80, color: '#a0845a' }}>⏳ Loading map...</div>);
+    return (<div className="screen" style={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-      {attackError && (<div style={{ position: 'absolute', top: 60, left: 12, right: 12, zIndex: 600, background: 'rgba(231,76,60,0.95)', border: '1px solid #e74c3c', borderRadius: 10, padding: '12px 16px', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center' }}>
-          ⛔ {attackError}
+      
+      <div style={{ padding: '8px 14px', background: 'rgba(0,0,0,0.5)', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 900, color: '#f4d03f' }}>🗺️ Exploration Map</div>
+          <div style={{ display: 'flex', gap: 10, fontSize: 12, color: '#a0845a' }}>
+            {(mapData?.magic ?? 0) > 0 && <span>✨ {mapData.magic}</span>}
+            <span>🧭 {freeExplorers}/{explorerCount}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['map', 'missions'].map(tb => (<button key={tb} onClick={() => setTab(tb)} style={{
+                padding: '4px 12px', borderRadius: 7, fontSize: 11, fontWeight: 700,
+                background: tab === tb ? 'rgba(244,208,63,0.2)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${tab === tb ? 'rgba(244,208,63,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                color: tab === tb ? '#f4d03f' : '#555', cursor: 'pointer',
+            }}>
+              {tb === 'map' ? '🗺️ Map' : `🧭 Missions${activeCount > 0 ? ` (${activeCount})` : ''}`}
+            </button>))}
+        </div>
+      </div>
+
+      {actionMsg && (<div style={{ padding: '6px 14px', fontSize: 12, textAlign: 'center', background: actionMsg.startsWith('✅') ? 'rgba(39,174,96,0.15)' : 'rgba(231,76,60,0.15)', color: actionMsg.startsWith('✅') ? '#27ae60' : '#e74c3c', flexShrink: 0 }}>
+          {actionMsg}
         </div>)}
 
-      
-      <div style={{ padding: '8px 16px', background: 'rgba(0,0,0,0.75)', borderBottom: '1px solid rgba(244,208,63,0.2)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#f4d03f' }}>{t('worldmap_title')}</div>
-          <div style={{ fontSize: 11, color: '#a0845a', marginTop: 1 }}>{t('wm_subtitle', { n: kingdoms.length })}</div>
-        </div>
-        
-        <div style={{ display: 'flex', gap: 6, fontSize: 10, color: '#a0845a', alignItems: 'center' }}>
-          <span>⭐ {t('worldmap_you')}</span>
-          <span style={{ color: '#333' }}>·</span>
-          <span>🏰 {t('worldmap_others')}</span>
-          <span style={{ color: '#333' }}>·</span>
-          <span>🛡️ {t('worldmap_protected')}</span>
-        </div>
-      </div>
+      {tab === 'map' && (<div ref={containerRef} style={{ flex: 1, overflow: 'hidden', position: 'relative', background: '#050e03', touchAction: 'none', userSelect: 'none' }}>
+          <canvas ref={canvasRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel} style={{ display: 'block', width: '100%', height: '100%', cursor: 'grab' }}/>
 
-      <div style={{ textAlign: 'center', fontSize: 10, color: '#3a5a30', padding: '3px 0', background: 'rgba(0,0,0,0.3)', flexShrink: 0 }}>
-        {t('map_hint')}
-      </div>
-
-      
-      <div ref={containerRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel} onTouchMove={onTouchMove} style={{ flex: 1, minHeight: 0, position: 'relative', background: 'radial-gradient(ellipse at 50% 40%,#0f2a0a 0%,#060e06 70%)', overflow: 'hidden', cursor: 'grab', touchAction: 'none' }}>
-        
-        <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 400, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-          <button onClick={() => setZoom(z => Math.max(0.35, z - 0.2))} style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-        </div>
-
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(0,0,0,0.65) 100%)', pointerEvents: 'none', zIndex: 300 }}/>
-
-        {loading ? (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5d8aa8', gap: 12 }}>
-            <div style={{ fontSize: 36 }}>🌍</div>
-            <div className="skeleton" style={{ width: 160, height: 12, borderRadius: 6 }}/>
-          </div>) : kingdoms.length === 0 ? (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#5d8aa8', gap: 12 }}>
-            <div style={{ fontSize: 40 }}>🏜️</div>
-            <div style={{ fontSize: 14 }}>{t('no_kingdoms_yet')}</div>
-          </div>) : (<div style={{ position: 'absolute', left: pan.x, top: pan.y, width: sceneW, height: sceneH, willChange: 'transform', transform: `scale(${zoom})`, transformOrigin: '0 0' }}>
-
-            {allTiles.map(({ i, j, isKingdom, kIdx }) => {
-                const { x, y } = isoXY(i, j);
-                const px = x - minX, py = y;
-                const zBase = i + j;
-                if (!isKingdom || kIdx === undefined) {
-                    const tr = TERRAIN[terrainFor(i, j)];
-                    return (<div key={`t${i},${j}`} style={{ position: 'absolute', left: px - TILE_W / 2, top: py, width: TILE_W, height: TILE_H + WALL_H, zIndex: zBase, pointerEvents: 'none' }}>
-                    <div style={{ position: 'absolute', left: 0, top: TILE_H / 2, width: TILE_W / 2, height: WALL_H, background: tr.left, transform: 'skewY(26.6deg)', transformOrigin: 'top left' }}/>
-                    <div style={{ position: 'absolute', right: 0, top: TILE_H / 2, width: TILE_W / 2, height: WALL_H, background: tr.right, transform: 'skewY(-26.6deg)', transformOrigin: 'top right' }}/>
-                    <div style={{ position: 'absolute', left: 0, top: 0, width: TILE_W, height: TILE_H, clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', background: `linear-gradient(135deg,${tr.top},${tr.left})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {tr.icon && <span style={{ fontSize: 10, opacity: 0.7, paddingTop: TILE_H * 0.2 }}>{tr.icon}</span>}
-                    </div>
-                  </div>);
-                }
-                const BODY = 20;
-                const k = kingdoms[kIdx];
-                const isMe = k.kingdomName === kingdom?.name;
-                const isSel = selected?.id === k.id;
-                const colors = kingdomColors(k, isMe);
-                const castleEmoji = isMe ? '⭐' : k.rank === 1 ? '👑' : k.rank === 2 ? '🏆' : k.rank === 3 ? '🥉' : k.shieldActive ? '🛡️' : '🏰';
-                const zK = zBase + 200 + (isSel || isMe ? 100 : 0);
-                return (<div key={`k${kIdx}`}>
-                  
-                  <div style={{ position: 'absolute', left: px - TILE_W / 2, top: py, width: TILE_W, height: TILE_H + WALL_H, zIndex: zBase + 10, pointerEvents: 'none' }}>
-                    <div style={{ position: 'absolute', left: 0, top: TILE_H / 2, width: TILE_W / 2, height: WALL_H, background: '#2d6818', transform: 'skewY(26.6deg)', transformOrigin: 'top left' }}/>
-                    <div style={{ position: 'absolute', right: 0, top: TILE_H / 2, width: TILE_W / 2, height: WALL_H, background: '#1a400c', transform: 'skewY(-26.6deg)', transformOrigin: 'top right' }}/>
-                    <div style={{ position: 'absolute', left: 0, top: 0, width: TILE_W, height: TILE_H, clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', background: 'linear-gradient(135deg,#4aaa28,#2d6818)' }}/>
-                  </div>
-
-                  
-                  <div data-tile="true" onClick={() => { if (!isDragging.current)
-                    setSelected(isSel ? null : k); }} style={{ position: 'absolute', left: px - TILE_W / 2, top: py - BODY, width: TILE_W, height: TILE_H + BODY, zIndex: zK, cursor: 'pointer' }}>
-                    
-                    <div style={{ position: 'absolute', left: 0, top: TILE_H / 2, width: TILE_W / 2, height: BODY, background: `linear-gradient(180deg,${colors.left},${colors.right})`, transform: 'skewY(26.6deg)', transformOrigin: 'top left' }}/>
-                    
-                    <div style={{ position: 'absolute', right: 0, top: TILE_H / 2, width: TILE_W / 2, height: BODY, background: `linear-gradient(180deg,${colors.right},rgba(0,0,0,0.85))`, transform: 'skewY(-26.6deg)', transformOrigin: 'top right' }}/>
-                    
-                    <div style={{ position: 'absolute', left: 0, top: 0, width: TILE_W, height: TILE_H, clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', background: `radial-gradient(ellipse at 40% 35%,${colors.top},${colors.left})`, filter: isSel ? 'brightness(1.4)' : isMe ? 'brightness(1.1)' : undefined, boxShadow: (isSel || isMe) ? `0 0 20px ${colors.top}88` : undefined, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 17, paddingTop: TILE_H * 0.18, filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.9))' }}>{castleEmoji}</span>
-                    </div>
-                    
-                    <div style={{ position: 'absolute', left: '50%', top: -14, transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', border: `1px solid ${isMe ? '#f4d03f' : 'rgba(255,255,255,0.12)'}`, borderRadius: 8, padding: '2px 6px', fontSize: 8, fontWeight: 800, color: isMe ? '#f4d03f' : 'rgba(200,220,255,0.9)', textShadow: '0 1px 3px rgba(0,0,0,1)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-                      #{k.rank}
-                    </div>
-                  </div>
-
-                  
-                  <div style={{ position: 'absolute', left: px - 38, top: py + TILE_H + WALL_H + 2, width: 76, textAlign: 'center', fontSize: 8, fontWeight: 700, color: isMe ? '#f4d03f' : 'rgba(200,220,255,0.75)', textShadow: '0 1px 4px rgba(0,0,0,1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 1000 }}>
-                    {k.kingdomName.substring(0, 11)}
-                  </div>
-                </div>);
-            })}
-          </div>)}
-      </div>
-
-      
-      {selected && (<div style={{ position: 'absolute', bottom: 130, left: 12, right: 12, zIndex: 400, background: 'linear-gradient(135deg,rgba(6,14,6,0.98),rgba(10,22,10,0.98))', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 14, padding: 14, boxShadow: '0 -4px 24px rgba(0,0,0,0.8)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#f4d03f' }}>🏰 {selected.kingdomName}</div>
-              {selected.username && <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>@{selected.username}</div>}
-            </div>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', color: '#a0845a', fontSize: 20, cursor: 'pointer' }}>✕</button>
+          
+          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <button onClick={() => setZoom(z => Math.min(2.5, z * 1.2))} style={{ width: 30, height: 30, borderRadius: 6, background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>+</button>
+            <button onClick={() => setZoom(z => Math.max(0.3, z * 0.83))} style={{ width: 30, height: 30, borderRadius: 6, background: 'rgba(0,0,0,0.75)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>−</button>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            <div style={{ background: 'rgba(244,208,63,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#f4d03f' }}>🏆 #{selected.rank}</div>
-            <div style={{ background: 'rgba(244,208,63,0.08)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#a0845a' }}>⚡ {t('score_pts', { n: (0, format_1.fmt)(selected.score) })}</div>
-            {selected.shieldActive && selected.shieldUntil && (<div style={{ background: 'rgba(52,152,219,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#3498db' }}>
-                🛡️ {t('protected_label')} · <Countdown_1.default endsAt={selected.shieldUntil}/>
-              </div>)}
-            {(selected.usdtBalance ?? 0) > 0 && (<div style={{ background: 'rgba(39,174,96,0.1)', borderRadius: 8, padding: '5px 10px', fontSize: 12, color: '#27ae60' }}>💵 {selected.usdtBalance?.toFixed(4)} USDT</div>)}
-          </div>
-          {selected.kingdomName !== kingdom?.name && (<button className="btn" onClick={() => { if (selected.id) {
-                setProfileId(selected.id);
-                setSelected(null);
-            } }} style={{ width: '100%', background: 'linear-gradient(135deg,#7b1515,#c0392b)', border: '1px solid #e74c3c', color: '#fff', padding: '11px', borderRadius: 10, fontWeight: 700 }}>
-              {t('check_and_attack')}
-            </button>)}
-        </div>)}
 
-      {profileId && (<KingdomProfileSheet_1.default kingdomId={profileId} attacking={attackingId === profileId} marchCountdown={marchCountdown} onClose={() => setProfileId(null)} onAttack={doAttack}/>)}
+          
+          {!hasAcademy && (<div style={{ position: 'absolute', bottom: 16, left: 14, right: 14, background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: '#f4d03f', fontWeight: 700, marginBottom: 4 }}>🔒 בנה אקדמיה כדי לחקור</div>
+              <div style={{ fontSize: 11, color: '#a0845a' }}>גייס חוקרים לגלות משאבים, גיבורים וקסם</div>
+            </div>)}
 
-      {battle && (<div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, textAlign: 'center' }} onClick={() => setBattle(null)}>
-          <div style={{ fontSize: 64 }}>{battle.attackerWins ? '🏆' : '💀'}</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: battle.attackerWins ? '#f4d03f' : '#e74c3c' }}>{battle.attackerWins ? t('battle_win') : t('battle_loss')}</div>
-          {battle.attackerWins && (<div style={{ background: 'rgba(244,208,63,0.1)', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 12, padding: '10px 20px' }}>
-              <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 6 }}>{t('loot_label')}</div>
-              <div style={{ display: 'flex', gap: 18, fontSize: 16, fontWeight: 700, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <span>💰 {(0, format_1.fmt)(battle.loot?.gold)}</span>
-                <span>🪵 {(0, format_1.fmt)(battle.loot?.wood)}</span>
-                <span>🪨 {(0, format_1.fmt)(battle.loot?.stone)}</span>
-                {battle.loot?.usdt > 0 && <span style={{ color: '#27ae60' }}>💵 ${battle.loot.usdt.toFixed(4)}</span>}
+          
+          {sendTarget && (<div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(180deg,rgba(20,10,0,0.97),rgba(10,15,0,0.99))', borderTop: '1px solid rgba(244,208,63,0.3)', padding: 14 }}>
+              <div style={{ fontSize: 13, color: '#f4d03f', fontWeight: 700, marginBottom: 4 }}>🧭 לשלוח חוקר לכאן?</div>
+              <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 10 }}>
+                {(() => {
+                    const dist = Math.sqrt(sendTarget.wx ** 2 + sendTarget.wy ** 2);
+                    const hrs = Math.min(12, Math.max(1, Math.round(dist * 0.5)));
+                    return `מרחק ${dist.toFixed(1)} · ~${hrs}ש' חזרה`;
+                })()}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setSendTarget(null)} style={{ flex: 1, padding: 10, borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#888', fontSize: 13, cursor: 'pointer' }}>ביטול</button>
+                <button onClick={sendMission} disabled={sending || freeExplorers === 0} style={{ flex: 2, padding: 10, borderRadius: 10, background: freeExplorers > 0 ? 'linear-gradient(135deg,#f39c12,#f4d03f)' : 'rgba(255,255,255,0.06)', border: 'none', color: freeExplorers > 0 ? '#000' : '#555', fontWeight: 900, fontSize: 14, cursor: freeExplorers > 0 ? 'pointer' : 'not-allowed' }}>
+                  {sending ? '...' : freeExplorers > 0 ? '🧭 שלח!' : 'אין חוקרים פנויים'}
+                </button>
               </div>
             </div>)}
-          {battle.attackerLosses && Object.values(battle.attackerLosses).some((v) => v > 0) && (<div style={{ fontSize: 12, color: '#e74c3c' }}>{t('your_losses')} {Object.entries(battle.attackerLosses).filter(([, v]) => v > 0).map(([k, v]) => `${(0, format_1.fmt)(v)} ${t('u_' + k)}`).join(', ')}</div>)}
-          <button className="btn btn-gold" style={{ marginTop: 8, padding: '12px 36px' }} onClick={() => setBattle(null)}>{t('continue_btn')}</button>
+
+          
+          {selected && !sendTarget && (<div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(180deg,rgba(20,10,0,0.97),rgba(10,15,0,0.99))', borderTop: '1px solid rgba(244,208,63,0.3)', padding: 14 }}>
+              {selected.type === 'hero' ? (<>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: '#9b59b6', marginBottom: 4 }}>{NODE_ICONS[selected.heroType] ?? '🦸'} {selected.heroType?.replace('_', ' ')} התגלה!</div>
+                  <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 10 }}>גייס גיבור אגדי לצבאך</div>
+                  <button onClick={recruitHero} style={{ width: '100%', padding: 10, borderRadius: 10, background: 'linear-gradient(135deg,#8e44ad,#9b59b6)', border: 'none', color: '#fff', fontWeight: 900, fontSize: 14, cursor: 'pointer' }}>⚔️ גייס</button>
+                </>) : (<>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: selected.type === 'rare_resource' ? '#16a085' : '#b8860b', marginBottom: 4 }}>
+                    {NODE_ICONS[selected.resourceType] ?? '📦'} {selected.resourceType} · ~{selected.amount?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 10 }}>
+                    קולדאון: {selected.raidCooldownDays}י׳
+                    {selected.lastRaidedAt && !selected.canRaid && (<> · <Countdown_1.default endsAt={new Date(new Date(selected.lastRaidedAt).getTime() + selected.raidCooldownDays * 86400000).toISOString()} onEnd={load}/></>)}
+                  </div>
+                  <button onClick={selected.canRaid ? raidNode : undefined} disabled={!selected.canRaid} style={{ width: '100%', padding: 10, borderRadius: 10, background: selected.canRaid ? 'linear-gradient(135deg,#f39c12,#f4d03f)' : 'rgba(255,255,255,0.08)', border: 'none', color: selected.canRaid ? '#000' : '#555', fontWeight: 900, fontSize: 14, cursor: selected.canRaid ? 'pointer' : 'not-allowed' }}>
+                    {selected.canRaid ? '⚔️ תקוף!' : '⏳ קולדאון פעיל'}
+                  </button>
+                </>)}
+              <button onClick={() => setSelected(null)} style={{ width: '100%', marginTop: 8, padding: '6px', background: 'none', border: 'none', color: '#555', fontSize: 12, cursor: 'pointer' }}>סגור</button>
+            </div>)}
+        </div>)}
+
+      {tab === 'missions' && (<div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+          
+          <div style={{ background: 'linear-gradient(135deg,rgba(39,174,96,0.1),rgba(26,138,64,0.05))', border: '1px solid rgba(39,174,96,0.25)', borderRadius: 14, padding: 14, marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#27ae60', marginBottom: 8 }}>🧭 חוקרים</div>
+            <div style={{ fontSize: 12, color: '#a0845a', marginBottom: 8 }}>
+              מגויסים: <strong>{explorerCount}</strong> / מקסימום: <strong>{academyLevel > 0 ? maxExp : '—'}</strong>
+              {!hasAcademy && <span style={{ color: '#e74c3c' }}> · בנה אקדמיה תחילה</span>}
+            </div>
+            {explorerCount < maxExp && academyLevel > 0 && (<button onClick={hireExplorer} disabled={hiring} style={{ width: '100%', padding: 10, borderRadius: 10, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                {hiring ? '...' : '➕ גייס חוקר (200💰 + 20💎)'}
+              </button>)}
+            {explorerCount >= maxExp && maxExp > 0 && (<div style={{ fontSize: 11, color: '#27ae60', textAlign: 'center' }}>✅ מקסימום חוקרים · שדרג אקדמיה לעוד</div>)}
+          </div>
+
+          {activeCount > 0 && <>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#f4d03f', marginBottom: 8 }}>⏳ פעילות</div>
+            {mapData.activeMissions.map(m => (<div key={m.id} style={{ background: 'rgba(244,208,63,0.07)', border: '1px solid rgba(244,208,63,0.2)', borderRadius: 12, padding: '10px 12px', marginBottom: 8 }}>
+                <div style={{ fontSize: 12, color: '#f4d03f' }}>🧭 ({m.targetX}, {m.targetY})</div>
+                <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>חוזר: <Countdown_1.default endsAt={m.returnsAt} onEnd={load}/></div>
+              </div>))}
+          </>}
+
+          {(mapData?.returnedMissions.length ?? 0) > 0 && <>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#27ae60', marginBottom: 8, marginTop: 12 }}>✅ הושלמו</div>
+            {mapData.returnedMissions.map(m => (<div key={m.id} style={{ background: 'rgba(39,174,96,0.07)', border: '1px solid rgba(39,174,96,0.15)', borderRadius: 12, padding: '10px 12px', marginBottom: 8, opacity: 0.8 }}>
+                <div style={{ fontSize: 12, color: '#27ae60' }}>✅ ({m.targetX}, {m.targetY})</div>
+                <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>{(m.discoveredNodeIds?.length ?? 0) > 0 ? `🔍 ${m.discoveredNodeIds.length} צמתים נמצאו` : '🔍 לא נמצא חדש'}</div>
+              </div>))}
+          </>}
+
+          {explorerCount === 0 && academyLevel === 0 && (<div style={{ textAlign: 'center', color: '#666', paddingTop: 40, fontSize: 12 }}>בנה אקדמיה → גייס חוקרים → גלה את העולם</div>)}
         </div>)}
     </div>);
 }

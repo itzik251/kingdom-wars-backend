@@ -81,10 +81,17 @@ function TutorialOverlay({ onDone }) {
         </div>
 
         
-        {!isLast && (<button onClick={finish} style={{
-                background: 'none', border: 'none', color: '#555',
-                fontSize: 12, marginTop: 14, cursor: 'pointer',
-            }}>{t('tut_skip')}</button>)}
+        <button onClick={finish} style={{
+            background: 'none',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 8,
+            color: '#888',
+            fontSize: 13,
+            marginTop: 14,
+            padding: '8px 20px',
+            cursor: 'pointer',
+            width: '100%',
+        }}>{t('tut_skip')}</button>
       </div>
     </div>);
 }

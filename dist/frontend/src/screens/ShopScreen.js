@@ -493,106 +493,6 @@ function BuyGemsSection({ refresh }) {
       </div>
     </div>);
 }
-function TitanHeroSection() {
-    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
-    const t = (0, useT_1.useT)();
-    const [loading, setLoading] = (0, react_1.useState)(false);
-    const [msg, setMsg] = (0, react_1.useState)('');
-    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
-    const bal = kingdom?.usdtBalance ?? 0;
-    const canAfford = bal >= 0.1;
-    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 5000); }
-    async function buy() {
-        setLoading(true);
-        try {
-            await client_1.api.post('/kingdom/buy-titan');
-            await refresh();
-            window.dispatchEvent(new Event('usdt-balance-refresh'));
-            show(t('titan_purchased'));
-        }
-        catch (e) {
-            show('❌ ' + (e.response?.data?.message || t('error')), false);
-        }
-        finally {
-            setLoading(false);
-        }
-    }
-    return (<div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color: '#e74c3c', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(231,76,60,0.15)' }}>
-        {t('titan_section_title')}
-      </div>
-      <div style={{ background: 'linear-gradient(135deg,rgba(231,76,60,0.1),rgba(120,30,20,0.05))', border: '1px solid rgba(231,76,60,0.25)', borderRadius: 14, padding: 14 }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#7b1515,#c0392b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, flexShrink: 0 }}>⚔️</div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#e74c3c' }}>Titan</div>
-            <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>{t('titan_hero_desc')}</div>
-            <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, fontWeight: 700 }}>
-              <span style={{ color: '#e74c3c' }}>⚔️ 800</span>
-              <span style={{ color: '#3498db' }}>🛡️ 600</span>
-              <span style={{ color: '#f4d03f' }}>💵 0.1 USDT</span>
-            </div>
-          </div>
-        </div>
-        <div style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>{t('titan_note')}</div>
-        {!canAfford && <div style={{ fontSize: 11, color: '#e74c3c', marginBottom: 6 }}>💵 {t('missing_usdt_balance')} ({bal.toFixed(3)} / 0.1)</div>}
-        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
-        <button onClick={buy} disabled={loading || !canAfford} style={{ width: '100%', padding: '11px', borderRadius: 10, background: loading ? 'rgba(231,76,60,0.2)' : 'linear-gradient(135deg,#7b1515,#c0392b)', border: '1px solid #e74c3c', color: '#fff', fontWeight: 800, fontSize: 13, cursor: (loading || !canAfford) ? 'not-allowed' : 'pointer', opacity: (loading || !canAfford) ? 0.5 : 1 }}>
-          {loading ? t('processing') : t('titan_buy_btn')}
-        </button>
-      </div>
-    </div>);
-}
-function GiantHeroSection() {
-    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
-    const t = (0, useT_1.useT)();
-    const [loading, setLoading] = (0, react_1.useState)(false);
-    const [msg, setMsg] = (0, react_1.useState)('');
-    const [msgOk, setMsgOk] = (0, react_1.useState)(true);
-    const bal = kingdom?.usdtBalance ?? 0;
-    const canAfford = bal >= 0.5;
-    function show(text, ok = true) { setMsg(text); setMsgOk(ok); setTimeout(() => setMsg(''), 5000); }
-    async function buy() {
-        setLoading(true);
-        try {
-            await client_1.api.post('/kingdom/buy-giant');
-            await refresh();
-            window.dispatchEvent(new Event('usdt-balance-refresh'));
-            show(t('giant_purchased'));
-        }
-        catch (e) {
-            show('❌ ' + (e.response?.data?.message || t('error')), false);
-        }
-        finally {
-            setLoading(false);
-        }
-    }
-    return (<div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color: '#8e44ad', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(142,68,173,0.15)' }}>
-        {t('giant_section_title')}
-      </div>
-      <div style={{ background: 'linear-gradient(135deg,rgba(142,68,173,0.1),rgba(70,30,100,0.05))', border: '1px solid rgba(142,68,173,0.25)', borderRadius: 14, padding: 14 }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'linear-gradient(135deg,#5b1a7b,#8e44ad)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, flexShrink: 0 }}>👹</div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#8e44ad' }}>Giant</div>
-            <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>{t('giant_hero_desc')}</div>
-            <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, fontWeight: 700 }}>
-              <span style={{ color: '#8e44ad' }}>⚔️ 2000</span>
-              <span style={{ color: '#3498db' }}>🛡️ 1200</span>
-              <span style={{ color: '#f4d03f' }}>💵 0.5 USDT</span>
-            </div>
-          </div>
-        </div>
-        <div style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>{t('giant_note')}</div>
-        {!canAfford && <div style={{ fontSize: 11, color: '#e74c3c', marginBottom: 6 }}>💵 {t('missing_usdt_balance')} ({bal.toFixed(3)} / 0.5)</div>}
-        {msg && <div style={{ fontSize: 12, color: msgOk ? '#27ae60' : '#e74c3c', marginBottom: 8, textAlign: 'center' }}>{msg}</div>}
-        <button onClick={buy} disabled={loading || !canAfford} style={{ width: '100%', padding: '11px', borderRadius: 10, background: loading ? 'rgba(142,68,173,0.2)' : 'linear-gradient(135deg,#5b1a7b,#8e44ad)', border: '1px solid #8e44ad', color: '#fff', fontWeight: 800, fontSize: 13, cursor: (loading || !canAfford) ? 'not-allowed' : 'pointer', opacity: (loading || !canAfford) ? 0.5 : 1 }}>
-          {loading ? t('processing') : t('giant_buy_btn')}
-        </button>
-      </div>
-    </div>);
-}
 function GemForgeSection({ refresh }) {
     const { kingdom, buildings } = (0, gameStore_1.useGameStore)();
     const t = (0, useT_1.useT)();
@@ -810,8 +710,6 @@ function ShopScreen() {
       <UsdtTopupSection refresh={refresh}/>
 
       
-      <TitanHeroSection />
-      <GiantHeroSection />
 
       
       <SECTION title={t('vip_section')}>

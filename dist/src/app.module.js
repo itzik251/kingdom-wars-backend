@@ -29,6 +29,7 @@ const admin_module_1 = require("./modules/admin/admin.module");
 const cryptobot_full_module_1 = require("./modules/cryptobot/cryptobot.full.module");
 const antibot_module_1 = require("./modules/antibot/antibot.module");
 const dev_module_1 = require("./modules/dev/dev.module");
+const exploration_module_1 = require("./modules/exploration/exploration.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -80,6 +81,7 @@ exports.AppModule = AppModule = __decorate([
             cryptobot_full_module_1.CryptoBotFullModule,
             antibot_module_1.AntiBotModule,
             dev_module_1.DevModule,
+            exploration_module_1.ExplorationModule,
         ],
     })
 ], AppModule);

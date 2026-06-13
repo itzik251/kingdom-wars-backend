@@ -5,6 +5,9 @@ const react_1 = require("react");
 const client_1 = require("../api/client");
 const gameStore_1 = require("../store/gameStore");
 const useT_1 = require("../i18n/useT");
+function GemIcon({ size = 14 }) {
+    return <img src="/assets/icon_gem.png" alt="gem" style={{ width: size, height: size, verticalAlign: 'middle', marginRight: 2 }}/>;
+}
 function ReferralSection() {
     const [referral, setReferral] = (0, react_1.useState)(null);
     const [copied, setCopied] = (0, react_1.useState)(false);
@@ -31,7 +34,7 @@ function ReferralSection() {
             const r = await client_1.api.post('/referral/claim');
             let parts = [];
             if (r.gems > 0)
-                parts.push(`💎 ${r.gems} Gems`);
+                parts.push(`💎 ${r.gems} ${t('gems')}`);
             if (r.vipDays > 0)
                 parts.push(`👑 VIP ${r.vipDays} ${t('days_free')}`);
             if (r.skins > 0)
@@ -49,10 +52,10 @@ function ReferralSection() {
         }
     }
     const milestones = [
-        { every: 1, label: t('friend'), reward: `💎 +100 Gems` },
-        { every: 5, label: t('friends'), reward: `💎 +200 Gems ${t('bonus')}` },
-        { every: 10, label: t('friends'), reward: `🦸 ${t('ragnar_name')} (${t('referral_hero')})` },
-        { every: 20, label: t('friends'), reward: `👑 VIP 30 ${t('days_free')}` },
+        { every: 1, label: t('friend'), reward: <><GemIcon size={13}/> +100 {t('gems')}</> },
+        { every: 5, label: t('friends'), reward: <><GemIcon size={13}/> +200 {t('gems')} {t('bonus')}</> },
+        { every: 10, label: t('friends'), reward: <>🦸 {t('ragnar_name')} ({t('referral_hero')})</> },
+        { every: 20, label: t('friends'), reward: <>👑 VIP 30 {t('days_free')}</> },
     ];
     return (<div style={{ marginBottom: 8 }}>
       
@@ -77,7 +80,7 @@ function ReferralSection() {
         
         {hasPending && (<div style={{ background: 'linear-gradient(135deg,rgba(244,208,63,0.12),rgba(184,134,11,0.08))', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
             <div style={{ fontSize: 12, color: '#f4d03f', fontWeight: 700, marginBottom: 4 }}>🎁 {t('pending_rewards')}:</div>
-            {pending.gems > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>💎 {pending.gems} Gems</div>}
+            {pending.gems > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}><GemIcon size={13}/> {pending.gems} {t('gems')}</div>}
             {pending.vipDays > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>👑 VIP {pending.vipDays} {t('days_free')}</div>}
             {pending.skins > 0 && <div style={{ fontSize: 12, color: '#e0e0e0' }}>🦸 {pending.skins}× {t('ragnar_name')}</div>}
           </div>)}
@@ -180,7 +183,7 @@ function QuestScreen() {
             <span style={{ fontSize: 24 }}>{info.icon}</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{info.label}</div>
-              <div style={{ fontSize: 11, color: '#a0845a', marginTop: 1 }}>💎 {reward} Gems</div>
+              <div style={{ fontSize: 11, color: '#a0845a', marginTop: 1, display: 'flex', alignItems: 'center', gap: 3 }}><GemIcon size={13}/> {reward} {t('gems')}</div>
             </div>
           </div>
           <div style={{ fontSize: 12, color: '#a0845a', whiteSpace: 'nowrap' }}>

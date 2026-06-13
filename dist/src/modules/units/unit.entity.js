@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Unit = exports.HERO_SALARY_GEMS = exports.HERO_TYPES = exports.UnitType = void 0;
+exports.Unit = exports.HERO_SALARY_GEMS = exports.EXPLORATION_HEROES = exports.HERO_TYPES = exports.UnitType = void 0;
 const typeorm_1 = require("typeorm");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 var UnitType;
@@ -26,6 +26,9 @@ var UnitType;
     UnitType["RAGNAR"] = "ragnar";
     UnitType["TITAN"] = "titan";
     UnitType["GIANT"] = "giant";
+    UnitType["OGRE"] = "ogre";
+    UnitType["MAGE"] = "mage";
+    UnitType["DWARF_FIGHTER"] = "dwarf_fighter";
 })(UnitType || (exports.UnitType = UnitType = {}));
 exports.HERO_TYPES = new Set([
     UnitType.KNIGHT,
@@ -34,6 +37,14 @@ exports.HERO_TYPES = new Set([
     UnitType.RAGNAR,
     UnitType.TITAN,
     UnitType.GIANT,
+    UnitType.OGRE,
+    UnitType.MAGE,
+    UnitType.DWARF_FIGHTER,
+]);
+exports.EXPLORATION_HEROES = new Set([
+    UnitType.OGRE,
+    UnitType.MAGE,
+    UnitType.DWARF_FIGHTER,
 ]);
 exports.HERO_SALARY_GEMS = {
     [UnitType.KNIGHT]: 1,
@@ -42,6 +53,9 @@ exports.HERO_SALARY_GEMS = {
     [UnitType.RAGNAR]: 2,
     [UnitType.TITAN]: 0,
     [UnitType.GIANT]: 10,
+    [UnitType.OGRE]: 4,
+    [UnitType.MAGE]: 6,
+    [UnitType.DWARF_FIGHTER]: 3,
 };
 let Unit = class Unit {
 };

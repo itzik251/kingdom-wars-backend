@@ -23,6 +23,7 @@ export interface UnitStats {
     gemsCost?: number;
     requiresVip?: boolean;
     requiresReferralHero?: boolean;
+    requiresExploration?: boolean;
 }
 export declare const UNIT_STATS: Record<UnitType, UnitStats>;
 export declare const COMBAT_RANDOM_MIN = 0.85;

@@ -68,6 +68,9 @@ let QuestService = class QuestService {
         const questDef = [...DAILY_QUESTS, ...WEEKLY_QUESTS].find(q => q.key === quest.questKey);
         if (!questDef)
             return null;
+        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        const vipMultiplier = kingdom?.isVip ? 1.5 : 1;
+        const gemsRewarded = Math.floor(questDef.rewardGems * vipMultiplier);
         const claimResult = await this.questRepo
             .createQueryBuilder()
             .update()
@@ -80,10 +83,10 @@ let QuestService = class QuestService {
         await this.kingdomRepo
             .createQueryBuilder()
             .update()
-            .set({ gems: () => `gems + ${questDef.rewardGems}` })
+            .set({ gems: () => `gems + ${gemsRewarded}` })
             .where('id = :id', { id: kingdomId })
             .execute();
-        return { gemsRewarded: questDef.rewardGems };
+        return { gemsRewarded };
     }
     async ensureQuests(kingdomId, defs, period, periodDate) {
         const existing = await this.questRepo.find({

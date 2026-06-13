@@ -147,6 +147,18 @@ __decorate([
     __metadata("design:type", Number)
 ], Kingdom.prototype, "ragnarHeroGrantedCount", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "magic", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'max_magic', default: 1000 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "maxMagic", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'explorer_count', default: 0 }),
+    __metadata("design:type", Number)
+], Kingdom.prototype, "explorerCount", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
     __metadata("design:type", Date)
 ], Kingdom.prototype, "createdAt", void 0);

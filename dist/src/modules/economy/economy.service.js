@@ -24,6 +24,8 @@ const user_entity_1 = require("../user/user.entity");
 const notification_service_1 = require("../notifications/notification.service");
 const game_constants_1 = require("../../constants/game.constants");
 const unit_entity_2 = require("../units/unit.entity");
+const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const lastNegativeProdNotif = new Map();
 const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.GOLD_MINE]: 'gold_mine',
     [building_entity_1.BuildingType.LUMBER_MILL]: 'lumber_mill',
@@ -69,7 +71,7 @@ let EconomyService = class EconomyService {
         const workerProductionBonus = 1 + workerCount * 0.04;
         const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
         const workerSalary = workerCount * 5 * hoursElapsed;
-        const HERO_SALARY_INTERVAL_HOURS = 24;
+        const HERO_SALARY_INTERVAL_HOURS = 1;
         const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
         if (heroSalaryTicks > 0) {
             let gemsNeeded = 0;
@@ -97,7 +99,7 @@ let EconomyService = class EconomyService {
             const desertionRate = Math.min(0.05, foodShortfall * 0.005);
             let desertionChanged = false;
             for (const unit of units) {
-                if (unit.count > 0) {
+                if (unit.count > 0 && !unit_entity_2.HERO_TYPES.has(unit.type)) {
                     const lost = Math.max(1, Math.floor(unit.count * desertionRate));
                     unit.count = Math.max(0, unit.count - lost);
                     desertionChanged = true;
@@ -128,28 +130,50 @@ let EconomyService = class EconomyService {
         await this.completeRepairs(buildings, now);
         const saved = await this.kingdomRepo.save(kingdom);
         const resolvedUserId = userId ?? (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
-        if (resolvedUserId && (completedBuildings.length > 0 || completedUnits.length > 0)) {
+        if (resolvedUserId) {
             const user = userObj ?? await this.userRepo?.findOne({ where: { id: resolvedUserId } }).catch(() => null);
             const userPayload = user ? { telegramId: user.telegramId, language: user.language || 'en' } : {};
-            if (completedBuildings.length > 0) {
-                const grouped = new Map();
-                for (const b of completedBuildings) {
-                    const existing = grouped.get(b.type);
-                    if (existing)
-                        existing.count++;
-                    else
-                        grouped.set(b.type, { count: 1, level: b.level });
-                }
-                for (const [type, { count, level }] of grouped) {
-                    this.notifService.create(resolvedUserId, 'build_done', { ...userPayload, building: type, level, count }).catch(() => { });
+            const hasSoldiers = units.some(u => !unit_entity_2.HERO_TYPES.has(u.type) && u.count > 0);
+            if (userId && hasSoldiers && kingdom.food <= 0 && foodShortfall > 0) {
+                this.notifService.create(resolvedUserId, 'low_food', { ...userPayload }).catch(() => { });
+            }
+            const hasHeroes = units.some(u => unit_entity_2.HERO_TYPES.has(u.type) && u.count > 0);
+            if (userId && hasHeroes) {
+                const hourlyGemsCost = units.reduce((s, u) => unit_entity_2.HERO_TYPES.has(u.type) && u.count > 0 ? s + (unit_entity_2.HERO_SALARY_GEMS[u.type] ?? 0) : s, 0);
+                if (hourlyGemsCost > 0 && (kingdom.gems ?? 0) < hourlyGemsCost * 10) {
+                    this.notifService.create(resolvedUserId, 'low_gems', { ...userPayload, gems: kingdom.gems ?? 0 }).catch(() => { });
                 }
             }
-            if (completedUnits.length > 0) {
-                const grouped = new Map();
-                for (const u of completedUnits)
-                    grouped.set(u.type, (grouped.get(u.type) ?? 0) + u.count);
-                for (const [type, count] of grouped) {
-                    this.notifService.create(resolvedUserId, 'training_done', { ...userPayload, unit: type, count }).catch(() => { });
+            if (userId) {
+                const hourlyFoodProduction = this.calculateProduction(buildings, 1).food;
+                const hourlyUpkeep = this.calculateUpkeep(units, 1);
+                const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
+                if (hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
+                    lastNegativeProdNotif.set(kingdomId, Date.now());
+                    this.notifService.create(resolvedUserId, 'negative_production', { ...userPayload }).catch(() => { });
+                }
+            }
+            if (completedBuildings.length > 0 || completedUnits.length > 0) {
+                if (completedBuildings.length > 0) {
+                    const grouped = new Map();
+                    for (const b of completedBuildings) {
+                        const existing = grouped.get(b.type);
+                        if (existing)
+                            existing.count++;
+                        else
+                            grouped.set(b.type, { count: 1, level: b.level });
+                    }
+                    for (const [type, { count, level }] of grouped) {
+                        this.notifService.create(resolvedUserId, 'build_done', { ...userPayload, building: type, level, count }).catch(() => { });
+                    }
+                }
+                if (completedUnits.length > 0) {
+                    const grouped = new Map();
+                    for (const u of completedUnits)
+                        grouped.set(u.type, (grouped.get(u.type) ?? 0) + u.count);
+                    for (const [type, count] of grouped) {
+                        this.notifService.create(resolvedUserId, 'training_done', { ...userPayload, unit: type, count }).catch(() => { });
+                    }
                 }
             }
         }

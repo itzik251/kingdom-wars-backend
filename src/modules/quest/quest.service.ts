@@ -64,8 +64,11 @@ export class QuestService {
     const questDef = [...DAILY_QUESTS, ...WEEKLY_QUESTS].find(q => q.key === quest.questKey);
     if (!questDef) return null;
 
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    const vipMultiplier = kingdom?.isVip ? 1.5 : 1;
+    const gemsRewarded = Math.floor(questDef.rewardGems * vipMultiplier);
+
     // ── Atomic claim: only one concurrent request can claim ─────────────────
-    // UPDATE WHERE reward_claimed = false prevents double-claim race condition
     const claimResult = await this.questRepo
       .createQueryBuilder()
       .update()
@@ -75,18 +78,17 @@ export class QuestService {
       .execute();
 
     if (!claimResult.affected || claimResult.affected === 0) {
-      return null; // already claimed by concurrent request
+      return null;
     }
 
-    // Only update gems AFTER successful atomic claim
     await this.kingdomRepo
       .createQueryBuilder()
       .update()
-      .set({ gems: () => `gems + ${questDef.rewardGems}` })
+      .set({ gems: () => `gems + ${gemsRewarded}` })
       .where('id = :id', { id: kingdomId })
       .execute();
 
-    return { gemsRewarded: questDef.rewardGems };
+    return { gemsRewarded };
   }
 
   private async ensureQuests(kingdomId: string, defs: any[], period: QuestPeriod, periodDate: string) {

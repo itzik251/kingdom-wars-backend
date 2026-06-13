@@ -22,7 +22,7 @@ const UNIT_CONFIG = {
     paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5, isHero: true, dailySalaryGems: 3, canSoloAttack: true },
     dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15, isHero: true, dailySalaryGems: 5, canSoloAttack: true },
     ragnar: { icon: '🦸', gold: 0, gems: 200, power: 400, def: 300, color: '#e67e22', referralHero: true, upkeep: 20, isHero: true, dailySalaryGems: 2, canSoloAttack: true, gemsPerHour: 2 },
-    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 10, isHero: true, dailySalaryGems: 4, canSoloAttack: true },
+    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 25, isHero: true, dailySalaryGems: 4, canSoloAttack: true },
     giant: { icon: '👹', gold: 0, usdtCost: 0.5, power: 2000, def: 1200, color: '#8e44ad', usdtUnit: true, upkeep: 50, isHero: true, dailySalaryGems: 10, canSoloAttack: true },
 };
 const RAGNAR_REQUIRED = 10;
@@ -246,7 +246,7 @@ function ArmyScreen() {
       {units.some(u => u.trainingCount > 0) && (<div style={{ background: 'rgba(52,152,219,0.1)', border: '1px solid rgba(52,152,219,0.3)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#3498db', marginBottom: 6 }}>{t('training_queue')}</div>
           {units.filter(u => u.trainingCount > 0).map(u => (<div key={u.type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a0845a', marginBottom: 3 }}>
-              <span>{t('u_' + u.type)}: {(0, format_1.fmt)(u.trainingCount)} {t('soldiers').toLowerCase()}</span>
+              <span>{t('u_' + u.type)}: {(0, format_1.fmt)(u.trainingCount)} {UNIT_CONFIG[u.type]?.isHero ? t('heroes').toLowerCase() : t('soldiers').toLowerCase()}</span>
               <span style={{ color: '#3498db' }}>⏳ <Countdown_1.default endsAt={u.trainingEndsAt}/></span>
             </div>))}
         </div>)}

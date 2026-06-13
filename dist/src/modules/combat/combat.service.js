@@ -50,11 +50,16 @@ let CombatService = class CombatService {
             throw new common_1.BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
         }
         const ATTACK_COOLDOWN_MS = 10_000;
-        if (attacker.lastAttackAt) {
-            const msSinceLast = Date.now() - new Date(attacker.lastAttackAt).getTime();
-            if (msSinceLast < ATTACK_COOLDOWN_MS) {
-                throw new common_1.BadRequestException('ATTACK_COOLDOWN');
-            }
+        const cooldownCutoff = new Date(Date.now() - ATTACK_COOLDOWN_MS);
+        const claimResult = await this.kingdomRepo
+            .createQueryBuilder()
+            .update()
+            .set({ lastAttackAt: new Date() })
+            .where('id = :id', { id: attackerKingdomId })
+            .andWhere('(last_attack_at IS NULL OR last_attack_at < :cutoff)', { cutoff: cooldownCutoff })
+            .execute();
+        if (!claimResult.affected || claimResult.affected === 0) {
+            throw new common_1.BadRequestException('ATTACK_COOLDOWN');
         }
         await Promise.all([
             this.economyService.tickKingdom(attackerKingdomId),
@@ -66,9 +71,10 @@ let CombatService = class CombatService {
             this.buildingRepo.find({ where: { kingdom: { id: defenderKingdomId } } }),
         ]);
         const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
-        const hasHero = allAttackerUnits.some(u => unit_entity_1.HERO_TYPES.has(u.type) && u.count > 0);
-        if (hasHero && !heroType) {
-            throw new common_1.BadRequestException('HERO_REQUIRED');
+        const HERO_POWER = { giant: 300, titan: 150, dragon_rider: 100, ragnar: 90, paladin: 80, knight: 40 };
+        const heroUnits = allAttackerUnits.filter(u => unit_entity_1.HERO_TYPES.has(u.type) && u.count > 0);
+        if (heroUnits.length > 0 && !heroType) {
+            heroType = heroUnits.reduce((best, u) => (HERO_POWER[u.type] ?? 0) > (HERO_POWER[best.type] ?? 0) ? u : best).type;
         }
         if (heroType) {
             const heroUnit = allAttackerUnits.find(u => u.type === heroType);
@@ -86,8 +92,9 @@ let CombatService = class CombatService {
             const soldierCount = allAttackerUnits
                 .filter(u => !unit_entity_1.HERO_TYPES.has(u.type))
                 .reduce((s, u) => s + u.count, 0);
-            const isTitanAlone = heroType === unit_entity_1.UnitType.TITAN && soldierCount === 0;
-            if (!isTitanAlone && soldierCount < 10) {
+            const heroCanSoloAttack = heroType === unit_entity_1.UnitType.TITAN || heroType === unit_entity_1.UnitType.GIANT;
+            const isSoloHero = heroCanSoloAttack && soldierCount === 0;
+            if (!isSoloHero && soldierCount < 10) {
                 for (const unit of allAttackerUnits)
                     unit.count = originalCounts.get(unit.type) ?? unit.count;
                 throw new common_1.BadRequestException('Minimum 10 soldiers required per squad');
@@ -209,10 +216,16 @@ let CombatService = class CombatService {
         return losses;
     }
     async applyBattleResults(attacker, defender, attackerUnits, defenderUnits, report, originalCounts) {
-        attacker.gold = Math.min(attacker.maxGold, attacker.gold + report.loot.gold);
-        attacker.wood = Math.min(attacker.maxWood, attacker.wood + report.loot.wood);
-        attacker.stone = Math.min(attacker.maxStone, attacker.stone + report.loot.stone);
+        const goldReceived = Math.min(attacker.maxGold, attacker.gold + report.loot.gold) - attacker.gold;
+        const woodReceived = Math.min(attacker.maxWood, attacker.wood + report.loot.wood) - attacker.wood;
+        const stoneReceived = Math.min(attacker.maxStone, attacker.stone + report.loot.stone) - attacker.stone;
+        attacker.gold += goldReceived;
+        attacker.wood += woodReceived;
+        attacker.stone += stoneReceived;
         attacker.gems = (attacker.gems ?? 0) + (report.loot.gems ?? 0);
+        report.loot.gold = goldReceived;
+        report.loot.wood = woodReceived;
+        report.loot.stone = stoneReceived;
         defender.gold = Math.max(0, defender.gold - report.loot.gold);
         defender.wood = Math.max(0, defender.wood - report.loot.wood);
         defender.stone = Math.max(0, defender.stone - report.loot.stone);

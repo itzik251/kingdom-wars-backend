@@ -1,0 +1,45 @@
+import { ExplorationService } from './exploration.service';
+export declare class ExplorationController {
+    private readonly explorationService;
+    constructor(explorationService: ExplorationService);
+    getMap(req: any): Promise<{
+        fogRadius: number;
+        academyLevel: number;
+        explorerCount: number;
+        maxExplorers: number;
+        activeMissions: import("./exploration-mission.entity").ExplorationMission[];
+        returnedMissions: import("./exploration-mission.entity").ExplorationMission[];
+        nodes: {
+            id: string;
+            x: number;
+            y: number;
+            type: import("./map-node.entity").MapNodeType;
+            resourceType: string;
+            amount: number;
+            heroType: string;
+            discovered: boolean;
+            lastRaidedAt: Date;
+            raidCooldownDays: number;
+            canRaid: boolean;
+        }[];
+        magic: number;
+    }>;
+    hireExplorer(req: any): Promise<{
+        explorerCount: number;
+        maxExplorers: number;
+    }>;
+    sendMission(req: any, body: {
+        targetX: number;
+        targetY: number;
+    }): Promise<{
+        mission: import("./exploration-mission.entity").ExplorationMission;
+        hoursUntilReturn: number;
+    }>;
+    raidNode(req: any, nodeId: string): Promise<{
+        gained: Record<string, number>;
+    }>;
+    recruitHero(req: any, nodeId: string): Promise<{
+        heroType: string;
+        count: number;
+    }>;
+}

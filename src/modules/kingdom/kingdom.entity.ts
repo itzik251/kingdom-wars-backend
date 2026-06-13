@@ -100,6 +100,15 @@ export class Kingdom {
   @Column({ name: 'ragnar_hero_granted_count', default: 0 })
   ragnarHeroGrantedCount: number;
 
+  @Column({ default: 0 })
+  magic: number;
+
+  @Column({ name: 'max_magic', default: 1000 })
+  maxMagic: number;
+
+  @Column({ name: 'explorer_count', default: 0 })
+  explorerCount: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

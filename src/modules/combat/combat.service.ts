@@ -72,13 +72,18 @@ export class CombatService {
       throw new BadRequestException('לא ניתן לתקוף ממלכה חלשה פי 10 ממך — בחר יריב הוגן');
     }
 
-    // Server-side attack cooldown — prevents API bypass of march time
-    const ATTACK_COOLDOWN_MS = 10_000; // 10 seconds minimum between attacks
-    if (attacker.lastAttackAt) {
-      const msSinceLast = Date.now() - new Date(attacker.lastAttackAt).getTime();
-      if (msSinceLast < ATTACK_COOLDOWN_MS) {
-        throw new BadRequestException('ATTACK_COOLDOWN');
-      }
+    // Atomic cooldown check — prevents parallel attacks from the same kingdom
+    const ATTACK_COOLDOWN_MS = 10_000;
+    const cooldownCutoff = new Date(Date.now() - ATTACK_COOLDOWN_MS);
+    const claimResult = await this.kingdomRepo
+      .createQueryBuilder()
+      .update()
+      .set({ lastAttackAt: new Date() })
+      .where('id = :id', { id: attackerKingdomId })
+      .andWhere('(last_attack_at IS NULL OR last_attack_at < :cutoff)', { cutoff: cooldownCutoff })
+      .execute();
+    if (!claimResult.affected || claimResult.affected === 0) {
+      throw new BadRequestException('ATTACK_COOLDOWN');
     }
 
     await Promise.all([
@@ -94,10 +99,11 @@ export class CombatService {
 
     const attackerBuildings = await this.buildingRepo.find({ where: { kingdom: { id: attackerKingdomId } } });
 
-    // Hero required if attacker owns any hero
-    const hasHero = allAttackerUnits.some(u => HERO_TYPES.has(u.type as any) && u.count > 0);
-    if (hasHero && !heroType) {
-      throw new BadRequestException('HERO_REQUIRED');
+    // Auto-select strongest hero if attacker has one but frontend didn't send heroType
+    const HERO_POWER: Record<string, number> = { giant: 300, titan: 150, dragon_rider: 100, ragnar: 90, paladin: 80, knight: 40 };
+    const heroUnits = allAttackerUnits.filter(u => HERO_TYPES.has(u.type as any) && u.count > 0);
+    if (heroUnits.length > 0 && !heroType) {
+      heroType = heroUnits.reduce((best, u) => (HERO_POWER[u.type] ?? 0) > (HERO_POWER[best.type] ?? 0) ? u : best).type;
     }
     if (heroType) {
       const heroUnit = allAttackerUnits.find(u => u.type === heroType);
@@ -117,8 +123,9 @@ export class CombatService {
       const soldierCount = allAttackerUnits
         .filter(u => !HERO_TYPES.has(u.type))
         .reduce((s, u) => s + u.count, 0);
-      const isTitanAlone = heroType === UnitType.TITAN && soldierCount === 0;
-      if (!isTitanAlone && soldierCount < 10) {
+      const heroCanSoloAttack = heroType === UnitType.TITAN || heroType === UnitType.GIANT;
+      const isSoloHero = heroCanSoloAttack && soldierCount === 0;
+      if (!isSoloHero && soldierCount < 10) {
         // Restore counts before throwing
         for (const unit of allAttackerUnits) unit.count = originalCounts.get(unit.type) ?? unit.count;
         throw new BadRequestException('Minimum 10 soldiers required per squad');
@@ -283,10 +290,16 @@ export class CombatService {
     report: BattleReport,
     originalCounts?: Map<string, number>,
   ) {
-    attacker.gold  = Math.min(attacker.maxGold,  attacker.gold  + report.loot.gold);
-    attacker.wood  = Math.min(attacker.maxWood,  attacker.wood  + report.loot.wood);
-    attacker.stone = Math.min(attacker.maxStone, attacker.stone + report.loot.stone);
-    attacker.gems  = (attacker.gems ?? 0) + (report.loot.gems ?? 0);
+    const goldReceived  = Math.min(attacker.maxGold,  attacker.gold  + report.loot.gold)  - attacker.gold;
+    const woodReceived  = Math.min(attacker.maxWood,  attacker.wood  + report.loot.wood)  - attacker.wood;
+    const stoneReceived = Math.min(attacker.maxStone, attacker.stone + report.loot.stone) - attacker.stone;
+    attacker.gold  += goldReceived;
+    attacker.wood  += woodReceived;
+    attacker.stone += stoneReceived;
+    attacker.gems   = (attacker.gems ?? 0) + (report.loot.gems ?? 0);
+    report.loot.gold  = goldReceived;
+    report.loot.wood  = woodReceived;
+    report.loot.stone = stoneReceived;
 
     defender.gold  = Math.max(0, defender.gold  - report.loot.gold);
     defender.wood  = Math.max(0, defender.wood  - report.loot.wood);

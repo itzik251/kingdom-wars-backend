@@ -1,1 +1,2 @@
-export default function QuestScreen(): import("react").JSX.Element;
+import React from 'react';
+export default function QuestScreen(): React.JSX.Element;

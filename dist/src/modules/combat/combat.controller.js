@@ -26,6 +26,16 @@ __decorate([
     (0, class_validator_1.IsUUID)(),
     __metadata("design:type", String)
 ], AttackDto.prototype, "defenderKingdomId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AttackDto.prototype, "heroType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], AttackDto.prototype, "squad", void 0);
 let CombatController = class CombatController {
     constructor(combatService, kingdomService, questService) {
         this.combatService = combatService;

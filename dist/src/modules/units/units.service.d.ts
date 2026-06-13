@@ -23,6 +23,7 @@ export declare class UnitsService {
         gemsCost?: number;
         requiresVip?: boolean;
         requiresReferralHero?: boolean;
+        requiresExploration?: boolean;
         type: string;
     }[];
 }

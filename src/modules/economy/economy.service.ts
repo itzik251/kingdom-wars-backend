@@ -176,14 +176,23 @@ export class EconomyService {
         }
       }
 
-      // Production deficit warning — once per 24h per kingdom
+      // Production deficit warning — once per 24h, only when food < 12h of upkeep
       if (userId) {
-        const hourlyFoodProduction = this.calculateProduction(buildings, 1).food;
-        const hourlyUpkeep = this.calculateUpkeep(units, 1);
+        const hourlyFoodProduction = Math.floor(this.calculateProduction(buildings, 1).food);
+        const hourlyUpkeep = Math.floor(this.calculateUpkeep(units, 1));
+        const foodLeft = kingdom.food ?? 0;
+        const hoursLeft = hourlyUpkeep > 0 ? foodLeft / hourlyUpkeep : Infinity;
         const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
-        if (hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
+        const isDeficit = hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep;
+        const isLow = hoursLeft < 12;
+        if (isDeficit && isLow && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
           lastNegativeProdNotif.set(kingdomId, Date.now());
-          this.notifService.create(resolvedUserId, 'negative_production', { ...userPayload }).catch(() => {});
+          this.notifService.create(resolvedUserId, 'negative_production', {
+            ...userPayload,
+            food: foodLeft,
+            prod: hourlyFoodProduction,
+            upkeep: hourlyUpkeep,
+          }).catch(() => {});
         }
       }
 

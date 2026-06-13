@@ -178,14 +178,14 @@ const MESSAGES: Record<string, Record<Lang, string>> = {
     ar: '🧭 عاد مستكشفك... لم يجد شيئاً هذه المرة 😔',
   },
   negative_production: {
-    en: '📉 Production deficit! Your upkeep exceeds food production — upgrade Farms or reduce your army',
-    he: '📉 גירעון ייצור! הצריכה עולה על ייצור האוכל — שדרג חוות או צמצם את הצבא',
-    es: '📉 ¡Déficit de producción! Tu mantenimiento supera la producción de comida — mejora Granjas o reduce el ejército',
-    fr: '📉 Déficit de production! Vos dépenses dépassent la production alimentaire — améliorez les Fermes ou réduisez l\'armée',
-    de: '📉 Produktionsdefizit! Dein Unterhalt übersteigt die Nahrungsproduktion — verbessere Farmen oder reduziere das Heer',
-    ru: '📉 Дефицит производства! Содержание превышает производство еды — улучшайте фермы или уменьшайте армию',
-    pt: '📉 Déficit de produção! Seu custo supera a produção de comida — melhore Fazendas ou reduza o exército',
-    ar: '📉 عجز في الإنتاج! تكاليف الصيانة تتجاوز إنتاج الغذاء — طوّر المزارع أو قلّل جيشك',
+    en: '📉 Production deficit! Food: {food} | Production: {prod}/h | Upkeep: {upkeep}/h — upgrade Farms or reduce your army',
+    he: '📉 גירעון ייצור! אוכל: {food} | ייצור: {prod}/שעה | צריכה: {upkeep}/שעה — שדרג חוות או צמצם את הצבא',
+    es: '📉 ¡Déficit! Comida: {food} | Producción: {prod}/h | Consumo: {upkeep}/h — mejora Granjas o reduce el ejército',
+    fr: '📉 Déficit! Nourriture: {food} | Production: {prod}/h | Entretien: {upkeep}/h — améliorez les Fermes ou réduisez l\'armée',
+    de: '📉 Defizit! Nahrung: {food} | Produktion: {prod}/h | Unterhalt: {upkeep}/h — verbessere Farmen oder reduziere das Heer',
+    ru: '📉 Дефицит! Еда: {food} | Производство: {prod}/ч | Расходы: {upkeep}/ч — улучшайте фермы или уменьшайте армию',
+    pt: '📉 Déficit! Comida: {food} | Produção: {prod}/h | Custo: {upkeep}/h — melhore Fazendas ou reduza o exército',
+    ar: '📉 عجز! الطعام: {food} | الإنتاج: {prod}/س | الصيانة: {upkeep}/س — طوّر المزارع أو قلّل جيشك',
   },
 };
 

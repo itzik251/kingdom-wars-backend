@@ -24,7 +24,7 @@ async function bootstrap() {
         },
         credentials: true,
     });
-    app.useStaticAssets((0, path_1.join)(__dirname, '..', 'public'), {
+    app.useStaticAssets((0, path_1.join)(__dirname, '..', '..', 'public'), {
         setHeaders: (res, path) => {
             if (path.endsWith('index.html')) {
                 res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');

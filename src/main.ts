@@ -31,7 +31,7 @@ async function bootstrap() {
   // Serve React frontend as static files
   // index.html: no-cache so Telegram always loads the latest version
   // JS/CSS assets: long-lived cache (they have hashed filenames)
-  app.useStaticAssets(join(__dirname, '..', 'public'), {
+  app.useStaticAssets(join(__dirname, '..', '..', 'public'), {
     setHeaders: (res, path) => {
       if (path.endsWith('index.html')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');

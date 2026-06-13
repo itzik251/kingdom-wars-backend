@@ -331,17 +331,11 @@ export class ExplorationService {
     // Push notification
     const kingdom2 = await this.kingdomRepo.findOne({ where: { id: mission.kingdomId }, relations: ['user'] });
     if (kingdom2?.user) {
-      const icons: Record<string, string> = { gold: '💰', wood: '🪵', stone: '🪨', food: '🌾', magic: '🔮', gems: '💎' };
-      let result: string;
-      if (discoveredNodeIds.length === 0) {
-        result = '😔 nothing found this time';
-      } else {
-        const discoveredNodes = await this.nodeRepo.findByIds(discoveredNodeIds);
-        result = discoveredNodes.map(n =>
-          n.type === MapNodeType.HERO ? `🦸 Hero: ${n.heroType}` : `${icons[n.resourceType ?? ''] ?? '📦'} ${n.resourceType}`
-        ).join(', ');
+      let foundNodes: { type: string; resourceType?: string; heroType?: string }[] = [];
+      if (discoveredNodeIds.length > 0) {
+        foundNodes = await this.nodeRepo.findByIds(discoveredNodeIds);
       }
-      this.notificationService.create(kingdom2.user.id, 'explorer_returned', { result }).catch(() => {});
+      this.notificationService.create(kingdom2.user.id, 'explorer_returned', { foundNodes }).catch(() => {});
     }
   }
 

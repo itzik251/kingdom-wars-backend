@@ -278,13 +278,17 @@ let KingdomService = class KingdomService {
         if (forge.level >= 10)
             throw new common_1.BadRequestException('Max level reached');
         const COST = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
+        if (forge.upgradeEndsAt && new Date() < new Date(forge.upgradeEndsAt))
+            throw new common_1.BadRequestException('Already upgrading');
         if ((kingdom.usdtBalance ?? 0) < COST)
             throw new common_1.BadRequestException(`נדרש $${COST} USDT`);
         kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
-        forge.level += 1;
+        const BUILD_TIME_SECS = Math.floor(300 * Math.pow(1.4, forge.level));
+        const buildTime = kingdom.isVip ? Math.floor(BUILD_TIME_SECS * 0.75) : BUILD_TIME_SECS;
+        forge.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
         await this.kingdomRepo.save(kingdom);
         await this.buildingRepo.save(forge);
-        return { id: forge.id, newLevel: forge.level, usdtBalance: kingdom.usdtBalance };
+        return { id: forge.id, level: forge.level, upgradeEndsAt: forge.upgradeEndsAt, usdtBalance: kingdom.usdtBalance };
     }
     async expandStorage(kingdomId) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });

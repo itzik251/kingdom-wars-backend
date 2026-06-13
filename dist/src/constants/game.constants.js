@@ -37,7 +37,7 @@ exports.BUILDING_BASE_TIMES = {
     [building_entity_1.BuildingType.WATCH_TOWER]: 35,
     [building_entity_1.BuildingType.HOSPITAL]: 45,
     [building_entity_1.BuildingType.ARCANE_TOWER]: 120,
-    [building_entity_1.BuildingType.GEM_FORGE]: 0,
+    [building_entity_1.BuildingType.GEM_FORGE]: 300,
 };
 exports.BUILD_TIME_MULTIPLIER = 1.4;
 exports.MAX_BUILDING_LEVEL = 30;

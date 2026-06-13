@@ -44,7 +44,7 @@ export const BUILDING_BASE_TIMES: Record<BuildingType, number> = {
   [BuildingType.WATCH_TOWER]:  35,
   [BuildingType.HOSPITAL]:     45,
   [BuildingType.ARCANE_TOWER]: 120,
-  [BuildingType.GEM_FORGE]:   0,
+  [BuildingType.GEM_FORGE]:   300,
 };
 
 export const BUILD_TIME_MULTIPLIER = 1.4;

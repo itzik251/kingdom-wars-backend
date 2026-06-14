@@ -192,7 +192,11 @@ export class EconomyService {
         const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
         const isDeficit = hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep;
         const isLow = hoursLeft < 12;
-        if (isDeficit && isLow && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
+        // Skip notification if the deficit is only due to buildings being upgraded (temporary)
+        const hourlyFoodWithUpgrades = Math.floor(this.calculateProduction(
+          buildings.map(b => b.isUpgrading ? ({ ...b, isUpgrading: false } as any) : b), 1).food);
+        const wouldBeDeficitWithoutUpgrades = hourlyUpkeep > 0 && hourlyFoodWithUpgrades < hourlyUpkeep;
+        if (isDeficit && isLow && wouldBeDeficitWithoutUpgrades && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
           lastNegativeProdNotif.set(kingdomId, Date.now());
           this.notifService.create(resolvedUserId, 'negative_production', {
             ...userPayload,

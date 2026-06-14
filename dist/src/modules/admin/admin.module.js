@@ -16,6 +16,7 @@ const notification_module_1 = require("../notifications/notification.module");
 const ton_module_1 = require("../ton/ton.module");
 const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 const audit_module_1 = require("../audit/audit.module");
+const exploration_module_1 = require("../exploration/exploration.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -26,6 +27,7 @@ exports.AdminModule = AdminModule = __decorate([
             notification_module_1.NotificationModule,
             ton_module_1.TonModule,
             audit_module_1.AuditModule,
+            exploration_module_1.ExplorationModule,
         ],
         controllers: [admin_controller_1.AdminController],
         providers: [cryptobot_service_1.CryptoBotService],

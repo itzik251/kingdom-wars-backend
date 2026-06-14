@@ -15,6 +15,7 @@ export declare class ExplorationService {
     private unitRepo;
     private notificationService;
     constructor(nodeRepo: Repository<MapNode>, missionRepo: Repository<ExplorationMission>, kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>, notificationService: NotificationService);
+    resetMap(kingdomId: string): Promise<void>;
     private ensureMap;
     getMap(kingdomId: string): Promise<{
         fogRadius: number;

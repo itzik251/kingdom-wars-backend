@@ -125,6 +125,12 @@ let ExplorationService = class ExplorationService {
         this.unitRepo = unitRepo;
         this.notificationService = notificationService;
     }
+    async resetMap(kingdomId) {
+        await this.nodeRepo.delete({ kingdomId });
+        await this.missionRepo.delete({ kingdomId });
+        const nodes = generateKingdomMap(kingdomId);
+        await this.nodeRepo.save(nodes.map(n => this.nodeRepo.create({ ...n, discovered: false })));
+    }
     async ensureMap(kingdomId) {
         const count = await this.nodeRepo.count({ where: { kingdomId } });
         if (count > 0)

@@ -26,10 +26,11 @@ const ton_service_1 = require("../ton/ton.service");
 const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 const antibot_service_1 = require("../antibot/antibot.service");
 const audit_service_1 = require("../audit/audit.service");
+const exploration_service_1 = require("../exploration/exploration.service");
 const game_constants_1 = require("../../constants/game.constants");
 const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService, antiBotService, auditService) {
+    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService, antiBotService, auditService, explorationService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
@@ -38,6 +39,7 @@ let AdminController = class AdminController {
         this.cryptoBotService = cryptoBotService;
         this.antiBotService = antiBotService;
         this.auditService = auditService;
+        this.explorationService = explorationService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -472,6 +474,17 @@ let AdminController = class AdminController {
         await this.antiBotService.unbanUser(user.id);
         return { success: true };
     }
+    async resetMap(headers, telegramId) {
+        this.guard(headers);
+        const user = await this.userRepo.findOne({ where: { telegramId } });
+        if (!user)
+            return { error: 'User not found' };
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+        if (!kingdom)
+            return { error: 'Kingdom not found' };
+        await this.explorationService.resetMap(kingdom.id);
+        return { success: true, kingdomId: kingdom.id };
+    }
 };
 exports.AdminController = AdminController;
 __decorate([
@@ -660,6 +673,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "antiBotUnban", null);
+__decorate([
+    (0, common_1.Post)('reset-map/:telegramId'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('telegramId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "resetMap", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
@@ -671,6 +692,7 @@ exports.AdminController = AdminController = __decorate([
         ton_service_1.TonService,
         cryptobot_service_1.CryptoBotService,
         antibot_service_1.AntiBotService,
-        audit_service_1.AuditService])
+        audit_service_1.AuditService,
+        exploration_service_1.ExplorationService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

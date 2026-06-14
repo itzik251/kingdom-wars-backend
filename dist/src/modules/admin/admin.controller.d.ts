@@ -8,6 +8,7 @@ import { TonService } from '../ton/ton.service';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AntiBotService } from '../antibot/antibot.service';
 import { AuditService } from '../audit/audit.service';
+import { ExplorationService } from '../exploration/exploration.service';
 type ResourceType = 'gems' | 'gold' | 'wood' | 'stone' | 'food' | 'usdt' | 'vip';
 export declare class AdminController {
     private userRepo;
@@ -18,7 +19,8 @@ export declare class AdminController {
     private cryptoBotService;
     private antiBotService;
     private auditService;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService, antiBotService: AntiBotService, auditService: AuditService);
+    private explorationService;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService, antiBotService: AntiBotService, auditService: AuditService, explorationService: ExplorationService);
     dashboard(res: Response): void;
     private getWalletConfig;
     private guard;
@@ -74,7 +76,7 @@ export declare class AdminController {
         amount?: undefined;
     } | {
         success: boolean;
-        type: "gold" | "wood" | "stone" | "food" | "gems" | "usdt";
+        type: "gems" | "gold" | "wood" | "stone" | "food" | "usdt";
         amount: number;
         error?: undefined;
         vipUntil?: undefined;
@@ -104,7 +106,7 @@ export declare class AdminController {
         amount?: undefined;
     } | {
         success: boolean;
-        type: "gold" | "wood" | "stone" | "food" | "gems" | "usdt";
+        type: "gems" | "gold" | "wood" | "stone" | "food" | "usdt";
         amount: number;
         error?: undefined;
         vipUntil?: undefined;
@@ -180,7 +182,7 @@ export declare class AdminController {
         amount?: undefined;
     } | {
         success: boolean;
-        type: "gold" | "wood" | "stone" | "food" | "gems" | "usdt";
+        type: "gems" | "gold" | "wood" | "stone" | "food" | "usdt";
         amount: number;
         error?: undefined;
         vipUntil?: undefined;
@@ -240,6 +242,15 @@ export declare class AdminController {
         success?: undefined;
     } | {
         success: boolean;
+        error?: undefined;
+    }>;
+    resetMap(headers: any, telegramId: string): Promise<{
+        error: string;
+        success?: undefined;
+        kingdomId?: undefined;
+    } | {
+        success: boolean;
+        kingdomId: string;
         error?: undefined;
     }>;
 }

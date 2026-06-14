@@ -77,7 +77,7 @@ export class KingdomService {
       this.notifService.create(userId, 'shield_expired', shieldPayload).catch(() => {});
     }
 
-    const productionRates = this.economyService.getProductionRates(buildings, updated);
+    const productionRates = this.economyService.getProductionRates(buildings, updated, units);
 
     return {
       kingdom: updated,

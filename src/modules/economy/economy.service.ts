@@ -321,7 +321,7 @@ export class EconomyService {
     }
   }
 
-  getProductionRates(buildings: Building[], kingdom?: Kingdom): Record<string, number> {
+  getProductionRates(buildings: Building[], kingdom?: Kingdom, units?: { type: string; count: number }[]): Record<string, number> {
     const rates = this.calculateProduction(buildings, 1); // per-hour rates
 
     const now = new Date();
@@ -340,12 +340,17 @@ export class EconomyService {
     const gemMinesForRate = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair);
     const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 2, 0);
 
+    const gemsSalaryPerHour = (units ?? []).reduce(
+      (s, u) => s + u.count * (HERO_SALARY_GEMS[u.type] ?? 0), 0
+    );
+
     return {
       gold:  Math.floor(rates.gold  * bonus - workerSalary),
       wood:  Math.floor(rates.wood  * bonus),
       stone: Math.floor(rates.stone * bonus),
       food:  Math.floor(rates.food  * bonus),
       gems:  gemMineRate,
+      gemsSalary: gemsSalaryPerHour,
     };
   }
 }

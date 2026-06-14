@@ -126,6 +126,14 @@ export class ExplorationService {
     private notificationService: NotificationService,
   ) {}
 
+  // ── Admin: reset map for a kingdom ────────────────────────────────────────
+  async resetMap(kingdomId: string): Promise<void> {
+    await this.nodeRepo.delete({ kingdomId });
+    await this.missionRepo.delete({ kingdomId });
+    const nodes = generateKingdomMap(kingdomId);
+    await this.nodeRepo.save(nodes.map(n => this.nodeRepo.create({ ...n, discovered: false })));
+  }
+
   // ── Ensure map nodes exist for this kingdom ───────────────────────────────
   private async ensureMap(kingdomId: string): Promise<void> {
     const count = await this.nodeRepo.count({ where: { kingdomId } });
@@ -260,11 +268,11 @@ export class ExplorationService {
     }
   }
 
-  private discoveryParams(academyLevel: number): { chance: number; minNodes: number; maxNodes: number } {
-    if (academyLevel >= 10) return { chance: 0.95, minNodes: 2, maxNodes: 3 };
-    if (academyLevel >= 6)  return { chance: 0.80, minNodes: 1, maxNodes: 3 };
-    if (academyLevel >= 3)  return { chance: 0.60, minNodes: 1, maxNodes: 2 };
-    return { chance: 0.40, minNodes: 1, maxNodes: 1 };
+  private discoveryChance(academyLevel: number): number {
+    if (academyLevel >= 10) return 0.95;
+    if (academyLevel >= 6)  return 0.80;
+    if (academyLevel >= 3)  return 0.65;
+    return 0.45;
   }
 
   private async processMissionReturn(mission: ExplorationMission) {
@@ -275,11 +283,11 @@ export class ExplorationService {
     const academyLevel = academy?.level ?? 0;
     const radius = fogRadius(kingdom.explorerCount, academyLevel);
 
-    const { chance, minNodes, maxNodes } = this.discoveryParams(academyLevel);
+    const chance = this.discoveryChance(academyLevel);
     const discoveredNodeIds: string[] = [];
 
     if (Math.random() < chance) {
-      const DISCOVER_RADIUS = 3;
+      const DISCOVER_RADIUS = 4;
       const undiscovered = await this.nodeRepo.find({ where: { kingdomId: mission.kingdomId, discovered: false } });
       const nearby = undiscovered.filter(n => {
         const dx = n.x - mission.targetX;
@@ -287,8 +295,8 @@ export class ExplorationService {
         return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
       });
 
-      const nodeCount = minNodes + Math.floor(Math.random() * (maxNodes - minNodes + 1));
-      const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, nodeCount);
+      // Always discover exactly 1 node per mission
+      const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, 1);
 
       if (toDiscover.length > 0) {
         for (const node of toDiscover) {

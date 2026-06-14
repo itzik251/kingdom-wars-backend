@@ -17,6 +17,7 @@ import { HERO_TYPES, HERO_SALARY_GEMS } from '../units/unit.entity';
 
 const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 const lastNegativeProdNotif = new Map<string, number>(); // kingdomId → timestamp
+const lastLowGemsNotif = new Map<string, number>(); // kingdomId → timestamp
 
 const PRODUCER_BUILDINGS: Partial<Record<BuildingType, keyof typeof BASE_PRODUCTION>> = {
   [BuildingType.GOLD_MINE]:    'gold_mine',
@@ -173,13 +174,25 @@ export class EconomyService {
         this.notifService.create(resolvedUserId, 'low_food', { ...userPayload }).catch(() => {});
       }
 
-      // Low gems warning — when heroes exist and gems < 10h of salary
+      // Low gems warning — once per 24h, only when gems < 12h of salary AND production doesn't cover salary
       const hasHeroes = units.some(u => HERO_TYPES.has(u.type) && u.count > 0);
       if (userId && hasHeroes) {
         const hourlyGemsCost = units.reduce((s, u) =>
           HERO_TYPES.has(u.type) && u.count > 0 ? s + (HERO_SALARY_GEMS[u.type] ?? 0) : s, 0);
-        if (hourlyGemsCost > 0 && (kingdom.gems ?? 0) < hourlyGemsCost * 10) {
-          this.notifService.create(resolvedUserId, 'low_gems', { ...userPayload, gems: kingdom.gems ?? 0 }).catch(() => {});
+        const gemsLeft = kingdom.gems ?? 0;
+        const gemMineRate = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair)
+          .reduce((s, b) => s + b.level * 3, 0);
+        const isGemsDeficit = hourlyGemsCost > gemMineRate; // salary outpaces production
+        const lastGemsSent = lastLowGemsNotif.get(kingdomId) ?? 0;
+        if (hourlyGemsCost > 0 && gemsLeft < hourlyGemsCost * 12 && Date.now() - lastGemsSent > NOTIF_COOLDOWN_MS) {
+          lastLowGemsNotif.set(kingdomId, Date.now());
+          this.notifService.create(resolvedUserId, 'low_gems', {
+            ...userPayload,
+            gems: gemsLeft,
+            salary: hourlyGemsCost,
+            prod: gemMineRate,
+            deficit: isGemsDeficit,
+          }).catch(() => {});
         }
       }
 

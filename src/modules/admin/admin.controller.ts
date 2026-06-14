@@ -12,6 +12,7 @@ import { TonService } from '../ton/ton.service';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AntiBotService } from '../antibot/antibot.service';
 import { AuditService } from '../audit/audit.service';
+import { ExplorationService } from '../exploration/exploration.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 
 const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
@@ -29,6 +30,7 @@ export class AdminController {
     private cryptoBotService: CryptoBotService,
     private antiBotService: AntiBotService,
     private auditService: AuditService,
+    private explorationService: ExplorationService,
   ) {}
 
   @Get()
@@ -537,5 +539,16 @@ export class AdminController {
     if (!user) return { error: 'User not found' };
     await this.antiBotService.unbanUser(user.id);
     return { success: true };
+  }
+
+  @Post('reset-map/:telegramId')
+  async resetMap(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+    if (!kingdom) return { error: 'Kingdom not found' };
+    await this.explorationService.resetMap(kingdom.id);
+    return { success: true, kingdomId: kingdom.id };
   }
 }

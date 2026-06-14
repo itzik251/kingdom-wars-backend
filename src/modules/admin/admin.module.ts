@@ -7,6 +7,7 @@ import { NotificationModule } from '../notifications/notification.module';
 import { TonModule } from '../ton/ton.module';
 import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AuditModule } from '../audit/audit.module';
+import { ExplorationModule } from '../exploration/exploration.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuditModule } from '../audit/audit.module';
     NotificationModule,
     TonModule,
     AuditModule,
+    ExplorationModule,
   ],
   controllers: [AdminController],
   providers: [CryptoBotService],

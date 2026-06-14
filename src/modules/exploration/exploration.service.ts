@@ -153,9 +153,9 @@ export class ExplorationService {
       take: 10,
     });
 
-    // Only show nodes that were explicitly discovered by an explorer
+    // Show discovered nodes + undiscovered nodes within fog radius (as "?" markers)
     const visibleNodes = allNodes
-      .filter(n => n.discovered)
+      .filter(n => n.discovered || Math.sqrt(n.x * n.x + n.y * n.y) <= radius)
       .map(n => ({
         id: n.id,
         x: n.x,

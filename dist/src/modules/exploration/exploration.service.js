@@ -243,14 +243,14 @@ let ExplorationService = class ExplorationService {
             await this.processMissionReturn(mission);
         }
     }
-    discoveryParams(academyLevel) {
+    discoveryChance(academyLevel) {
         if (academyLevel >= 10)
-            return { chance: 0.95, minNodes: 2, maxNodes: 3 };
+            return 0.95;
         if (academyLevel >= 6)
-            return { chance: 0.80, minNodes: 1, maxNodes: 3 };
+            return 0.80;
         if (academyLevel >= 3)
-            return { chance: 0.60, minNodes: 1, maxNodes: 2 };
-        return { chance: 0.40, minNodes: 1, maxNodes: 1 };
+            return 0.65;
+        return 0.45;
     }
     async processMissionReturn(mission) {
         await this.ensureMap(mission.kingdomId);
@@ -260,18 +260,17 @@ let ExplorationService = class ExplorationService {
         const academy = await this.buildingRepo.findOne({ where: { kingdom: { id: mission.kingdomId }, type: building_entity_1.BuildingType.ACADEMY } });
         const academyLevel = academy?.level ?? 0;
         const radius = fogRadius(kingdom.explorerCount, academyLevel);
-        const { chance, minNodes, maxNodes } = this.discoveryParams(academyLevel);
+        const chance = this.discoveryChance(academyLevel);
         const discoveredNodeIds = [];
         if (Math.random() < chance) {
-            const DISCOVER_RADIUS = 3;
+            const DISCOVER_RADIUS = 4;
             const undiscovered = await this.nodeRepo.find({ where: { kingdomId: mission.kingdomId, discovered: false } });
             const nearby = undiscovered.filter(n => {
                 const dx = n.x - mission.targetX;
                 const dy = n.y - mission.targetY;
                 return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
             });
-            const nodeCount = minNodes + Math.floor(Math.random() * (maxNodes - minNodes + 1));
-            const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, nodeCount);
+            const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, 1);
             if (toDiscover.length > 0) {
                 for (const node of toDiscover) {
                     node.discovered = true;

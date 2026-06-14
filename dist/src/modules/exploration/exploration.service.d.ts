@@ -50,7 +50,7 @@ export declare class ExplorationService {
         hoursUntilReturn: number;
     }>;
     completeMissions(): Promise<void>;
-    private discoveryParams;
+    private discoveryChance;
     private processMissionReturn;
     raidNode(kingdomId: string, nodeId: string): Promise<{
         gained: Record<string, number>;

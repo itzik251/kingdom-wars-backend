@@ -82,8 +82,8 @@ export function generateKingdomMap(kingdomId: string): Omit<MapNode, 'id' | 'dis
     const x = Math.round(Math.cos(angle) * dist);
     const y = Math.round(Math.sin(angle) * dist);
 
-    // Avoid duplicates
-    if (nodes.find(n => n.x === x && n.y === y)) continue;
+    // Avoid clustering — min 2 tiles between nodes
+    if (nodes.find(n => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 2)) continue;
 
     const r = rand();
     let type: MapNodeType;
@@ -288,13 +288,8 @@ export class ExplorationService {
         return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
       });
 
-      // Also discover everything within fog radius from center (passive)
-      const inFogRange = undiscovered.filter(n => Math.sqrt(n.x * n.x + n.y * n.y) <= radius);
-
-      // Limit nearby discoveries by academy level; fog-range always fully revealed
       const nodeCount = minNodes + Math.floor(Math.random() * (maxNodes - minNodes + 1));
-      const shuffledNearby = nearby.sort(() => Math.random() - 0.5).slice(0, nodeCount);
-      const toDiscover = [...new Map([...shuffledNearby, ...inFogRange].map(n => [n.id, n])).values()];
+      const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, nodeCount);
 
       if (toDiscover.length > 0) {
         for (const node of toDiscover) {

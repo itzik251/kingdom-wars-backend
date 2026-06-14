@@ -340,7 +340,11 @@ export class EconomyService {
     const gemMinesForRate = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair);
     const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 2, 0);
 
-    const gemsSalaryPerHour = (units ?? []).reduce(
+    const unitsArr = units ?? [];
+    const ragnarCount = unitsArr.find(u => u.type === 'ragnar')?.count ?? 0;
+    const gemsPerHour = gemMineRate + ragnarCount * 2;
+
+    const gemsSalaryPerHour = unitsArr.reduce(
       (s, u) => s + u.count * (HERO_SALARY_GEMS[u.type] ?? 0), 0
     );
 
@@ -349,7 +353,7 @@ export class EconomyService {
       wood:  Math.floor(rates.wood  * bonus),
       stone: Math.floor(rates.stone * bonus),
       food:  Math.floor(rates.food  * bonus),
-      gems:  gemMineRate,
+      gems:  gemsPerHour,
       gemsSalary: gemsSalaryPerHour,
     };
   }

@@ -82,8 +82,8 @@ export function generateKingdomMap(kingdomId: string): Omit<MapNode, 'id' | 'dis
     const x = Math.round(Math.cos(angle) * dist);
     const y = Math.round(Math.sin(angle) * dist);
 
-    // Avoid clustering — min 4 tiles between nodes for wider spread
-    if (nodes.find(n => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 4)) continue;
+    // Min 6 tiles between nodes
+    if (nodes.find(n => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 6)) continue;
 
     const r = rand();
     let type: MapNodeType;

@@ -337,11 +337,15 @@ export class EconomyService {
     const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonusInRates) * workerProductionBonus;
     const workerSalary = workerCount * 5;
 
+    const gemMinesForRate = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair);
+    const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 2, 0);
+
     return {
       gold:  Math.floor(rates.gold  * bonus - workerSalary),
       wood:  Math.floor(rates.wood  * bonus),
       stone: Math.floor(rates.stone * bonus),
       food:  Math.floor(rates.food  * bonus),
+      gems:  gemMineRate,
     };
   }
 }

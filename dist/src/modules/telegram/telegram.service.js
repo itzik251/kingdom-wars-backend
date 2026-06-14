@@ -95,15 +95,35 @@ const BOT_MESSAGES = {
         en: '🏰 Open', he: '🏰 פתח', es: '🏰 Abrir', fr: '🏰 Ouvrir',
         de: '🏰 Öffnen', ru: '🏰 Открыть', pt: '🏰 Abrir', ar: '🏰 فتح',
     },
+    leaderboard_title: {
+        en: '🏆 <b>Global Leaderboard</b>',
+        he: '🏆 <b>דירוג עולמי</b>',
+        es: '🏆 <b>Clasificación Global</b>',
+        fr: '🏆 <b>Classement Mondial</b>',
+        de: '🏆 <b>Weltrangliste</b>',
+        ru: '🏆 <b>Мировой рейтинг</b>',
+        pt: '🏆 <b>Ranking Global</b>',
+        ar: '🏆 <b>التصنيف العالمي</b>',
+    },
+    leaderboard_your_rank: {
+        en: '\n\n📍 <b>Your rank: #{rank}</b> — {score} pts',
+        he: '\n\n📍 <b>הדירוג שלך: #{rank}</b> — {score} נק׳',
+        es: '\n\n📍 <b>Tu posición: #{rank}</b> — {score} pts',
+        fr: '\n\n📍 <b>Votre rang: #{rank}</b> — {score} pts',
+        de: '\n\n📍 <b>Dein Rang: #{rank}</b> — {score} Pkt',
+        ru: '\n\n📍 <b>Ваше место: #{rank}</b> — {score} очков',
+        pt: '\n\n📍 <b>Sua posição: #{rank}</b> — {score} pts',
+        ar: '\n\n📍 <b>ترتيبك: #{rank}</b> — {score} نقطة',
+    },
     leaderboard_msg: {
-        en: '🏆 View the global leaderboard:',
-        he: '🏆 ראה את הדירוג העולמי:',
-        es: '🏆 Ver el ranking global:',
-        fr: '🏆 Voir le classement mondial:',
-        de: '🏆 Weltrangliste ansehen:',
-        ru: '🏆 Посмотреть глобальный рейтинг:',
-        pt: '🏆 Ver o ranking global:',
-        ar: '🏆 عرض التصنيف العالمي:',
+        en: '🏆 View the full leaderboard in the game:',
+        he: '🏆 פתח את הדירוג המלא במשחק:',
+        es: '🏆 Ver el ranking completo en el juego:',
+        fr: '🏆 Voir le classement complet dans le jeu:',
+        de: '🏆 Vollständige Rangliste im Spiel:',
+        ru: '🏆 Полный рейтинг в игре:',
+        pt: '🏆 Ver o ranking completo no jogo:',
+        ar: '🏆 عرض التصنيف الكامل في اللعبة:',
     },
     leaderboard_btn: {
         en: '🏆 Open Leaderboard', he: '🏆 פתח דירוג', es: '🏆 Ver Ranking', fr: '🏆 Classement',
@@ -145,14 +165,14 @@ const BOT_MESSAGES = {
         ar: '⚔️ <b>Kingdom Wars</b>\n\n🏰 طور المباني\n⚔️ درب الجنود\n🗡️ هاجم اللاعبين الآخرين\n🛡️ الدرع: يحمي من الهجمات\n💎 الجواهر: عملة مميزة\n💵 USDT: انهب لاعبي VIP / شاهد إعلانات\n👑 VIP: +50% إنتاج، بدون إعلانات\n\n/status /referral /leaderboard',
     },
     status_msg: {
-        en: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gems: {gems}\n💰 Gold: {gold}\n💵 USDT: {usdt}\n🛡️ Shield: {shield}',
-        he: '🏰 <b>{name}</b>\n⚔️ ניקוד: {score}\n💎 Gems: {gems}\n💰 זהב: {gold}\n💵 USDT: {usdt}\n🛡️ מגן: {shield}',
-        es: '🏰 <b>{name}</b>\n⚔️ Puntos: {score}\n💎 Gemas: {gems}\n💰 Oro: {gold}\n💵 USDT: {usdt}\n🛡️ Escudo: {shield}',
-        fr: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n💎 Gemmes: {gems}\n💰 Or: {gold}\n💵 USDT: {usdt}\n🛡️ Bouclier: {shield}',
-        de: '🏰 <b>{name}</b>\n⚔️ Punkte: {score}\n💎 Edelsteine: {gems}\n💰 Gold: {gold}\n💵 USDT: {usdt}\n🛡️ Schild: {shield}',
-        ru: '🏰 <b>{name}</b>\n⚔️ Очки: {score}\n💎 Самоцветы: {gems}\n💰 Золото: {gold}\n💵 USDT: {usdt}\n🛡️ Щит: {shield}',
-        pt: '🏰 <b>{name}</b>\n⚔️ Pontos: {score}\n💎 Gemas: {gems}\n💰 Ouro: {gold}\n💵 USDT: {usdt}\n🛡️ Escudo: {shield}',
-        ar: '🏰 <b>{name}</b>\n⚔️ النقاط: {score}\n💎 الجواهر: {gems}\n💰 الذهب: {gold}\n💵 USDT: {usdt}\n🛡️ الدرع: {shield}',
+        en: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n\n💰 Gold: {gold}\n🪵 Wood: {wood}\n🪨 Stone: {stone}\n🌾 Food: {food}\n\n💎 Gems: {gems}\n💵 USDT: ${usdt}\n🛡️ Shield: {shield}',
+        he: '🏰 <b>{name}</b>\n⚔️ ניקוד: {score}\n\n💰 זהב: {gold}\n🪵 עץ: {wood}\n🪨 אבן: {stone}\n🌾 אוכל: {food}\n\n💎 Gems: {gems}\n💵 USDT: ${usdt}\n🛡️ מגן: {shield}',
+        es: '🏰 <b>{name}</b>\n⚔️ Puntos: {score}\n\n💰 Oro: {gold}\n🪵 Madera: {wood}\n🪨 Piedra: {stone}\n🌾 Comida: {food}\n\n💎 Gemas: {gems}\n💵 USDT: ${usdt}\n🛡️ Escudo: {shield}',
+        fr: '🏰 <b>{name}</b>\n⚔️ Score: {score}\n\n💰 Or: {gold}\n🪵 Bois: {wood}\n🪨 Pierre: {stone}\n🌾 Nourriture: {food}\n\n💎 Gemmes: {gems}\n💵 USDT: ${usdt}\n🛡️ Bouclier: {shield}',
+        de: '🏰 <b>{name}</b>\n⚔️ Punkte: {score}\n\n💰 Gold: {gold}\n🪵 Holz: {wood}\n🪨 Stein: {stone}\n🌾 Nahrung: {food}\n\n💎 Edelsteine: {gems}\n💵 USDT: ${usdt}\n🛡️ Schild: {shield}',
+        ru: '🏰 <b>{name}</b>\n⚔️ Очки: {score}\n\n💰 Золото: {gold}\n🪵 Дерево: {wood}\n🪨 Камень: {stone}\n🌾 Еда: {food}\n\n💎 Самоцветы: {gems}\n💵 USDT: ${usdt}\n🛡️ Щит: {shield}',
+        pt: '🏰 <b>{name}</b>\n⚔️ Pontos: {score}\n\n💰 Ouro: {gold}\n🪵 Madeira: {wood}\n🪨 Pedra: {stone}\n🌾 Comida: {food}\n\n💎 Gemas: {gems}\n💵 USDT: ${usdt}\n🛡️ Escudo: {shield}',
+        ar: '🏰 <b>{name}</b>\n⚔️ النقاط: {score}\n\n💰 الذهب: {gold}\n🪵 الخشب: {wood}\n🪨 الحجر: {stone}\n🌾 الغذاء: {food}\n\n💎 الجواهر: {gems}\n💵 USDT: ${usdt}\n🛡️ الدرع: {shield}',
     },
     shield_active: { en: '✅ Active', he: '✅ פעיל', es: '✅ Activo', fr: '✅ Actif', de: '✅ Aktiv', ru: '✅ Активен', pt: '✅ Ativo', ar: '✅ نشط' },
     shield_none: { en: '❌ No shield', he: '❌ אין מגן', es: '❌ Sin escudo', fr: '❌ Pas de bouclier', de: '❌ Kein Schild', ru: '❌ Нет щита', pt: '❌ Sem escudo', ar: '❌ لا درع' },
@@ -205,8 +225,35 @@ let TelegramService = class TelegramService {
             return;
         }
         if (cmd('/leaderboard')) {
-            const lbUrl = `${miniAppUrl}?startapp=tab_leaderboard`;
-            await this.sendMessage(chatId, BOT_MESSAGES.leaderboard_msg[lang], {
+            const lbUrl = `${miniAppUrl}?screen=leaderboard`;
+            const MEDALS = ['🥇', '🥈', '🥉'];
+            const top = await this.kingdomRepo
+                .createQueryBuilder('k')
+                .leftJoin('k.user', 'u')
+                .select(['k.id', 'k.name', 'k.score'])
+                .orderBy('k.score', 'DESC')
+                .limit(10)
+                .getMany().catch(() => []);
+            let msg = BOT_MESSAGES.leaderboard_title[lang] + '\n';
+            top.forEach((k, i) => {
+                const medal = MEDALS[i] ?? `${i + 1}.`;
+                msg += `\n${medal} ${k.name} — ${k.score}`;
+            });
+            if (user) {
+                const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } }).catch(() => null);
+                if (kingdom) {
+                    const rank = await this.kingdomRepo.createQueryBuilder('k')
+                        .where('k.score > :score', { score: kingdom.score })
+                        .getCount().catch(() => null);
+                    if (rank !== null) {
+                        msg += (BOT_MESSAGES.leaderboard_your_rank[lang] ?? BOT_MESSAGES.leaderboard_your_rank.en)
+                            .replace('{rank}', String(rank + 1))
+                            .replace('{score}', String(kingdom.score));
+                    }
+                }
+            }
+            msg += '\n\n' + BOT_MESSAGES.leaderboard_msg[lang];
+            await this.sendMessage(chatId, msg, {
                 reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: lbUrl } }]] },
             });
             return;
@@ -228,7 +275,17 @@ let TelegramService = class TelegramService {
                 });
             }
             else {
-                await this.sendMessage(chatId, BOT_MESSAGES.welcome[lang], {
+                const noAccountMsg = {
+                    en: '⚠️ You don\'t have a kingdom yet. Open the game to create one!',
+                    he: '⚠️ עדיין אין לך ממלכה. פתח את המשחק כדי ליצור אחת!',
+                    es: '⚠️ Aún no tienes reino. ¡Abre el juego para crear uno!',
+                    fr: '⚠️ Vous n\'avez pas encore de royaume. Ouvrez le jeu pour en créer un!',
+                    de: '⚠️ Du hast noch kein Königreich. Öffne das Spiel, um eines zu erstellen!',
+                    ru: '⚠️ У вас ещё нет королевства. Откройте игру, чтобы создать его!',
+                    pt: '⚠️ Você ainda não tem um reino. Abra o jogo para criar um!',
+                    ar: '⚠️ ليس لديك مملكة بعد. افتح اللعبة لإنشاء مملكة!',
+                };
+                await this.sendMessage(chatId, noAccountMsg[lang], {
                     reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_game[lang], web_app: { url: miniAppUrl } }]] },
                 });
             }
@@ -256,9 +313,12 @@ let TelegramService = class TelegramService {
             const statusText = (BOT_MESSAGES.status_msg[lang] ?? BOT_MESSAGES.status_msg.en)
                 .replace('{name}', kingdom.name)
                 .replace('{score}', String(kingdom.score))
-                .replace('{gems}', String(kingdom.gems))
                 .replace('{gold}', String(Math.floor(kingdom.gold)))
-                .replace('{usdt}', (kingdom.usdtBalance ?? 0).toFixed(4))
+                .replace('{wood}', String(Math.floor(kingdom.wood)))
+                .replace('{stone}', String(Math.floor(kingdom.stone)))
+                .replace('{food}', String(Math.floor(kingdom.food)))
+                .replace('{gems}', String(kingdom.gems))
+                .replace('{usdt}', (kingdom.usdtBalance ?? 0).toFixed(2))
                 .replace('{shield}', shieldStr);
             await this.sendMessage(chatId, statusText, {
                 reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.open_btn[lang], web_app: { url: miniAppUrl } }]] },

@@ -69,7 +69,9 @@ let EconomyService = class EconomyService {
         const vipBonus = kingdom.isVip ? 0.5 : 0;
         const workerCount = kingdom.workers || 0;
         const workerProductionBonus = 1 + workerCount * 0.04;
-        const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
+        const academy = buildings.find(b => b.type === building_entity_1.BuildingType.ACADEMY && !b.needsRepair);
+        const academyBonus = academy ? academy.level * 0.02 : 0;
+        const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus) * workerProductionBonus;
         const workerSalary = workerCount * 5 * hoursElapsed;
         const HERO_SALARY_INTERVAL_HOURS = 1;
         const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
@@ -93,6 +95,11 @@ let EconomyService = class EconomyService {
         const ragnar = units.find(u => u.type === 'ragnar' && u.count > 0);
         if (ragnar) {
             kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
+        }
+        const gemMines = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair);
+        const gemMineRate = gemMines.reduce((sum, b) => sum + b.level * 2, 0);
+        if (gemMineRate > 0) {
+            kingdom.gems = Math.floor((kingdom.gems || 0) + gemMineRate * hoursElapsed);
         }
         kingdom.lastResourceTick = now;
         if (foodShortfall > 0) {
@@ -145,12 +152,23 @@ let EconomyService = class EconomyService {
                 }
             }
             if (userId) {
-                const hourlyFoodProduction = this.calculateProduction(buildings, 1).food;
-                const hourlyUpkeep = this.calculateUpkeep(units, 1);
+                const hourlyFoodProduction = Math.floor(this.calculateProduction(buildings, 1).food);
+                const hourlyUpkeep = Math.floor(this.calculateUpkeep(units, 1));
+                const foodLeft = kingdom.food ?? 0;
+                const hoursLeft = hourlyUpkeep > 0 ? foodLeft / hourlyUpkeep : Infinity;
                 const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
-                if (hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
+                const isDeficit = hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep;
+                const isLow = hoursLeft < 12;
+                const hourlyFoodWithUpgrades = Math.floor(this.calculateProduction(buildings.map(b => b.isUpgrading ? { ...b, isUpgrading: false } : b), 1).food);
+                const wouldBeDeficitWithoutUpgrades = hourlyUpkeep > 0 && hourlyFoodWithUpgrades < hourlyUpkeep;
+                if (isDeficit && isLow && wouldBeDeficitWithoutUpgrades && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
                     lastNegativeProdNotif.set(kingdomId, Date.now());
-                    this.notifService.create(resolvedUserId, 'negative_production', { ...userPayload }).catch(() => { });
+                    this.notifService.create(resolvedUserId, 'negative_production', {
+                        ...userPayload,
+                        food: foodLeft,
+                        prod: hourlyFoodProduction,
+                        upkeep: hourlyUpkeep,
+                    }).catch(() => { });
                 }
             }
             if (completedBuildings.length > 0 || completedUnits.length > 0) {
@@ -259,7 +277,7 @@ let EconomyService = class EconomyService {
             }
         }
     }
-    getProductionRates(buildings, kingdom) {
+    getProductionRates(buildings, kingdom, units) {
         const rates = this.calculateProduction(buildings, 1);
         const now = new Date();
         const isWeak = kingdom ? kingdom.score < 1000 : false;
@@ -269,13 +287,23 @@ let EconomyService = class EconomyService {
         const vipBonus = kingdom?.isVip ? 0.5 : 0;
         const workerCount = kingdom?.workers || 0;
         const workerProductionBonus = 1 + workerCount * 0.04;
-        const bonus = (1 + weakBonus + boostBonus + vipBonus) * workerProductionBonus;
+        const academyInRates = buildings.find((b) => b.type === building_entity_1.BuildingType.ACADEMY && !b.needsRepair);
+        const academyBonusInRates = academyInRates ? academyInRates.level * 0.02 : 0;
+        const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonusInRates) * workerProductionBonus;
         const workerSalary = workerCount * 5;
+        const gemMinesForRate = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair);
+        const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 2, 0);
+        const unitsArr = units ?? [];
+        const ragnarCount = unitsArr.find(u => u.type === 'ragnar')?.count ?? 0;
+        const gemsPerHour = gemMineRate + ragnarCount * 2;
+        const gemsSalaryPerHour = unitsArr.reduce((s, u) => s + u.count * (unit_entity_2.HERO_SALARY_GEMS[u.type] ?? 0), 0);
         return {
             gold: Math.floor(rates.gold * bonus - workerSalary),
             wood: Math.floor(rates.wood * bonus),
             stone: Math.floor(rates.stone * bonus),
             food: Math.floor(rates.food * bonus),
+            gems: gemsPerHour,
+            gemsSalary: gemsSalaryPerHour,
         };
     }
 };

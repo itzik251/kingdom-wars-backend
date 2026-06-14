@@ -131,9 +131,10 @@ let CombatService = class CombatService {
             throw new common_1.BadRequestException('Kingdom not found');
         const myUnits = await this.unitRepo.find({ where: { kingdom: { id: myKingdomId } } });
         const wallLevel = targetBuildings.find(b => b.type === building_entity_1.BuildingType.WALL)?.level ?? 0;
+        const watchTowerLevelScout = targetBuildings.find(b => b.type === building_entity_1.BuildingType.WATCH_TOWER)?.level ?? 0;
         const myAttackPower = myUnits.reduce((s, u) => s + u.count * (game_constants_1.UNIT_STATS[u.type]?.attackPower ?? 0), 0);
-        const defPower = targetUnits.reduce((s, u) => s + u.count * (game_constants_1.UNIT_STATS[u.type]?.defensePower ?? 0), 0) +
-            wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
+        const defPower = (targetUnits.reduce((s, u) => s + u.count * (game_constants_1.UNIT_STATS[u.type]?.defensePower ?? 0), 0) +
+            wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL) * (1 + watchTowerLevelScout * 0.1);
         const lootable = {
             gold: Math.floor(target.gold * game_constants_1.LOOT_PERCENTAGE),
             wood: Math.floor(target.wood * game_constants_1.LOOT_PERCENTAGE),
@@ -172,8 +173,10 @@ let CombatService = class CombatService {
         const wallBonus = wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
         const arcaneLevel = attackerBuildings.find(b => b.type === building_entity_1.BuildingType.ARCANE_TOWER)?.level ?? 0;
         const arcaneMult = 1 + arcaneLevel * 0.1;
+        const watchTowerLevel = defenderBuildings.find(b => b.type === building_entity_1.BuildingType.WATCH_TOWER)?.level ?? 0;
+        const watchTowerMult = 1 + watchTowerLevel * 0.1;
         let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * (game_constants_1.UNIT_STATS[u.type]?.attackPower ?? 0), 0) * arcaneMult;
-        let defensePower = defenderUnits.reduce((sum, u) => sum + u.count * (game_constants_1.UNIT_STATS[u.type]?.defensePower ?? 0), 0) + wallBonus;
+        let defensePower = (defenderUnits.reduce((sum, u) => sum + u.count * (game_constants_1.UNIT_STATS[u.type]?.defensePower ?? 0), 0) + wallBonus) * watchTowerMult;
         attackPower *= this.random(game_constants_1.COMBAT_RANDOM_MIN, game_constants_1.COMBAT_RANDOM_MAX);
         defensePower *= this.random(game_constants_1.COMBAT_RANDOM_MIN, game_constants_1.COMBAT_RANDOM_MAX);
         const attackerWins = attackPower > defensePower;

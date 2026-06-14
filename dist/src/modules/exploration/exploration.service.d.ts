@@ -4,6 +4,7 @@ import { ExplorationMission } from './exploration-mission.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
+import { NotificationService } from '../notifications/notification.service';
 export declare function fogRadius(explorerCount: number, academyLevel: number): number;
 export declare function generateKingdomMap(kingdomId: string): Omit<MapNode, 'id' | 'discovered' | 'discoveredAt' | 'lastRaidedAt'>[];
 export declare class ExplorationService {
@@ -12,7 +13,8 @@ export declare class ExplorationService {
     private kingdomRepo;
     private buildingRepo;
     private unitRepo;
-    constructor(nodeRepo: Repository<MapNode>, missionRepo: Repository<ExplorationMission>, kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>);
+    private notificationService;
+    constructor(nodeRepo: Repository<MapNode>, missionRepo: Repository<ExplorationMission>, kingdomRepo: Repository<Kingdom>, buildingRepo: Repository<Building>, unitRepo: Repository<Unit>, notificationService: NotificationService);
     private ensureMap;
     getMap(kingdomId: string): Promise<{
         fogRadius: number;
@@ -48,6 +50,7 @@ export declare class ExplorationService {
         hoursUntilReturn: number;
     }>;
     completeMissions(): Promise<void>;
+    private discoveryParams;
     private processMissionReturn;
     raidNode(kingdomId: string, nodeId: string): Promise<{
         gained: Record<string, number>;

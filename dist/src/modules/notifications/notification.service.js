@@ -42,11 +42,34 @@ const UNIT_NAMES = {
     paladin: { en: 'Paladins', he: 'פלדינים', es: 'Paladines', fr: 'Paladins', de: 'Paladine', ru: 'Паладины', pt: 'Paladinos', ar: 'الفرسان المقدسون' },
     dragon_rider: { en: 'Dragon Riders', he: 'רוכבי דרקון', es: 'Jinetes dragón', fr: 'Cavaliers dragons', de: 'Drachenreiter', ru: 'Всадники дракона', pt: 'Cavaleiros dragão', ar: 'راكبو التنانين' },
 };
+const RESOURCE_ICONS = {
+    gold: '💰', wood: '🪵', stone: '🪨', food: '🌾', magic: '🔮', gems: '💎',
+};
+const RESOURCE_NAMES = {
+    gold: { en: 'Gold', he: 'זהב', es: 'Oro', fr: 'Or', de: 'Gold', ru: 'Золото', pt: 'Ouro', ar: 'ذهب' },
+    wood: { en: 'Wood', he: 'עץ', es: 'Madera', fr: 'Bois', de: 'Holz', ru: 'Дерево', pt: 'Madeira', ar: 'خشب' },
+    stone: { en: 'Stone', he: 'אבן', es: 'Piedra', fr: 'Pierre', de: 'Stein', ru: 'Камень', pt: 'Pedra', ar: 'حجر' },
+    food: { en: 'Food', he: 'אוכל', es: 'Comida', fr: 'Nourriture', de: 'Nahrung', ru: 'Еда', pt: 'Comida', ar: 'طعام' },
+    magic: { en: 'Magic', he: 'קסם', es: 'Magia', fr: 'Magie', de: 'Magie', ru: 'Магия', pt: 'Magia', ar: 'سحر' },
+    gems: { en: 'Gems', he: 'אבני חן', es: 'Gemas', fr: 'Gemmes', de: 'Edelsteine', ru: 'Камни', pt: 'Gemas', ar: 'جواهر' },
+};
+const HERO_LABEL = {
+    en: 'Hero', he: 'גיבור', es: 'Héroe', fr: 'Héros', de: 'Held', ru: 'Герой', pt: 'Herói', ar: 'بطل',
+};
 function translateBuilding(type, lang) {
     return BUILDING_NAMES[type]?.[lang] ?? BUILDING_NAMES[type]?.['en'] ?? type;
 }
 function translateUnit(type, lang) {
     return UNIT_NAMES[type]?.[lang] ?? UNIT_NAMES[type]?.['en'] ?? type;
+}
+function translateExplorerResult(foundNodes, lang) {
+    return foundNodes.map(n => {
+        if (n.type === 'hero')
+            return `🦸 ${HERO_LABEL[lang]}: ${n.heroType}`;
+        const icon = RESOURCE_ICONS[n.resourceType ?? ''] ?? '📦';
+        const name = RESOURCE_NAMES[n.resourceType ?? '']?.[lang] ?? n.resourceType ?? '?';
+        return `${icon} ${name}`;
+    }).join(', ');
 }
 const MESSAGES = {
     attacked: {
@@ -139,15 +162,35 @@ const MESSAGES = {
         pt: '💎 Poucas gemas ({gems} restantes)! Heróis não lutarão sem salário',
         ar: '💎 الجواهر تنفد ({gems} متبقية)! الأبطال لن يقاتلوا بدون راتب',
     },
+    explorer_returned_found: {
+        en: '🧭 Your explorer returned! Found: {result}',
+        he: '🧭 החוקר שלך חזר! נמצא: {result}',
+        es: '🧭 ¡Tu explorador regresó! Encontró: {result}',
+        fr: '🧭 Votre explorateur est revenu! Trouvé: {result}',
+        de: '🧭 Dein Entdecker ist zurück! Gefunden: {result}',
+        ru: '🧭 Ваш исследователь вернулся! Найдено: {result}',
+        pt: '🧭 Seu explorador voltou! Encontrou: {result}',
+        ar: '🧭 عاد مستكشفك! وجد: {result}',
+    },
+    explorer_returned_empty: {
+        en: '🧭 Your explorer returned... found nothing this time 😔',
+        he: '🧭 החוקר שלך חזר... לא נמצא כלום הפעם 😔',
+        es: '🧭 Tu explorador regresó... no encontró nada esta vez 😔',
+        fr: '🧭 Votre explorateur est revenu... rien trouvé cette fois 😔',
+        de: '🧭 Dein Entdecker ist zurück... diesmal nichts gefunden 😔',
+        ru: '🧭 Исследователь вернулся... на этот раз ничего не нашёл 😔',
+        pt: '🧭 Seu explorador voltou... não encontrou nada desta vez 😔',
+        ar: '🧭 عاد مستكشفك... لم يجد شيئاً هذه المرة 😔',
+    },
     negative_production: {
-        en: '📉 Production deficit! Your upkeep exceeds food production — upgrade Farms or reduce your army',
-        he: '📉 גירעון ייצור! הצריכה עולה על ייצור האוכל — שדרג חוות או צמצם את הצבא',
-        es: '📉 ¡Déficit de producción! Tu mantenimiento supera la producción de comida — mejora Granjas o reduce el ejército',
-        fr: '📉 Déficit de production! Vos dépenses dépassent la production alimentaire — améliorez les Fermes ou réduisez l\'armée',
-        de: '📉 Produktionsdefizit! Dein Unterhalt übersteigt die Nahrungsproduktion — verbessere Farmen oder reduziere das Heer',
-        ru: '📉 Дефицит производства! Содержание превышает производство еды — улучшайте фермы или уменьшайте армию',
-        pt: '📉 Déficit de produção! Seu custo supera a produção de comida — melhore Fazendas ou reduza o exército',
-        ar: '📉 عجز في الإنتاج! تكاليف الصيانة تتجاوز إنتاج الغذاء — طوّر المزارع أو قلّل جيشك',
+        en: '📉 Production deficit! Food: {food} | Production: {prod}/h | Upkeep: {upkeep}/h — upgrade Farms or reduce your army',
+        he: '📉 גירעון ייצור! אוכל: {food} | ייצור: {prod}/שעה | צריכה: {upkeep}/שעה — שדרג חוות או צמצם את הצבא',
+        es: '📉 ¡Déficit! Comida: {food} | Producción: {prod}/h | Consumo: {upkeep}/h — mejora Granjas o reduce el ejército',
+        fr: '📉 Déficit! Nourriture: {food} | Production: {prod}/h | Entretien: {upkeep}/h — améliorez les Fermes ou réduisez l\'armée',
+        de: '📉 Defizit! Nahrung: {food} | Produktion: {prod}/h | Unterhalt: {upkeep}/h — verbessere Farmen oder reduziere das Heer',
+        ru: '📉 Дефицит! Еда: {food} | Производство: {prod}/ч | Расходы: {upkeep}/ч — улучшайте фермы или уменьшайте армию',
+        pt: '📉 Déficit! Comida: {food} | Produção: {prod}/h | Custo: {upkeep}/h — melhore Fazendas ou reduza o exército',
+        ar: '📉 عجز! الطعام: {food} | الإنتاج: {prod}/س | الصيانة: {upkeep}/س — طوّر المزارع أو قلّل جيشك',
     },
 };
 const OPEN_GAME = {
@@ -214,6 +257,23 @@ let NotificationService = class NotificationService {
         const VALID = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];
         if (!VALID.includes(lang))
             lang = 'en';
+        if (type === 'explorer_returned') {
+            const foundNodes = payload.foundNodes ?? [];
+            const resolvedType = foundNodes.length > 0 ? 'explorer_returned_found' : 'explorer_returned_empty';
+            const msgTemplates = MESSAGES[resolvedType];
+            const result = translateExplorerResult(foundNodes, lang);
+            const text = formatMessage(msgTemplates[lang] ?? msgTemplates['en'], { result });
+            const botUsername = this.config.get('TELEGRAM_BOT_USERNAME') || 'KingdomWarsBot';
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: telegramId, text,
+                    reply_markup: { inline_keyboard: [[{ text: OPEN_GAME[lang] ?? OPEN_GAME['en'], web_app: { url: this.config.get('FRONTEND_URL') || 'https://kingdomwars.cloud' } }]] },
+                }),
+            });
+            return;
+        }
         const msgTemplates = MESSAGES[type];
         if (!msgTemplates)
             return;

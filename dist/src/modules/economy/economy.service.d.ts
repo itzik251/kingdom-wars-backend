@@ -18,5 +18,8 @@ export declare class EconomyService {
     private completeBuildingUpgrades;
     private completeUnitTraining;
     private completeRepairs;
-    getProductionRates(buildings: Building[], kingdom?: Kingdom): Record<string, number>;
+    getProductionRates(buildings: Building[], kingdom?: Kingdom, units?: {
+        type: string;
+        count: number;
+    }[]): Record<string, number>;
 }

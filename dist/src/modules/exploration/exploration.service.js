@@ -25,6 +25,7 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const building_entity_1 = require("../building/building.entity");
 const unit_entity_1 = require("../units/unit.entity");
 const unit_entity_2 = require("../units/unit.entity");
+const notification_service_1 = require("../notifications/notification.service");
 function maxExplorers(academyLevel) {
     if (academyLevel >= 10)
         return 5;
@@ -47,7 +48,7 @@ function explorerTrainingSecs(academyLevel, isVip) {
     return isVip ? Math.floor(secs * 0.75) : secs;
 }
 function raidCooldownDays(academyLevel) {
-    if (academyLevel >= 11)
+    if (academyLevel >= 10)
         return 1;
     if (academyLevel >= 6)
         return 3;
@@ -59,18 +60,11 @@ function missionHours(distance) {
     return Math.min(12, Math.max(1, Math.round(distance * 0.5)));
 }
 function fogRadius(explorerCount, academyLevel) {
-    const power = explorerCount * academyLevel;
-    if (power >= 50)
-        return 14;
-    if (power >= 25)
-        return 10;
-    if (power >= 10)
-        return 7;
-    if (power >= 4)
-        return 5;
-    if (power >= 1)
-        return 3;
-    return 0;
+    if (academyLevel <= 0 || explorerCount <= 0)
+        return 0;
+    const base = Math.round(3 + (academyLevel - 1) * (22 / 29));
+    const explorerBonus = (explorerCount - 1) * 1.5;
+    return Math.min(25, Math.round(base + explorerBonus));
 }
 const EXPLORATION_HEROES = [unit_entity_2.UnitType.OGRE, unit_entity_2.UnitType.MAGE, unit_entity_2.UnitType.DWARF_FIGHTER];
 const RESOURCE_TYPES = ['gold', 'wood', 'stone', 'food'];
@@ -88,14 +82,14 @@ function generateKingdomMap(kingdomId) {
     const seed = kingdomId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
     const rand = seededRand(seed);
     const nodes = [];
-    const MAP_RADIUS = 15;
+    const MAP_RADIUS = 22;
     let heroesPlaced = 0;
-    for (let attempt = 0; attempt < 300 && nodes.length < 80; attempt++) {
+    for (let attempt = 0; attempt < 800 && nodes.length < 60; attempt++) {
         const angle = rand() * Math.PI * 2;
-        const dist = 3 + rand() * (MAP_RADIUS - 3);
+        const dist = 5 + rand() * (MAP_RADIUS - 5);
         const x = Math.round(Math.cos(angle) * dist);
         const y = Math.round(Math.sin(angle) * dist);
-        if (nodes.find(n => n.x === x && n.y === y))
+        if (nodes.find(n => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 6))
             continue;
         const r = rand();
         let type;
@@ -123,12 +117,13 @@ function generateKingdomMap(kingdomId) {
     return nodes;
 }
 let ExplorationService = class ExplorationService {
-    constructor(nodeRepo, missionRepo, kingdomRepo, buildingRepo, unitRepo) {
+    constructor(nodeRepo, missionRepo, kingdomRepo, buildingRepo, unitRepo, notificationService) {
         this.nodeRepo = nodeRepo;
         this.missionRepo = missionRepo;
         this.kingdomRepo = kingdomRepo;
         this.buildingRepo = buildingRepo;
         this.unitRepo = unitRepo;
+        this.notificationService = notificationService;
     }
     async ensureMap(kingdomId) {
         const count = await this.nodeRepo.count({ where: { kingdomId } });
@@ -140,6 +135,8 @@ let ExplorationService = class ExplorationService {
     async getMap(kingdomId) {
         await this.ensureMap(kingdomId);
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
         const academy = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: building_entity_1.BuildingType.ACADEMY } });
         const academyLevel = academy?.level ?? 0;
         const radius = fogRadius(kingdom.explorerCount, academyLevel);
@@ -152,8 +149,7 @@ let ExplorationService = class ExplorationService {
             order: { startedAt: 'DESC' },
             take: 10,
         });
-        const visibleNodes = allNodes
-            .filter(n => n.discovered || (Math.sqrt(n.x * n.x + n.y * n.y) <= radius))
+        const visibleNodes = allNodes.filter(n => n.discovered)
             .map(n => ({
             id: n.id,
             x: n.x,
@@ -217,6 +213,8 @@ let ExplorationService = class ExplorationService {
     }
     async sendMission(kingdomId, targetX, targetY) {
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
         if (kingdom.explorerCount <= 0)
             throw new common_1.BadRequestException('No explorers available');
         const activeCount = await this.missionRepo.count({ where: { kingdomId, status: exploration_mission_entity_1.MissionStatus.ACTIVE } });
@@ -245,43 +243,57 @@ let ExplorationService = class ExplorationService {
             await this.processMissionReturn(mission);
         }
     }
+    discoveryParams(academyLevel) {
+        if (academyLevel >= 10)
+            return { chance: 0.95, minNodes: 2, maxNodes: 3 };
+        if (academyLevel >= 6)
+            return { chance: 0.80, minNodes: 1, maxNodes: 3 };
+        if (academyLevel >= 3)
+            return { chance: 0.60, minNodes: 1, maxNodes: 2 };
+        return { chance: 0.40, minNodes: 1, maxNodes: 1 };
+    }
     async processMissionReturn(mission) {
         await this.ensureMap(mission.kingdomId);
         const kingdom = await this.kingdomRepo.findOne({ where: { id: mission.kingdomId } });
+        if (!kingdom)
+            return;
         const academy = await this.buildingRepo.findOne({ where: { kingdom: { id: mission.kingdomId }, type: building_entity_1.BuildingType.ACADEMY } });
         const academyLevel = academy?.level ?? 0;
         const radius = fogRadius(kingdom.explorerCount, academyLevel);
-        const DISCOVER_RADIUS = 3;
-        const undiscovered = await this.nodeRepo.find({ where: { kingdomId: mission.kingdomId, discovered: false } });
-        const nearby = undiscovered.filter(n => {
-            const dx = n.x - mission.targetX;
-            const dy = n.y - mission.targetY;
-            return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
-        });
-        const inFogRange = undiscovered.filter(n => Math.sqrt(n.x * n.x + n.y * n.y) <= radius);
-        const toDiscover = [...new Set([...nearby, ...inFogRange])];
+        const { chance, minNodes, maxNodes } = this.discoveryParams(academyLevel);
         const discoveredNodeIds = [];
-        if (toDiscover.length > 0) {
-            for (const node of toDiscover) {
-                node.discovered = true;
-                node.discoveredAt = new Date();
-            }
-            await this.nodeRepo.save(toDiscover);
-            discoveredNodeIds.push(...toDiscover.map(n => n.id));
-            for (const node of toDiscover) {
-                if (node.type === map_node_entity_1.MapNodeType.HERO && node.heroType) {
-                    const existing = await this.unitRepo.findOne({
-                        where: { kingdom: { id: mission.kingdomId }, type: node.heroType },
-                    });
-                    if (!existing) {
-                        const unit = this.unitRepo.create({
-                            kingdom: { id: mission.kingdomId },
-                            type: node.heroType,
-                            count: 0,
-                            woundedCount: 0,
-                            trainingCount: 0,
+        if (Math.random() < chance) {
+            const DISCOVER_RADIUS = 3;
+            const undiscovered = await this.nodeRepo.find({ where: { kingdomId: mission.kingdomId, discovered: false } });
+            const nearby = undiscovered.filter(n => {
+                const dx = n.x - mission.targetX;
+                const dy = n.y - mission.targetY;
+                return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
+            });
+            const nodeCount = minNodes + Math.floor(Math.random() * (maxNodes - minNodes + 1));
+            const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, nodeCount);
+            if (toDiscover.length > 0) {
+                for (const node of toDiscover) {
+                    node.discovered = true;
+                    node.discoveredAt = new Date();
+                }
+                await this.nodeRepo.save(toDiscover);
+                discoveredNodeIds.push(...toDiscover.map(n => n.id));
+                for (const node of toDiscover) {
+                    if (node.type === map_node_entity_1.MapNodeType.HERO && node.heroType) {
+                        const existing = await this.unitRepo.findOne({
+                            where: { kingdom: { id: mission.kingdomId }, type: node.heroType },
                         });
-                        await this.unitRepo.save(unit);
+                        if (!existing) {
+                            const unit = this.unitRepo.create({
+                                kingdom: { id: mission.kingdomId },
+                                type: node.heroType,
+                                count: 0,
+                                woundedCount: 0,
+                                trainingCount: 0,
+                            });
+                            await this.unitRepo.save(unit);
+                        }
                     }
                 }
             }
@@ -289,6 +301,14 @@ let ExplorationService = class ExplorationService {
         mission.status = exploration_mission_entity_1.MissionStatus.RETURNED;
         mission.discoveredNodeIds = discoveredNodeIds;
         await this.missionRepo.save(mission);
+        const kingdom2 = await this.kingdomRepo.findOne({ where: { id: mission.kingdomId }, relations: ['user'] });
+        if (kingdom2?.user) {
+            let foundNodes = [];
+            if (discoveredNodeIds.length > 0) {
+                foundNodes = await this.nodeRepo.findByIds(discoveredNodeIds);
+            }
+            this.notificationService.create(kingdom2.user.id, 'explorer_returned', { foundNodes }).catch(() => { });
+        }
     }
     async raidNode(kingdomId, nodeId) {
         const node = await this.nodeRepo.findOne({ where: { id: nodeId, kingdomId } });
@@ -301,6 +321,8 @@ let ExplorationService = class ExplorationService {
             throw new common_1.BadRequestException('Raid cooldown not expired');
         }
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
         const gained = {};
         if (node.resourceType === 'magic') {
             const amt = Math.min(node.amount, kingdom.maxMagic - (kingdom.magic ?? 0));
@@ -337,6 +359,8 @@ let ExplorationService = class ExplorationService {
             throw new common_1.BadRequestException('Hero node not found');
         }
         const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+        if (!kingdom)
+            throw new common_1.BadRequestException('Kingdom not found');
         const { UNIT_STATS } = await Promise.resolve().then(() => require('../../constants/game.constants'));
         const stats = UNIT_STATS[node.heroType];
         const cost = stats?.gemsCost ?? 150;
@@ -379,6 +403,7 @@ exports.ExplorationService = ExplorationService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        notification_service_1.NotificationService])
 ], ExplorationService);
 //# sourceMappingURL=exploration.service.js.map

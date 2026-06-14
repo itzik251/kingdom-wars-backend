@@ -97,7 +97,7 @@ let EconomyService = class EconomyService {
             kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
         }
         const gemMines = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair);
-        const gemMineRate = gemMines.reduce((sum, b) => sum + b.level * 2, 0);
+        const gemMineRate = gemMines.reduce((sum, b) => sum + b.level * 3, 0);
         if (gemMineRate > 0) {
             kingdom.gems = Math.floor((kingdom.gems || 0) + gemMineRate * hoursElapsed);
         }
@@ -292,7 +292,7 @@ let EconomyService = class EconomyService {
         const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonusInRates) * workerProductionBonus;
         const workerSalary = workerCount * 5;
         const gemMinesForRate = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair);
-        const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 2, 0);
+        const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 3, 0);
         const unitsArr = units ?? [];
         const ragnarCount = unitsArr.find(u => u.type === 'ragnar')?.count ?? 0;
         const gemsPerHour = gemMineRate + ragnarCount * 2;

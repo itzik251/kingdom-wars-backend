@@ -91,15 +91,35 @@ const BOT_MESSAGES: Record<string, Record<Lang, string>> = {
     en: '🏰 Open', he: '🏰 פתח', es: '🏰 Abrir', fr: '🏰 Ouvrir',
     de: '🏰 Öffnen', ru: '🏰 Открыть', pt: '🏰 Abrir', ar: '🏰 فتح',
   },
+  leaderboard_title: {
+    en: '🏆 <b>Global Leaderboard</b>',
+    he: '🏆 <b>דירוג עולמי</b>',
+    es: '🏆 <b>Clasificación Global</b>',
+    fr: '🏆 <b>Classement Mondial</b>',
+    de: '🏆 <b>Weltrangliste</b>',
+    ru: '🏆 <b>Мировой рейтинг</b>',
+    pt: '🏆 <b>Ranking Global</b>',
+    ar: '🏆 <b>التصنيف العالمي</b>',
+  },
+  leaderboard_your_rank: {
+    en: '\n\n📍 <b>Your rank: #{rank}</b> — {score} pts',
+    he: '\n\n📍 <b>הדירוג שלך: #{rank}</b> — {score} נק׳',
+    es: '\n\n📍 <b>Tu posición: #{rank}</b> — {score} pts',
+    fr: '\n\n📍 <b>Votre rang: #{rank}</b> — {score} pts',
+    de: '\n\n📍 <b>Dein Rang: #{rank}</b> — {score} Pkt',
+    ru: '\n\n📍 <b>Ваше место: #{rank}</b> — {score} очков',
+    pt: '\n\n📍 <b>Sua posição: #{rank}</b> — {score} pts',
+    ar: '\n\n📍 <b>ترتيبك: #{rank}</b> — {score} نقطة',
+  },
   leaderboard_msg: {
-    en: '🏆 View the global leaderboard:',
-    he: '🏆 ראה את הדירוג העולמי:',
-    es: '🏆 Ver el ranking global:',
-    fr: '🏆 Voir le classement mondial:',
-    de: '🏆 Weltrangliste ansehen:',
-    ru: '🏆 Посмотреть глобальный рейтинг:',
-    pt: '🏆 Ver o ranking global:',
-    ar: '🏆 عرض التصنيف العالمي:',
+    en: '🏆 View the full leaderboard in the game:',
+    he: '🏆 פתח את הדירוג המלא במשחק:',
+    es: '🏆 Ver el ranking completo en el juego:',
+    fr: '🏆 Voir le classement complet dans le jeu:',
+    de: '🏆 Vollständige Rangliste im Spiel:',
+    ru: '🏆 Полный рейтинг в игре:',
+    pt: '🏆 Ver o ranking completo no jogo:',
+    ar: '🏆 عرض التصنيف الكامل في اللعبة:',
   },
   leaderboard_btn: {
     en: '🏆 Open Leaderboard', he: '🏆 פתח דירוג', es: '🏆 Ver Ranking', fr: '🏆 Classement',
@@ -216,9 +236,40 @@ export class TelegramService {
     }
 
     if (cmd('/leaderboard')) {
-      // Deep-link directly to the leaderboard tab
       const lbUrl = `${miniAppUrl}?screen=leaderboard`;
-      await this.sendMessage(chatId, BOT_MESSAGES.leaderboard_msg[lang], {
+      const MEDALS = ['🥇', '🥈', '🥉'];
+      // Fetch top 10 kingdoms ordered by score
+      const top = await this.kingdomRepo
+        .createQueryBuilder('k')
+        .leftJoin('k.user', 'u')
+        .select(['k.id', 'k.name', 'k.score'])
+        .orderBy('k.score', 'DESC')
+        .limit(10)
+        .getMany().catch(() => []);
+
+      let msg = BOT_MESSAGES.leaderboard_title[lang] + '\n';
+      top.forEach((k, i) => {
+        const medal = MEDALS[i] ?? `${i + 1}.`;
+        msg += `\n${medal} ${k.name} — ${k.score}`;
+      });
+
+      // Show the user's own rank if they have a kingdom
+      if (user) {
+        const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } }).catch(() => null);
+        if (kingdom) {
+          const rank = await this.kingdomRepo.createQueryBuilder('k')
+            .where('k.score > :score', { score: kingdom.score })
+            .getCount().catch(() => null);
+          if (rank !== null) {
+            msg += (BOT_MESSAGES.leaderboard_your_rank[lang] ?? BOT_MESSAGES.leaderboard_your_rank.en)
+              .replace('{rank}', String(rank + 1))
+              .replace('{score}', String(kingdom.score));
+          }
+        }
+      }
+
+      msg += '\n\n' + BOT_MESSAGES.leaderboard_msg[lang];
+      await this.sendMessage(chatId, msg, {
         reply_markup: { inline_keyboard: [[{ text: BOT_MESSAGES.leaderboard_btn[lang], web_app: { url: lbUrl } }]] },
       });
       return;

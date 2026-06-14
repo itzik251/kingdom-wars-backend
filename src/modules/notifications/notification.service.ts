@@ -31,7 +31,10 @@ const UNIT_NAMES: Record<string, Record<Lang, string>> = {
   catapult:    { en:'Catapults',    he:'קטפולטות',     es:'Catapultas',    fr:'Catapultes',     de:'Katapulte',     ru:'Катапульты',      pt:'Catapultas',      ar:'المنجنيق'     },
   elite_guard: { en:'Elite Guards', he:'שומרי עילית',  es:'Guardias élite',fr:'Gardes d\'élite',de:'Elitegarden',   ru:'Элитная стража',  pt:'Guardas de elite',ar:'الحرس النخبوي'},
   paladin:     { en:'Paladins',     he:'פלדינים',      es:'Paladines',     fr:'Paladins',       de:'Paladine',      ru:'Паладины',        pt:'Paladinos',       ar:'الفرسان المقدسون'},
-  dragon_rider:{ en:'Dragon Riders',he:'רוכבי דרקון',  es:'Jinetes dragón',fr:'Cavaliers dragons',de:'Drachenreiter',ru:'Всадники дракона',pt:'Cavaleiros dragão',ar:'راكبو التنانين'},
+  dragon_rider:  { en:'Dragon Riders',  he:'רוכבי דרקון',   es:'Jinetes dragón',  fr:'Cavaliers dragons', de:'Drachenreiter',   ru:'Всадники дракона', pt:'Cavaleiros dragão', ar:'راكبو التنانين'   },
+  ogre:          { en:'Forest Ogre',    he:'שמן היער',       es:'Ogro del bosque', fr:'Ogre des forêts',   de:'Waldoger',        ru:'Лесной огр',       pt:'Ogro da floresta',  ar:'وحش الغابة'       },
+  mage:          { en:'White Wizard',   he:'קוסם לבן',       es:'Mago blanco',     fr:'Mage blanc',        de:'Weißer Magier',   ru:'Белый маг',        pt:'Mago branco',       ar:'الساحر الأبيض'    },
+  dwarf_fighter: { en:'Dwarf Fighter',  he:'גמד לוחם',       es:'Guerrero enano',  fr:'Guerrier nain',     de:'Zwergenkämpfer',  ru:'Боец-гном',        pt:'Guerreiro anão',    ar:'محارب الأقزام'    },
 };
 
 const RESOURCE_ICONS: Record<string, string> = {
@@ -59,7 +62,10 @@ function translateUnit(type: string, lang: Lang): string {
 }
 function translateExplorerResult(foundNodes: { type: string; resourceType?: string; heroType?: string }[], lang: Lang): string {
   return foundNodes.map(n => {
-    if (n.type === 'hero') return `🦸 ${HERO_LABEL[lang]}: ${n.heroType}`;
+    if (n.type === 'hero') {
+      const heroName = UNIT_NAMES[n.heroType ?? '']?.[lang] ?? n.heroType ?? HERO_LABEL[lang];
+      return `🦸 ${heroName}`;
+    }
     const icon = RESOURCE_ICONS[n.resourceType ?? ''] ?? '📦';
     const name = RESOURCE_NAMES[n.resourceType ?? '']?.[lang] ?? n.resourceType ?? '?';
     return `${icon} ${name}`;
@@ -267,14 +273,17 @@ export class NotificationService {
     const VALID: Lang[] = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];
     if (!VALID.includes(lang)) lang = 'en';
 
-    // Special handling for explorer_returned — build translated result from raw node data
+    // Special handling for explorer_returned — each mission gets its own dedup key
     if (type === 'explorer_returned') {
+      const missionKey = `${userId}:explorer_returned:${payload.missionId ?? Date.now()}`;
+      if (this.recentSends.get(missionKey)) return;
+      this.recentSends.set(missionKey, Date.now());
+
       const foundNodes = payload.foundNodes ?? [];
       const resolvedType = foundNodes.length > 0 ? 'explorer_returned_found' : 'explorer_returned_empty';
       const msgTemplates = MESSAGES[resolvedType];
       const result = translateExplorerResult(foundNodes, lang);
       const text = formatMessage(msgTemplates[lang] ?? msgTemplates['en'], { result });
-      const botUsername = this.config.get('TELEGRAM_BOT_USERNAME') || 'KingdomWarsBot';
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

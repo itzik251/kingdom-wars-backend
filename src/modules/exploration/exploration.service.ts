@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { MapNode, MapNodeType } from './map-node.entity';
 import { ExplorationMission, MissionStatus } from './exploration-mission.entity';
@@ -42,12 +42,10 @@ function missionHours(distance: number): number {
 }
 
 // How many tiles each research-power level can see (fog radius)
-// MAP_R = 22 → academy level 30 clears the full map
+// Linear: lvl 1=1, lvl 30=22 (full map clear). Each level adds ~0.73 tiles.
 export function fogRadius(explorerCount: number, academyLevel: number): number {
   if (academyLevel <= 0 || explorerCount <= 0) return 0;
-  // Scale linearly with academy level: lvl 1 = 3 tiles, lvl 30 = 25 tiles (full map)
-  const base = Math.round(3 + (academyLevel - 1) * (22 / 29));
-  // Bonus tiles per additional explorer (beyond first)
+  const base = Math.round(academyLevel * 22 / 30);
   const explorerBonus = (explorerCount - 1) * 1.5;
   return Math.min(25, Math.round(base + explorerBonus));
 }
@@ -335,9 +333,9 @@ export class ExplorationService {
     if (kingdom2?.user) {
       let foundNodes: { type: string; resourceType?: string; heroType?: string }[] = [];
       if (discoveredNodeIds.length > 0) {
-        foundNodes = await this.nodeRepo.findByIds(discoveredNodeIds);
+        foundNodes = await this.nodeRepo.findBy({ id: In(discoveredNodeIds) });
       }
-      this.notificationService.create(kingdom2.user.id, 'explorer_returned', { foundNodes }).catch(() => {});
+      this.notificationService.create(kingdom2.user.id, 'explorer_returned', { missionId: mission.id, foundNodes }).catch(() => {});
     }
   }
 

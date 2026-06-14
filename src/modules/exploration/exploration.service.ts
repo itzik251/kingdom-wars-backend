@@ -74,16 +74,16 @@ export function generateKingdomMap(kingdomId: string): Omit<MapNode, 'id' | 'dis
   const nodes: Omit<MapNode, 'id' | 'discovered' | 'discoveredAt' | 'lastRaidedAt'>[] = [];
   const MAP_RADIUS = 15;
 
-  // Spread ~80 nodes across the map (excluding center 2 tiles = kingdom area)
+  // Spread ~50 nodes across the map (excluding center 3 tiles = kingdom area)
   let heroesPlaced = 0;
-  for (let attempt = 0; attempt < 300 && nodes.length < 80; attempt++) {
+  for (let attempt = 0; attempt < 500 && nodes.length < 50; attempt++) {
     const angle = rand() * Math.PI * 2;
-    const dist = 3 + rand() * (MAP_RADIUS - 3); // min distance 3 from center
+    const dist = 4 + rand() * (MAP_RADIUS - 4); // min distance 4 from center
     const x = Math.round(Math.cos(angle) * dist);
     const y = Math.round(Math.sin(angle) * dist);
 
-    // Avoid clustering — min 2 tiles between nodes
-    if (nodes.find(n => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 2)) continue;
+    // Avoid clustering — min 3 tiles between nodes
+    if (nodes.find(n => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 3)) continue;
 
     const r = rand();
     let type: MapNodeType;

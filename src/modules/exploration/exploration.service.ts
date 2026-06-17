@@ -36,11 +36,11 @@ function missionHours(distance: number): number {
   return Math.min(24, Math.max(1, Math.round(distance * 0.5)));
 }
 
-// How many tiles each research-power level can see (fog radius)
-// Linear: lvl 1=1, lvl 30=22 (full map clear). Each level adds ~0.73 tiles.
+// Fog radius per academy level: level 0 = full fog, level 1 = 10%, level 30 = 100% (MAP_R=22)
 export function fogRadius(_explorerCount: number, academyLevel: number): number {
   if (academyLevel <= 0) return 0;
-  return Math.min(22, Math.round(2 + (academyLevel - 1) * 20 / 29));
+  if (academyLevel >= 30) return 22;
+  return Math.round(2.2 + (academyLevel - 1) * 19.8 / 29);
 }
 
 const EXPLORATION_HEROES = [UnitType.OGRE, UnitType.MAGE, UnitType.DWARF_FIGHTER];

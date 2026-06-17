@@ -86,8 +86,9 @@ export class EconomyService {
     }
     const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus + allianceBonus) * workerProductionBonus;
 
-    // Worker salary: 5 gold/hour per worker
+    // Worker salary: 5 gold/hour + 2 food/hour per worker
     const workerSalary = workerCount * 5 * hoursElapsed;
+    const workerFoodSalary = workerCount * 2 * hoursElapsed;
 
     // Explorer salary: 10 gold/hour + 3 food/hour per explorer (requires academy)
     const explorerCount = kingdom.explorerCount ?? 0;
@@ -120,7 +121,7 @@ export class EconomyService {
     kingdom.gold  = Math.min(Math.floor(kingdom.maxGold  * sMult), Math.max(0, Math.floor(kingdom.gold  + production.gold  * bonus - workerSalary - explorerGoldSalary)));
     kingdom.wood  = Math.min(Math.floor(kingdom.maxWood  * sMult), Math.floor(kingdom.wood  + production.wood  * bonus));
     kingdom.stone = Math.min(Math.floor(kingdom.maxStone * sMult), Math.floor(kingdom.stone + production.stone * bonus));
-    kingdom.food  = Math.min(Math.floor(kingdom.maxFood  * sMult), Math.max(0, Math.floor(newFood - explorerFoodSalary)));
+    kingdom.food  = Math.min(Math.floor(kingdom.maxFood  * sMult), Math.max(0, Math.floor(newFood - explorerFoodSalary - workerFoodSalary)));
 
     // Ragnar hero generates 2 gems/hour
     const ragnar = units.find(u => u.type === 'ragnar' && u.count > 0);
@@ -383,7 +384,7 @@ export class EconomyService {
       gold:  Math.floor(rates.gold  * bonus - workerSalary),
       wood:  Math.floor(rates.wood  * bonus),
       stone: Math.floor(rates.stone * bonus),
-      food:  Math.floor(rates.food  * bonus),
+      food:  Math.floor(rates.food  * bonus - workerCount * 2),
       gems:  gemsPerHour,
       gemsSalary: gemsSalaryPerHour,
     };

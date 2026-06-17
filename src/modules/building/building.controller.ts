@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { IsEnum, IsInt, IsOptional, IsString, Min, Max } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AntiBotGuard, AntiBotAction } from '../antibot/antibot.guard';
 import { BuildingService } from './building.service';
@@ -65,5 +65,11 @@ export class BuildingController {
   async repair(@Request() req, @Param('id') buildingId: string) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.buildingService.repairBuilding(kingdom.id, buildingId);
+  }
+
+  @Patch(':id/position')
+  async moveBuilding(@Request() req, @Param('id') buildingId: string, @Body() dto: { gridX: number; gridY: number }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.buildingService.moveBuilding(kingdom.id, buildingId, dto.gridX, dto.gridY);
   }
 }

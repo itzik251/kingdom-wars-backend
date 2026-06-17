@@ -6,7 +6,6 @@ const react_1 = require("react");
 const ui_react_1 = require("@tonconnect/ui-react");
 const client_1 = require("../api/client");
 const gameStore_1 = require("../store/gameStore");
-const format_1 = require("../utils/format");
 const Countdown_1 = require("../components/Countdown");
 const useT_1 = require("../i18n/useT");
 const core_1 = require("@ton/core");
@@ -82,7 +81,7 @@ async function sendUsdtViaTon(tonConnectUI, wallet, amountUsdt, showMsg, onSucce
         messages: [{ address: jettonWallet, amount: (0, core_1.toNano)('0.05').toString(), payload: body.toBoc().toString('base64') }],
     });
     showMsg('⏳ ' + t('vip_tx_sent'), true);
-    const txHash = result.boc.replace(/[+/=]/g, (c) => c === '+' ? '-' : c === '/' ? '_' : '').slice(0, 44);
+    const txHash = Buffer.from(core_1.Cell.fromBase64(result.boc).hash()).toString('hex');
     const extraData = verifyEndpoint.includes('topup') ? { amount: amountUsdt } : {};
     let attempts = 0;
     return new Promise(res => {
@@ -282,16 +281,29 @@ function UsdtBalanceSection() {
         window.addEventListener('usdt-balance-refresh', load);
         return () => window.removeEventListener('usdt-balance-refresh', load);
     }, []);
+    const [amountInput, setAmountInput] = (0, react_1.useState)('');
     async function submitWithdrawal() {
-        if (!walletInput.trim() || walletInput.trim().length < 10) {
+        const wallet = walletInput.trim();
+        const amount = parseFloat(amountInput);
+        if (!wallet || wallet.length < 10) {
             setMsg('❌ ' + t('invalid_wallet'));
+            return;
+        }
+        if (!amount || amount < 1) {
+            setMsg('❌ סכום מינימלי: $1');
+            return;
+        }
+        if (amount > bal) {
+            setMsg('❌ יתרה לא מספיקה');
             return;
         }
         setSubmitting(true);
         try {
-            const r = await client_1.api.post('/kingdom/request-withdrawal', { walletAddress: walletInput.trim() });
+            await client_1.api.post('/kingdom/request-withdrawal', { walletAddress: wallet, amount });
             setMsg('✅ ' + t('withdrawal_submitted'));
             setShowWalletForm(false);
+            setWalletInput('');
+            setAmountInput('');
             await load();
         }
         catch (e) {
@@ -322,7 +334,7 @@ function UsdtBalanceSection() {
           {isPending ? (<div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, color: '#f4d03f', fontWeight: 700 }}>⏳ {t('withdrawal_pending')}</div>
               <div style={{ fontSize: 11, color: '#a0845a', marginTop: 2 }}>${withdrawalPending.toFixed(3)} USDT</div>
-            </div>) : bal >= 20 ? (<button onClick={() => setShowWalletForm(v => !v)} style={{ padding: '11px 16px', borderRadius: 12, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+            </div>) : bal >= 50 ? (<button onClick={() => setShowWalletForm(v => !v)} style={{ padding: '11px 16px', borderRadius: 12, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
               {t('withdraw_btn')}
             </button>) : (<div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, color: '#a0845a' }}>{t('to_withdraw')}</div>
@@ -339,12 +351,17 @@ function UsdtBalanceSection() {
 
         
         {showWalletForm && !isPending && (<div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 6 }}>
-              📋 {t('enter_wallet_address')} (TRC20 USDT)
+            <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 6 }}>💳 כתובת ארנק TON (UQ... / EQ...)</div>
+            <input type="text" value={walletInput} onChange={e => setWalletInput(e.target.value)} placeholder="UQ... או EQ..." style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontFamily: 'monospace', marginBottom: 8, outline: 'none', boxSizing: 'border-box' }}/>
+            <div style={{ fontSize: 11, color: '#a0845a', marginBottom: 4 }}>💵 סכום למשיכה (יתרה: ${bal.toFixed(2)})</div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <input type="number" value={amountInput} onChange={e => setAmountInput(e.target.value)} placeholder="0.00" min="1" step="0.01" style={{ flex: 1, padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 13, outline: 'none' }}/>
+              <button onClick={() => setAmountInput(bal.toFixed(2))} style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(244,208,63,0.15)', border: '1px solid rgba(244,208,63,0.3)', color: '#f4d03f', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                הכל
+              </button>
             </div>
-            <input type="text" value={walletInput} onChange={e => setWalletInput(e.target.value)} placeholder="T... (Tron TRC20)" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontFamily: 'monospace', marginBottom: 8, outline: 'none' }}/>
             <button onClick={submitWithdrawal} disabled={submitting} style={{ width: '100%', padding: '11px', borderRadius: 10, background: 'linear-gradient(135deg,#27ae60,#1e8449)', border: 'none', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
-              {submitting ? '...' : `💸 ${t('confirm_withdrawal')} $${bal.toFixed(3)}`}
+              {submitting ? '...' : `💸 ${t('confirm_withdrawal')} $${parseFloat(amountInput || '0').toFixed(2)}`}
             </button>
             <div style={{ fontSize: 10, color: '#666', marginTop: 6 }}>⚠️ {t('withdrawal_note')}</div>
           </div>)}
@@ -352,11 +369,11 @@ function UsdtBalanceSection() {
         
         {!isPending && (<div style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#a0845a', marginBottom: 4 }}>
-              <span>{bal >= 20 ? t('can_withdraw') : t('until_withdraw', { n: (20 - bal).toFixed(2) })}</span>
-              <span>${bal.toFixed(2)} / $20.00</span>
+              <span>{bal >= 50 ? t('can_withdraw') : t('until_withdraw', { n: (50 - bal).toFixed(2) })}</span>
+              <span>${bal.toFixed(2)} / $50.00</span>
             </div>
             <div style={{ height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (bal / 20) * 100)}%`, background: bal >= 20 ? '#27ae60' : 'linear-gradient(90deg,#b8860b,#f4d03f)', borderRadius: 3, transition: 'width 0.4s' }}/>
+              <div style={{ height: '100%', width: `${Math.min(100, (bal / 50) * 100)}%`, background: bal >= 50 ? '#27ae60' : 'linear-gradient(90deg,#b8860b,#f4d03f)', borderRadius: 3, transition: 'width 0.4s' }}/>
             </div>
           </div>)}
 
@@ -521,10 +538,11 @@ function GemForgeSection({ refresh }) {
         try {
             const r = await client_1.api.post('/kingdom/upgrade-gem-forge', { buildingId });
             await refresh();
-            show(t('gem_forge_upgraded').replace('{level}', String(r.newLevel)).replace('{gems}', String(r.newLevel * 2)));
+            show(t('gem_forge_upgraded').replace('{level}', String(r.newLevel)).replace('{gems}', String(r.newLevel * 3)));
         }
         catch (e) {
-            show('❌ ' + (e.response?.data?.message || t('error')), false);
+            const code = e.response?.data?.message || '';
+            show('❌ ' + (code === 'GEM_FORGE_MAX_LEVEL' ? t('gem_forge_max_level') : code || t('error')), false);
         }
         finally {
             setLoading(null);
@@ -544,14 +562,14 @@ function GemForgeSection({ refresh }) {
         
         {gemForges.length > 0 && (<div style={{ marginBottom: 10 }}>
             {gemForges.map(forge => {
-                const upgradeCost = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
-                const canUpgrade = bal >= upgradeCost && forge.level < 10;
+                const upgradeCost = parseFloat(((forge.level + 1) * 0.05).toFixed(2));
+                const canUpgrade = bal >= upgradeCost && forge.level < 100;
                 return (<div key={forge.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.3)', borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#f4d03f' }}>{t('gem_forge_label').replace('{n}', String(forge.slot + 1)).replace('{level}', String(forge.level))}</div>
-                    <div style={{ fontSize: 10, color: '#a0845a' }}>{t('gem_forge_produces').replace('{n}', String(forge.level * 2))}</div>
+                    <div style={{ fontSize: 10, color: '#a0845a' }}>{t('gem_forge_produces').replace('{n}', String(Math.floor(5 * Math.pow(1.15, forge.level - 1))))}</div>
                   </div>
-                  {forge.level < 10 ? (<button onClick={() => upgrade(forge.id, forge.level)} disabled={loading === forge.id || !canUpgrade} style={{ padding: '7px 10px', borderRadius: 8, background: canUpgrade ? 'linear-gradient(135deg,#b8860b,#f4d03f)' : 'rgba(244,208,63,0.15)', border: 'none', color: canUpgrade ? '#1a0a00' : '#666', fontWeight: 700, fontSize: 11, cursor: !canUpgrade ? 'not-allowed' : 'pointer', opacity: !canUpgrade || loading === forge.id ? 0.6 : 1 }}>
+                  {forge.level < 100 ? (<button onClick={() => upgrade(forge.id, forge.level)} disabled={loading === forge.id || !canUpgrade} style={{ padding: '7px 10px', borderRadius: 8, background: canUpgrade ? 'linear-gradient(135deg,#b8860b,#f4d03f)' : 'rgba(244,208,63,0.15)', border: 'none', color: canUpgrade ? '#1a0a00' : '#666', fontWeight: 700, fontSize: 11, cursor: !canUpgrade ? 'not-allowed' : 'pointer', opacity: !canUpgrade || loading === forge.id ? 0.6 : 1 }}>
                       {loading === forge.id ? '...' : `⬆️ $${upgradeCost}`}
                     </button>) : (<div style={{ fontSize: 10, color: '#f4d03f' }}>{t('gem_forge_max_level')}</div>)}
                 </div>);
@@ -742,11 +760,13 @@ function ShopScreen() {
             { icon: '⚡', label: t('vip_fast_build_pct') },
             { icon: '🔮', label: t('b_arcane_tower') },
             { icon: '🚫', label: t('vip_no_ads') },
-            { icon: '🏆', label: t('vip_badge_feat') },
+            { icon: '/assets/icon_vip.png', label: t('vip_badge_feat') },
             { icon: '/assets/icon_gem.png', label: t('vip_gems_x') },
             { icon: '🚀', label: t('vip_prod_x15') },
             { icon: '⚔️', label: t('vip_usdt_raid') },
-            { icon: '⚔️', label: t('u_paladin') + ' & 🐉 ' + t('u_dragon_rider') },
+            { icon: '⚔️', label: t('vip_heroes') },
+            { icon: '🧭', label: t('vip_fast_explorer') },
+            { icon: '⚡', label: t('vip_fast_training') },
         ].map(f => (<div key={f.label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 background: isVip ? 'rgba(244,208,63,0.08)' : 'rgba(0,0,0,0.3)',
@@ -790,18 +810,38 @@ function ShopScreen() {
           </>)}
 
         {[
-            { id: 'shield', icon: '🛡️', label: t('shield_label'), desc: t('shield_desc'), gems: 50, action: () => client_1.api.post('/kingdom/shield').then(r => showMsg(t('shield_active_until', { time: new Date(r.shieldUntil).toLocaleString() }))) },
-            { id: 'storage', icon: '📦', label: t('storage_label'), desc: t('storage_desc'), gems: 100, action: () => client_1.api.post('/kingdom/expand-storage').then(r => showMsg(t('storage_expanded', { n: (0, format_1.fmt)(r.maxGold) }))) },
-        ].map(item => (<div key={item.id} style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(244,208,63,0.12)', borderRadius: 12, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+            { id: 'shield', icon: '🛡️', label: t('shield_label'), desc: t('shield_desc'), gems: 50, action: () => client_1.api.post('/kingdom/shield').then(r => { refresh(); showMsg(t('shield_active_until', { time: new Date(r.shieldUntil).toLocaleString() })); }) },
+            { id: 'storage', icon: '📦', label: t('storage_label'), desc: t('storage_desc'), gems: 100, action: () => client_1.api.post('/kingdom/expand-storage').then(() => { refresh(); showMsg(t('storage_expanded')); }) },
+        ].map(item => {
+            const isStorage = item.id === 'storage';
+            const isShield = item.id === 'shield';
+            const boostUntil = isStorage ? kingdom?.storageBoostUntil : null;
+            const shieldUntil = isShield ? kingdom?.shieldUntil : null;
+            const boostActive = boostUntil && new Date() < new Date(boostUntil);
+            const shieldActive = shieldUntil && new Date() < new Date(shieldUntil);
+            return (<div key={item.id} style={{
+                    background: (isShield && shieldActive) ? 'rgba(52,152,219,0.1)' : (isStorage && boostActive) ? 'rgba(39,174,96,0.1)' : 'rgba(0,0,0,0.35)',
+                    border: `1px solid ${(isShield && shieldActive) ? 'rgba(52,152,219,0.4)' : (isStorage && boostActive) ? 'rgba(39,174,96,0.4)' : 'rgba(244,208,63,0.12)'}`,
+                    borderRadius: 12, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12
+                }}>
             <span style={{ fontSize: 26 }}>{item.icon}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{item.label}</div>
-              <div style={{ fontSize: 11, color: '#a0845a' }}>{item.desc}</div>
+              <div style={{ fontSize: 11, color: '#a0845a' }}>
+                {isShield && shieldActive
+                    ? <span style={{ color: '#3498db' }}>🛡️ <Countdown_1.default endsAt={shieldUntil}/></span>
+                    : isStorage && boostActive
+                        ? <span style={{ color: '#27ae60' }}>✅ <Countdown_1.default endsAt={boostUntil}/></span>
+                        : item.desc}
+              </div>
+              {isShield && (<div style={{ fontSize: 10, color: '#666', marginTop: 4, lineHeight: 1.4 }}>{t('shield_note')}</div>)}
+              {isStorage && (<div style={{ fontSize: 10, color: '#666', marginTop: 4, lineHeight: 1.4 }}>{t('storage_note')}</div>)}
             </div>
             <button className="btn btn-gold" style={{ fontSize: 12, padding: '9px 13px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }} disabled={loading === 'action'} onClick={() => doAction(item.action)}>
               {item.gems} <img src="/assets/icon_gem.png" style={{ width: 14, height: 14 }}/>
             </button>
-          </div>))}
+          </div>);
+        })}
       </SECTION>
 
       

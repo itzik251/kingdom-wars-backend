@@ -8,6 +8,7 @@ const Countdown_1 = require("../components/Countdown");
 const costs_1 = require("../utils/costs");
 const client_1 = require("../api/client");
 const useT_1 = require("../i18n/useT");
+const ResIcon_1 = require("../components/ResIcon");
 const BUILDING_ICONS = {
     town_hall: '🏛️', gold_mine: '⛏️', lumber_mill: '🪵', stone_quarry: '🪨',
     farm: '🌾', barracks: '⚔️', academy: '📚', wall: '🧱', watch_tower: '🗼',
@@ -24,6 +25,19 @@ function BuildScreen() {
     const [loading, setLoading] = (0, react_1.useState)(null);
     const [msg, setMsg] = (0, react_1.useState)('');
     const t = (0, useT_1.useT)();
+    function mapBuildError(raw) {
+        const map = {
+            ALREADY_UPGRADING: t('already_upgrading'),
+            BUILDING_MAX_LEVEL: t('building_max_level'),
+            NOT_ENOUGH_GOLD: t('not_enough_gold'),
+            NOT_ENOUGH_WOOD: t('not_enough_wood'),
+            NOT_ENOUGH_STONE: t('not_enough_stone'),
+            NOT_ENOUGH_RESOURCES: t('not_enough_resources'),
+            NOT_ENOUGH_GEMS: t('not_enough_gems'),
+            VIP_REQUIRED: t('vip_required_shop'),
+        };
+        return map[raw] ?? raw ?? t('error');
+    }
     async function upgrade(type) {
         setLoading(type);
         setMsg('');
@@ -33,7 +47,7 @@ function BuildScreen() {
             setMsg(t('upgrade_done'));
         }
         catch (e) {
-            setMsg(e.response?.data?.message || t('error'));
+            setMsg('❌ ' + mapBuildError(e.response?.data?.message || ''));
         }
         finally {
             setLoading(null);
@@ -48,7 +62,7 @@ function BuildScreen() {
             setMsg(t('speedup_done'));
         }
         catch (e) {
-            setMsg(e.response?.data?.message || t('error'));
+            setMsg('❌ ' + mapBuildError(e.response?.data?.message || ''));
         }
         finally {
             setLoading(null);
@@ -59,11 +73,11 @@ function BuildScreen() {
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
         {[
-            { key: 'gold', maxKey: 'maxGold', emoji: '💰', color: '#f4d03f' },
-            { key: 'wood', maxKey: 'maxWood', emoji: '🪵', color: '#b07a45' },
-            { key: 'stone', maxKey: 'maxStone', emoji: '🪨', color: '#b8c0c4' },
-            { key: 'food', maxKey: 'maxFood', emoji: '🌾', color: '#7dbb3f' },
-        ].map(({ key, maxKey, emoji, color }) => {
+            { key: 'gold', maxKey: 'maxGold', color: '#f4d03f' },
+            { key: 'wood', maxKey: 'maxWood', color: '#b07a45' },
+            { key: 'stone', maxKey: 'maxStone', color: '#b8c0c4' },
+            { key: 'food', maxKey: 'maxFood', color: '#7dbb3f' },
+        ].map(({ key, maxKey, color }) => {
             const val = kingdom?.[key] ?? 0;
             const max = kingdom?.[maxKey] ?? 0;
             const pct = max > 0 ? Math.min((val / max) * 100, 100) : 0;
@@ -76,7 +90,7 @@ function BuildScreen() {
                     boxShadow: full ? '0 0 10px rgba(231,76,60,0.4)' : 'none',
                 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: full ? '#e74c3c' : color }}>
-                <span>{emoji} {full ? t('storage_full_label') : `${Math.round(pct)}%`}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ResIcon_1.ResIcon type={key} size={13}/> {full ? t('storage_full_label') : `${Math.round(pct)}%`}</span>
               </div>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: full ? '#e74c3c' : color, borderRadius: 2, transition: 'width 0.3s' }}/>
@@ -155,9 +169,9 @@ function BuildScreen() {
                         display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 11, color: '#a0845a',
                     }}>
                   <span>{t('max_storage_label')}</span>
-                  <span style={{ color: '#f4d03f', fontWeight: 700 }}>💰 {(0, format_1.fmt)(kingdom?.maxGold ?? 0)}</span>
-                  <span style={{ color: '#8B5E3C', fontWeight: 700 }}>🪵 {(0, format_1.fmt)(kingdom?.maxWood ?? 0)}</span>
-                  <span style={{ color: '#aaa', fontWeight: 700 }}>🪨 {(0, format_1.fmt)(kingdom?.maxStone ?? 0)}</span>
+                  <span style={{ color: '#f4d03f', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="gold"/> {(0, format_1.fmt)(kingdom?.maxGold ?? 0)}</span>
+                  <span style={{ color: '#8B5E3C', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="wood"/> {(0, format_1.fmt)(kingdom?.maxWood ?? 0)}</span>
+                  <span style={{ color: '#aaa', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="stone"/> {(0, format_1.fmt)(kingdom?.maxStone ?? 0)}</span>
                 </div>)}
 
               {isUpg ? (<div style={{

@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = TermsModal;
 const react_1 = require("react");
 const client_1 = require("../api/client");
-const useT_1 = require("../i18n/useT");
+const translations_1 = require("../i18n/translations");
 const TERMS = {
     he: `📜 תנאי שימוש — Kingdom Wars
 
@@ -78,15 +78,153 @@ By clicking "I Agree" you confirm you have read and understood these Terms of Se
    • Нарушение правил может привести к блокировке без возврата средств
 
 Нажимая "Принимаю", вы подтверждаете, что прочитали условия.`,
+    es: `📜 Términos de Uso — Kingdom Wars
+
+1. 🎮 El juego está destinado a jugadores mayores de 13 años.
+
+2. 🚫 Estrictamente prohibido:
+   • Usar bots, scripts o cualquier automatización
+   • Crear cuentas falsas para explotar el sistema de referidos
+   • Intentar hackear, interrumpir o explotar errores del juego
+   • Compartir, vender o transferir cuentas
+
+3. 💎 Monedas y recompensas:
+   • Las Gems y USDT ganados son activos virtuales
+   • Los retiros de USDT están sujetos a verificación y requisitos mínimos
+   • Kingdom Wars se reserva el derecho de cancelar recompensas obtenidas injustamente
+
+4. 🔒 Privacidad:
+   • El juego accede solo a datos básicos de Telegram (nombre, ID)
+   • No se almacenan datos sensibles
+   • Los datos se usan únicamente para la gestión del juego
+
+5. ⚖️ Aplicación:
+   • Las violaciones pueden resultar en prohibición de cuenta sin reembolso
+   • Kingdom Wars se reserva el derecho de cerrar cuentas sospechosas
+
+Al hacer clic en "Acepto" confirmas que has leído y comprendido estos Términos de Uso.`,
+    fr: `📜 Conditions d'utilisation — Kingdom Wars
+
+1. 🎮 Le jeu est destiné aux joueurs âgés de 13 ans et plus.
+
+2. 🚫 Strictement interdit :
+   • Utiliser des bots, scripts ou toute automatisation
+   • Créer de faux comptes pour exploiter le système de parrainage
+   • Tenter de pirater, perturber ou exploiter des bugs du jeu
+   • Partager, vendre ou transférer des comptes
+
+3. 💎 Monnaies et récompenses :
+   • Les Gems et USDT gagnés sont des actifs virtuels
+   • Les retraits de USDT sont soumis à vérification et conditions minimales
+   • Kingdom Wars se réserve le droit d'annuler les récompenses obtenues injustement
+
+4. 🔒 Confidentialité :
+   • Le jeu n'accède qu'aux données Telegram de base (nom, ID)
+   • Aucune donnée sensible n'est stockée
+   • Les données sont utilisées uniquement pour la gestion du jeu
+
+5. ⚖️ Application :
+   • Les violations peuvent entraîner une interdiction de compte sans remboursement
+   • Kingdom Wars se réserve le droit de fermer les comptes suspects
+
+En cliquant sur "J'accepte", vous confirmez avoir lu et compris ces Conditions d'utilisation.`,
+    de: `📜 Nutzungsbedingungen — Kingdom Wars
+
+1. 🎮 Das Spiel richtet sich an Spieler ab 13 Jahren.
+
+2. 🚫 Strengstens verboten:
+   • Verwendung von Bots, Skripten oder jeglicher Automatisierung
+   • Erstellen gefälschter Konten zur Ausnutzung des Empfehlungssystems
+   • Versuche, das Spiel zu hacken, zu stören oder Fehler auszunutzen
+   • Teilen, Verkaufen oder Übertragen von Konten
+
+3. 💎 Münzen und Belohnungen:
+   • Verdiente Gems und USDT sind virtuelle Vermögenswerte
+   • USDT-Auszahlungen unterliegen der Verifizierung und Mindestanforderungen
+   • Kingdom Wars behält sich das Recht vor, unfair erworbene Belohnungen zu stornieren
+
+4. 🔒 Datenschutz:
+   • Das Spiel greift nur auf grundlegende Telegram-Daten zu (Name, ID)
+   • Es werden keine sensiblen Daten gespeichert
+   • Daten werden ausschließlich für die Spielverwaltung verwendet
+
+5. ⚖️ Durchsetzung:
+   • Verstöße können zur Kontosperrung ohne Erstattung führen
+   • Kingdom Wars behält sich das Recht vor, verdächtige Konten zu schließen
+
+Durch Klicken auf "Ich stimme zu" bestätigen Sie, dass Sie diese Nutzungsbedingungen gelesen und verstanden haben.`,
+    pt: `📜 Termos de Uso — Kingdom Wars
+
+1. 🎮 O jogo é destinado a jogadores com 13 anos ou mais.
+
+2. 🚫 Estritamente proibido:
+   • Usar bots, scripts ou qualquer automação
+   • Criar contas falsas para explorar o sistema de referência
+   • Tentar hackear, interromper ou explorar bugs do jogo
+   • Compartilhar, vender ou transferir contas
+
+3. 💎 Moedas e recompensas:
+   • Gems e USDT ganhos são ativos virtuais
+   • Saques de USDT estão sujeitos a verificação e requisitos mínimos
+   • Kingdom Wars reserva-se o direito de cancelar recompensas obtidas injustamente
+
+4. 🔒 Privacidade:
+   • O jogo acessa apenas dados básicos do Telegram (nome, ID)
+   • Nenhum dado sensível é armazenado
+   • Os dados são usados exclusivamente para gerenciamento do jogo
+
+5. ⚖️ Aplicação:
+   • Violações podem resultar em banimento de conta sem reembolso
+   • Kingdom Wars reserva-se o direito de fechar contas suspeitas
+
+Ao clicar em "Aceito" você confirma que leu e compreendeu estes Termos de Uso.`,
+    ar: `📜 شروط الاستخدام — Kingdom Wars
+
+1. 🎮 اللعبة مخصصة للاعبين من عمر 13 سنة فما فوق.
+
+2. 🚫 محظور تمامًا:
+   • استخدام البوتات أو السكريبتات أو أي أتمتة
+   • إنشاء حسابات وهمية لاستغلال نظام الإحالة
+   • محاولة اختراق اللعبة أو تعطيلها أو استغلال الأخطاء
+   • مشاركة الحسابات أو بيعها أو نقلها
+
+3. 💎 العملات والمكافآت:
+   • الجواهر والـ USDT المكتسبة هي أصول افتراضية
+   • عمليات سحب USDT تخضع للتحقق والحد الأدنى
+   • تحتفظ Kingdom Wars بحق إلغاء المكافآت المكتسبة بطرق غير عادلة
+
+4. 🔒 الخصوصية:
+   • تصل اللعبة فقط إلى بيانات Telegram الأساسية (الاسم، المعرّف)
+   • لا يتم تخزين بيانات حساسة
+   • تُستخدم البيانات فقط لإدارة اللعبة
+
+5. ⚖️ التطبيق:
+   • قد تؤدي المخالفات إلى حظر الحساب دون استرداد
+   • تحتفظ Kingdom Wars بحق إغلاق الحسابات المشبوهة
+
+بالنقر على "أوافق وأقبل" تؤكد أنك قرأت وفهمت شروط الاستخدام هذه.`,
+};
+const LABELS = {
+    he: { title: '📜 תנאי שימוש', agree: '✅ אני מסכים/ה ומאשר/ת', scroll: '↕️ גלול למטה לקרוא הכל' },
+    en: { title: '📜 Terms of Service', agree: '✅ I Agree & Accept', scroll: '↕️ Scroll down to read all' },
+    ru: { title: '📜 Условия использования', agree: '✅ Принимаю', scroll: '↕️ Прокрутите вниз' },
+    es: { title: '📜 Términos de uso', agree: '✅ Acepto', scroll: '↕️ Desplácese hacia abajo' },
+    fr: { title: '📜 Conditions d\'utilisation', agree: '✅ J\'accepte', scroll: '↕️ Faites défiler vers le bas' },
+    de: { title: '📜 Nutzungsbedingungen', agree: '✅ Ich stimme zu', scroll: '↕️ Nach unten scrollen' },
+    pt: { title: '📜 Termos de uso', agree: '✅ Aceito', scroll: '↕️ Role para baixo' },
+    ar: { title: '📜 شروط الاستخدام', agree: '✅ أوافق وأقبل', scroll: '↕️ مرر للأسفل للقراءة' },
 };
 function getTermsText(lang) {
     return TERMS[lang] || TERMS['en'];
 }
 function TermsModal({ onAccepted }) {
-    const t = (0, useT_1.useT)();
     const [scrolled, setScrolled] = (0, react_1.useState)(false);
     const [loading, setLoading] = (0, react_1.useState)(false);
-    const lang = localStorage.getItem('kw_lang') || 'en';
+    const [lang, setLang] = (0, react_1.useState)(localStorage.getItem('kw_lang') || 'en');
+    function switchLang(newLang) {
+        setLang(newLang);
+        setScrolled(false);
+    }
     async function accept() {
         setLoading(true);
         try {
@@ -97,17 +235,8 @@ function TermsModal({ onAccepted }) {
             setLoading(false);
         }
     }
-    const LABELS = {
-        he: { title: '📜 תנאי שימוש', agree: '✅ אני מסכים/ה ומאשר/ת', scroll: '↕️ גלול למטה לקרוא הכל' },
-        en: { title: '📜 Terms of Service', agree: '✅ I Agree & Accept', scroll: '↕️ Scroll down to read all' },
-        ru: { title: '📜 Условия использования', agree: '✅ Принимаю', scroll: '↕️ Прокрутите вниз' },
-        es: { title: '📜 Términos de uso', agree: '✅ Acepto', scroll: '↕️ Desplácese hacia abajo' },
-        fr: { title: '📜 Conditions d\'utilisation', agree: '✅ J\'accepte', scroll: '↕️ Faites défiler vers le bas' },
-        de: { title: '📜 Nutzungsbedingungen', agree: '✅ Ich stimme zu', scroll: '↕️ Nach unten scrollen' },
-        pt: { title: '📜 Termos de uso', agree: '✅ Aceito', scroll: '↕️ Role para baixo' },
-        ar: { title: '📜 شروط الاستخدام', agree: '✅ أوافق وأقبل', scroll: '↕️ مرر للأسفل للقراءة' },
-    };
     const lbl = LABELS[lang] || LABELS['en'];
+    const isRtl = translations_1.LANGUAGES.find(l => l.code === lang)?.rtl ?? false;
     return (<div style={{
             position: 'fixed', inset: 0, zIndex: 9999,
             background: 'rgba(0,0,0,0.95)',
@@ -125,23 +254,35 @@ function TermsModal({ onAccepted }) {
         }}>
         
         <div style={{
-            padding: '20px 20px 12px',
+            padding: '16px 20px 10px',
             background: 'linear-gradient(135deg,rgba(244,208,63,0.1),rgba(39,174,96,0.05))',
             borderBottom: '1px solid rgba(244,208,63,0.15)',
             textAlign: 'center',
         }}>
-          <div style={{ fontSize: 28, marginBottom: 6 }}>⚔️</div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: '#f4d03f' }}>Kingdom Wars</div>
-          <div style={{ fontSize: 14, color: '#a0845a', marginTop: 4 }}>{lbl.title}</div>
+          <div style={{ fontSize: 24, marginBottom: 4 }}>⚔️</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: '#f4d03f' }}>Kingdom Wars</div>
+          <div style={{ fontSize: 13, color: '#a0845a', marginTop: 2 }}>{lbl.title}</div>
+
+          
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', marginTop: 10 }}>
+            {translations_1.LANGUAGES.map(l => (<button key={l.code} onClick={() => switchLang(l.code)} style={{
+                padding: '3px 8px', borderRadius: 8, fontSize: 11,
+                background: lang === l.code ? 'rgba(244,208,63,0.3)' : 'rgba(255,255,255,0.06)',
+                border: lang === l.code ? '1px solid rgba(244,208,63,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                color: lang === l.code ? '#f4d03f' : '#888',
+                cursor: 'pointer', fontWeight: lang === l.code ? 700 : 400,
+            }}>
+                {l.flag} {l.code.toUpperCase()}
+              </button>))}
+          </div>
         </div>
 
         
-        <div onScroll={(e) => {
+        <div key={lang} onScroll={(e) => {
             const el = e.currentTarget;
-            const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-            if (nearBottom)
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 60)
                 setScrolled(true);
-        }} style={{
+        }} dir={isRtl ? 'rtl' : 'ltr'} style={{
             flex: 1, overflowY: 'auto', padding: '16px 20px',
             fontSize: 13, lineHeight: 1.7, color: '#d4b896',
             whiteSpace: 'pre-wrap',
@@ -151,7 +292,7 @@ function TermsModal({ onAccepted }) {
 
         
         <div style={{ padding: '12px 20px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          {!scrolled && (<div style={{ textAlign: 'center', fontSize: 11, color: '#666', marginBottom: 8, animation: 'pulse 2s infinite' }}>
+          {!scrolled && (<div style={{ textAlign: 'center', fontSize: 11, color: '#666', marginBottom: 8 }}>
               {lbl.scroll}
             </div>)}
           <button onClick={accept} disabled={!scrolled || loading} style={{

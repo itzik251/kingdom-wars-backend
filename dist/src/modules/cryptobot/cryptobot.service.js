@@ -88,6 +88,10 @@ let CryptoBotService = CryptoBotService_1 = class CryptoBotService {
     async getBalance() {
         try {
             const result = await fetch(`${CRYPTOBOT_API}/getBalance`, { headers: this.getHeaders() });
+            if (!result.ok) {
+                this.logger.error('getBalance error', `HTTP ${result.status} ${result.statusText}`);
+                return {};
+            }
             const json = await result.json();
             const balances = {};
             for (const item of json?.result || []) {

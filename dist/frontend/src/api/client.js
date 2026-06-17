@@ -23,6 +23,7 @@ client.interceptors.response.use((r) => r, (error) => {
 exports.api = {
     get: (url) => client.get(url).then(r => r.data),
     post: (url, data) => client.post(url, data).then(r => r.data),
+    patch: (url, data) => client.patch(url, data).then(r => r.data),
     delete: (url) => client.delete(url).then(r => r.data),
 };
 //# sourceMappingURL=client.js.map

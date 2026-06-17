@@ -3,166 +3,285 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = AllianceScreen;
 const react_1 = require("react");
 const client_1 = require("../api/client");
-const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
+const gameStore_1 = require("../store/gameStore");
+const ROLE_ICON = { leader: '👑', officer: '⭐', member: '🧑' };
 function AllianceScreen() {
-    const [myAlliance, setMyAlliance] = (0, react_1.useState)(null);
-    const [alliances, setAlliances] = (0, react_1.useState)([]);
-    const [view, setView] = (0, react_1.useState)('mine');
-    const [loading, setLoading] = (0, react_1.useState)(true);
-    const [form, setForm] = (0, react_1.useState)({ name: '', tag: '', description: '' });
-    const [msg, setMsg] = (0, react_1.useState)('');
     const t = (0, useT_1.useT)();
-    (0, react_1.useEffect)(() => { load(); }, []);
-    async function load() {
+    const { kingdom, refresh } = (0, gameStore_1.useGameStore)();
+    const [tab, setTab] = (0, react_1.useState)('mine');
+    const [myAlliance, setMyAlliance] = (0, react_1.useState)(undefined);
+    const [list, setList] = (0, react_1.useState)([]);
+    const [loading, setLoading] = (0, react_1.useState)(false);
+    const [msg, setMsg] = (0, react_1.useState)('');
+    const [name, setName] = (0, react_1.useState)('');
+    const [tag, setTag] = (0, react_1.useState)('');
+    const [desc, setDesc] = (0, react_1.useState)('');
+    const loadMine = async () => {
         setLoading(true);
         try {
-            const [mine, list] = await Promise.all([
-                client_1.api.get('/alliances/mine'),
-                client_1.api.get('/alliances'),
-            ]);
-            setMyAlliance(mine);
-            setAlliances(list);
-            setView(mine ? 'mine' : 'list');
+            setMyAlliance(await client_1.api.get('/alliances/mine'));
+        }
+        catch {
+            setMyAlliance(null);
         }
         finally {
             setLoading(false);
         }
-    }
-    async function create() {
-        setMsg('');
+    };
+    const loadList = async () => {
+        setLoading(true);
         try {
-            await client_1.api.post('/alliances', form);
-            await load();
+            setList(await client_1.api.get('/alliances'));
         }
-        catch (e) {
-            setMsg(e.response?.data?.message || t('error'));
+        finally {
+            setLoading(false);
         }
-    }
-    async function join(id) {
-        try {
-            await client_1.api.post('/alliances/join', { allianceId: id });
-            await load();
-        }
-        catch (e) {
-            alert(e.response?.data?.message || t('error'));
-        }
-    }
-    async function leave() {
-        if (!confirm(t('leave_alliance')))
+    };
+    (0, react_1.useEffect)(() => { loadMine(); }, []);
+    (0, react_1.useEffect)(() => { if (tab === 'browse')
+        loadList(); }, [tab]);
+    const showMsg = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3500); };
+    const doCreate = async () => {
+        if (!name.trim() || !tag.trim())
             return;
+        setLoading(true);
+        try {
+            await client_1.api.post('/alliances', { name: name.trim(), tag: tag.trim(), description: desc.trim() });
+            await loadMine();
+            await refresh();
+            setTab('mine');
+            showMsg(t('alliance_created'));
+        }
+        catch (e) {
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    const doJoin = async (allianceId) => {
+        setLoading(true);
+        try {
+            await client_1.api.post('/alliances/join', { allianceId });
+            await loadMine();
+            setTab('mine');
+            showMsg(t('alliance_joined'));
+        }
+        catch (e) {
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    const doLeave = async () => {
+        if (!confirm(t('alliance_leave_confirm')))
+            return;
+        setLoading(true);
         try {
             await client_1.api.delete('/alliances/leave');
-            await load();
+            setMyAlliance(null);
+            setTab('browse');
+            loadList();
         }
         catch (e) {
-            alert(e.response?.data?.message || t('error'));
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
         }
-    }
-    const [donateAmt, setDonateAmt] = (0, react_1.useState)({ gold: 0, wood: 0, stone: 0 });
-    const [donateMsg, setDonateMsg] = (0, react_1.useState)('');
-    async function donate() {
-        setDonateMsg('');
+        finally {
+            setLoading(false);
+        }
+    };
+    const doDisband = async () => {
+        if (!confirm(t('alliance_disband_confirm')))
+            return;
+        setLoading(true);
         try {
-            const r = await client_1.api.post('/alliances/donate', donateAmt);
-            setDonateMsg(t('donate_result', { n: r.gemsBonus }));
-            setDonateAmt({ gold: 0, wood: 0, stone: 0 });
-            await load();
+            await client_1.api.delete('/alliances/disband');
+            setMyAlliance(null);
+            setTab('browse');
+            loadList();
         }
         catch (e) {
-            setDonateMsg('❌ ' + (e.response?.data?.message || t('error')));
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
         }
-    }
-    if (loading) {
-        return (<div className="screen" style={{ textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: 32, marginBottom: 12 }}>🤝</div>
-        <div style={{ color: 'var(--text-dim)' }}>{t('loading')}</div>
-      </div>);
-    }
-    return (<div className="screen">
-      <div className="screen-title">{t('alliances_title')}</div>
+        finally {
+            setLoading(false);
+        }
+    };
+    const doKick = async (targetKingdomId, memberName) => {
+        if (!confirm(`${t('alliance_kick_confirm')} ${memberName}?`))
+            return;
+        try {
+            await client_1.api.post('/alliances/kick', { targetKingdomId });
+            await loadMine();
+        }
+        catch (e) {
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
+        }
+    };
+    const doPromote = async (targetKingdomId) => {
+        try {
+            await client_1.api.post(`/alliances/promote/${targetKingdomId}`, {});
+            await loadMine();
+        }
+        catch (e) {
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
+        }
+    };
+    const doTransfer = async (targetKingdomId, memberName) => {
+        if (!confirm(`${t('alliance_transfer_confirm')} ${memberName}?`))
+            return;
+        try {
+            await client_1.api.post('/alliances/transfer-leadership', { targetKingdomId });
+            await loadMine();
+        }
+        catch (e) {
+            showMsg('❌ ' + (e?.response?.data?.message || t('error')));
+        }
+    };
+    const inAlliance = !!myAlliance;
+    const gems = kingdom?.gems ?? 0;
+    return (<div style={{ padding: '16px 14px', maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ fontSize: 18, fontWeight: 800, color: '#f4d03f', marginBottom: 14 }}>{t('nav_alliance')}</div>
 
-      {myAlliance ? (<>
-          
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 18 }}>
-                  [{myAlliance.alliance.tag}] {myAlliance.alliance.name}
+      {msg && (<div style={{ background: 'rgba(244,208,63,0.1)', border: '1px solid rgba(244,208,63,0.3)', borderRadius: 10, padding: '8px 12px', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
+          {msg}
+        </div>)}
+
+      
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        {['mine', 'browse', ...(!inAlliance ? ['create'] : [])].map(tb => (<button key={tb} onClick={() => setTab(tb)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: tab === tb ? 700 : 400,
+                background: tab === tb ? 'rgba(244,208,63,0.2)' : 'rgba(0,0,0,0.3)',
+                border: `1px solid ${tab === tb ? 'rgba(244,208,63,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                color: tab === tb ? '#f4d03f' : '#888', cursor: 'pointer' }}>
+            {tb === 'mine' ? t('alliance_tab_mine') : tb === 'browse' ? t('alliance_tab_browse') : t('alliance_tab_create')}
+          </button>))}
+      </div>
+
+      
+      {tab === 'mine' && (myAlliance === undefined ? (<div style={{ textAlign: 'center', color: '#555', paddingTop: 40 }}>...</div>) : !myAlliance ? (<div style={{ textAlign: 'center', paddingTop: 50 }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🏰</div>
+            <div style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>{t('alliance_not_member')}</div>
+            <button className="btn btn-gold" onClick={() => setTab('browse')} style={{ marginRight: 8 }}>{t('alliance_tab_browse')}</button>
+            <button className="btn" onClick={() => setTab('create')}>{t('alliance_tab_create')}</button>
+          </div>) : (<div>
+            
+            <div style={{ background: 'rgba(244,208,63,0.07)', border: '1px solid rgba(244,208,63,0.25)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <span style={{ background: 'rgba(244,208,63,0.2)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: '#f4d03f', marginRight: 8 }}>
+                    [{myAlliance.alliance.tag}]
+                  </span>
+                  <span style={{ fontWeight: 800, fontSize: 16 }}>{myAlliance.alliance.name}</span>
                 </div>
-                <div style={{ color: 'var(--text-dim)', fontSize: 13, marginTop: 2 }}>
-                  {t('alliance_score_members', { score: (0, format_1.fmt)(myAlliance.alliance.score), n: myAlliance.members.length })}
-                </div>
+                <div style={{ fontSize: 12, color: '#a0845a' }}>🏆 {Number(myAlliance.alliance.score).toLocaleString()}</div>
               </div>
-              <span className="badge badge-purple">{myAlliance.myRole}</span>
+              {myAlliance.alliance.description && (<div style={{ color: '#888', fontSize: 12, marginTop: 6 }}>{myAlliance.alliance.description}</div>)}
+              <div style={{ display: 'flex', gap: 14, marginTop: 10, fontSize: 12, flexWrap: 'wrap' }}>
+                <span style={{ color: '#27ae60' }}>👥 {myAlliance.memberCount}/{myAlliance.maxMembers}</span>
+                <span style={{ color: '#27ae60' }}>📈 +{myAlliance.allianceBonus}% {t('production_bonus')}</span>
+                <span style={{ color: '#a0845a' }}>{ROLE_ICON[myAlliance.myRole]} {t(`alliance_role_${myAlliance.myRole}`)}</span>
+              </div>
             </div>
-            {myAlliance.alliance.description && (<div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-dim)' }}>
-                {myAlliance.alliance.description}
-              </div>)}
-            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12, color: '#e74c3c', borderColor: '#e74c3c' }} onClick={leave}>
-              🚪 {t('leave_confirm')}
-            </button>
-          </div>
 
-          
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{t('donate_label')}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>
-              {t('donate_desc')}
+            
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#a0845a', marginBottom: 8 }}>👥 {t('alliance_members')} ({myAlliance.memberCount})</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              {[...myAlliance.members].sort((a, b) => {
+                const r = { leader: 0, officer: 1, member: 2 };
+                return r[a.role] - r[b.role] || b.score - a.score;
+            }).map(m => {
+                const isMe = m.kingdomId === kingdom?.id;
+                const canManage = myAlliance.myRole === 'leader' && !isMe && m.role !== 'leader';
+                return (<div key={m.kingdomId} style={{
+                        background: isMe ? 'rgba(39,174,96,0.08)' : 'rgba(0,0,0,0.3)',
+                        border: `1px solid ${isMe ? 'rgba(39,174,96,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius: 10, padding: '8px 12px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>{ROLE_ICON[m.role]}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: isMe ? 700 : 400 }}>{m.name}{isMe ? ' ✓' : ''}</div>
+                        <div style={{ fontSize: 10, color: '#666' }}>🏆 {m.score.toLocaleString()}</div>
+                      </div>
+                    </div>
+                    {canManage && (<div style={{ display: 'flex', gap: 4 }}>
+                        <button title={m.role === 'officer' ? t('alliance_demote') : t('alliance_promote')} onClick={() => doPromote(m.kingdomId)} style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, background: 'rgba(52,152,219,0.15)', border: '1px solid rgba(52,152,219,0.3)', color: '#3498db', cursor: 'pointer' }}>
+                          {m.role === 'officer' ? '↓' : '⭐'}
+                        </button>
+                        <button title={t('alliance_transfer_leadership')} onClick={() => doTransfer(m.kingdomId, m.name)} style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, background: 'rgba(244,208,63,0.15)', border: '1px solid rgba(244,208,63,0.3)', color: '#f4d03f', cursor: 'pointer' }}>
+                          👑
+                        </button>
+                        <button title={t('alliance_kick')} onClick={() => doKick(m.kingdomId, m.name)} style={{ fontSize: 10, padding: '3px 7px', borderRadius: 6, background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.3)', color: '#e74c3c', cursor: 'pointer' }}>
+                          ✕
+                        </button>
+                      </div>)}
+                  </div>);
+            })}
             </div>
-            {['gold', 'wood', 'stone'].map(r => (<div key={r} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ width: 30, fontSize: 16 }}>{r === 'gold' ? '💰' : r === 'wood' ? '🪵' : '🪨'}</span>
-                <input type="number" min={0} max={5000} value={donateAmt[r] || ''} onChange={e => setDonateAmt(prev => ({ ...prev, [r]: Number(e.target.value) || 0 }))} placeholder="0" style={{ flex: 1, background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: 14 }}/>
-              </div>))}
-            {donateMsg && <div style={{ fontSize: 12, color: donateMsg.startsWith('✅') ? '#27ae60' : '#e74c3c', marginBottom: 8 }}>{donateMsg}</div>}
-            <button className="btn btn-green" style={{ width: '100%' }} onClick={donate}>
-              {t('donate_btn')}
-            </button>
-          </div>
 
-          
-          <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 15 }}>{t('members_label')}</div>
-          {myAlliance.members.map((m) => (<div key={m.kingdomId} className="card" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-              <div style={{ fontWeight: 600 }}>{m.kingdom?.name || '?'}</div>
-              <span className="badge" style={{ background: 'var(--bg-card2)', color: 'var(--text-dim)' }}>{m.role}</span>
-            </div>))}
-        </>) : (<>
-          
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <button className={`btn ${view === 'list' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => setView('list')} style={{ flex: 1 }}>
-              {t('alliance_search_btn')}
-            </button>
-            <button className={`btn ${view === 'create' ? 'btn-gold' : 'btn-ghost'}`} onClick={() => setView('create')} style={{ flex: 1 }}>
-              {t('alliance_create_btn')}
-            </button>
-          </div>
-
-          {view === 'list' && (<div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {alliances.map(a => (<div key={a.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>[{a.tag}] {a.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('alliance_score_label', { n: (0, format_1.fmt)(a.score) })}</div>
-                  </div>
-                  <button className="btn btn-green" onClick={() => join(a.id)}>{t('join')}</button>
-                </div>))}
-            </div>)}
-
-          {view === 'create' && (<div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {msg && <div style={{ color: '#e74c3c', fontSize: 13 }}>{msg}</div>}
-              {[
-                    { key: 'name', placeholder: t('alliance_name_ph'), max: 64 },
-                    { key: 'tag', placeholder: t('alliance_tag_ph'), max: 6 },
-                    { key: 'description', placeholder: t('alliance_desc_ph'), max: 256 },
-                ].map(({ key, placeholder, max }) => (<input key={key} maxLength={max} placeholder={placeholder} value={form[key]} onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))} style={{
-                        padding: '10px 14px', borderRadius: 8,
-                        background: 'var(--bg-card2)', border: '1px solid var(--border)',
-                        color: 'var(--text)', fontSize: 14,
-                    }}/>))}
-              <button className="btn btn-gold" onClick={create} disabled={!form.name || !form.tag}>
-                {t('create_alliance_btn')}
+            
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn" style={{ flex: 1, background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', color: '#e74c3c' }} disabled={loading} onClick={doLeave}>
+                🚪 {t('alliance_leave')}
               </button>
-            </div>)}
-        </>)}
+              {myAlliance.myRole === 'leader' && (<button className="btn" style={{ flex: 1, background: 'rgba(231,76,60,0.2)', border: '1px solid rgba(231,76,60,0.5)', color: '#e74c3c', fontWeight: 700 }} disabled={loading} onClick={doDisband}>
+                  💥 {t('alliance_disband')}
+                </button>)}
+            </div>
+          </div>))}
+
+      
+      {tab === 'browse' && (loading ? (<div style={{ textAlign: 'center', color: '#555', paddingTop: 40 }}>...</div>) : list.length === 0 ? (<div style={{ textAlign: 'center', color: '#555', paddingTop: 40 }}>{t('alliance_none')}</div>) : (<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {list.map(a => (<div key={a.id} style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(244,208,63,0.1)', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div>
+                    <span style={{ background: 'rgba(244,208,63,0.15)', borderRadius: 5, padding: '1px 7px', fontSize: 11, fontWeight: 700, color: '#f4d03f', marginRight: 8 }}>[{a.tag}]</span>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: '#888' }}>🏆 {Number(a.score).toLocaleString()}</span>
+                </div>
+                {a.description && <div style={{ color: '#777', fontSize: 11, marginBottom: 6 }}>{a.description}</div>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#888' }}>👥 {a.memberCount}/{a.maxMembers}</span>
+                  {!inAlliance && a.memberCount < a.maxMembers && (<button className="btn btn-gold" style={{ fontSize: 11, padding: '5px 14px' }} disabled={loading} onClick={() => doJoin(a.id)}>
+                      {t('alliance_join')}
+                    </button>)}
+                  {a.memberCount >= a.maxMembers && (<span style={{ fontSize: 11, color: '#e74c3c' }}>{t('alliance_full')}</span>)}
+                </div>
+              </div>))}
+          </div>))}
+
+      
+      {tab === 'create' && !inAlliance && (<div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(244,208,63,0.15)', borderRadius: 14, padding: '16px' }}>
+          <div style={{ color: '#888', fontSize: 12, marginBottom: 14 }}>
+            <img src="/assets/icon_gem.png" style={{ width: 14, height: 14, objectFit: 'contain', verticalAlign: 'middle', marginRight: 3 }}/>
+            {t('alliance_create_cost')}: <strong style={{ color: '#f4d03f' }}>500</strong>
+            &nbsp;·&nbsp; {t('your_balance')}: <strong style={{ color: gems >= 500 ? '#27ae60' : '#e74c3c' }}>{gems}</strong>
+            <img src="/assets/icon_gem.png" style={{ width: 12, height: 12, objectFit: 'contain', verticalAlign: 'middle', marginLeft: 2 }}/>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>{t('alliance_name')} *</div>
+            <input value={name} onChange={e => setName(e.target.value)} maxLength={40} placeholder={t('alliance_name_placeholder')} style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 10px', color: '#fff', fontSize: 13 }}/>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>{t('alliance_tag')} * (2-6)</div>
+            <input value={tag} onChange={e => setTag(e.target.value.toUpperCase())} maxLength={6} placeholder="KW" style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 10px', color: '#f4d03f', fontSize: 14, fontWeight: 700, letterSpacing: 2 }}/>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>{t('alliance_desc')} ({t('optional')})</div>
+            <textarea value={desc} onChange={e => setDesc(e.target.value)} maxLength={200} rows={2} placeholder={t('alliance_desc_placeholder')} style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 10px', color: '#aaa', fontSize: 12, resize: 'none' }}/>
+          </div>
+
+          <button className="btn btn-gold" style={{ width: '100%', padding: '12px', fontSize: 14, opacity: gems >= 500 && name.trim() && tag.trim() ? 1 : 0.5 }} disabled={loading || gems < 500 || !name.trim() || !tag.trim()} onClick={doCreate}>
+            {loading ? '...' : <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>🤝 {t('alliance_create_btn')} — 500 <img src="/assets/icon_gem.png" style={{ width: 14, height: 14, objectFit: 'contain' }}/></span>}
+          </button>
+        </div>)}
     </div>);
 }
 //# sourceMappingURL=AllianceScreen.js.map

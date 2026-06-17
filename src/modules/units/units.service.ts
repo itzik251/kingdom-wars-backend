@@ -66,7 +66,8 @@ export class UnitsService {
     }
     await this.kingdomRepo.save(kingdom);
 
-    const trainingSeconds = stats.trainingTime * amount;
+    const baseTrainingSeconds = stats.trainingTime * amount;
+    const trainingSeconds = isVip ? Math.ceil(baseTrainingSeconds * 0.5) : baseTrainingSeconds;
     if (unitRow.trainingEndsAt && new Date() < unitRow.trainingEndsAt) {
       // Stack on existing training queue instead of blocking
       unitRow.trainingCount += amount;

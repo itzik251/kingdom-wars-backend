@@ -29,7 +29,7 @@ export const BUILDING_BASE_COSTS: Record<BuildingType, { gold: number; wood: num
   [BuildingType.GEM_FORGE]:   { gold: 0,    wood: 0,    stone: 0   }, // USDT-based, handled in service
 };
 
-export const UPGRADE_COST_MULTIPLIER = 1.35;
+export const UPGRADE_COST_MULTIPLIER = 1.25;
 
 // ─── Build Times (seconds at level 1, × 1.4 per level) ───────
 export const BUILDING_BASE_TIMES: Record<BuildingType, number> = {
@@ -96,9 +96,9 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   // Giant — USDT hero, can attack alone
   [UnitType.GIANT]:       { goldCost: 0, gemsCost: 0, foodCost: 0, upkeep: 50, attackPower: 2000, defensePower: 1200, trainingTime: 0, requiredBarracksLevel: 1, requiresVip: false },
   // Exploration-discovered heroes — unlocked only after finding them on the map
-  [UnitType.OGRE]:         { goldCost: 0, gemsCost: 150, foodCost: 0, upkeep: 18, attackPower: 350, defensePower: 500, trainingTime: 0, requiredBarracksLevel: 1, requiresExploration: true },
-  [UnitType.MAGE]:         { goldCost: 0, gemsCost: 180, foodCost: 0, upkeep: 12, attackPower: 600, defensePower: 200, trainingTime: 0, requiredBarracksLevel: 1, requiresExploration: true },
-  [UnitType.DWARF_FIGHTER]:{ goldCost: 0, gemsCost: 120, foodCost: 0, upkeep: 10, attackPower: 280, defensePower: 320, trainingTime: 0, requiredBarracksLevel: 1, requiresExploration: true },
+  [UnitType.OGRE]:         { goldCost: 0, gemsCost: 150, foodCost: 0, upkeep: 18, attackPower: 350, defensePower: 500, trainingTime: 1800, requiredBarracksLevel: 1, requiresExploration: true },
+  [UnitType.MAGE]:         { goldCost: 0, gemsCost: 180, foodCost: 0, upkeep: 12, attackPower: 600, defensePower: 200, trainingTime: 2400, requiredBarracksLevel: 1, requiresExploration: true },
+  [UnitType.DWARF_FIGHTER]:{ goldCost: 0, gemsCost: 120, foodCost: 0, upkeep: 10, attackPower: 280, defensePower: 320, trainingTime: 1200, requiredBarracksLevel: 1, requiresExploration: true },
 };
 
 // ─── Combat ──────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { Unit, UnitType, HERO_TYPES } from '../units/unit.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { User } from '../user/user.entity';
+import { AllianceMember } from '../alliance/alliance-member.entity';
 import { EconomyService } from '../economy/economy.service';
 import { NotificationService } from '../notifications/notification.service';
 import { AuditService } from '../audit/audit.service';
@@ -44,6 +45,7 @@ export class CombatService {
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(AllianceMember) private allianceMemberRepo: Repository<AllianceMember>,
     private economyService: EconomyService,
     private notifService: NotificationService,
     private auditService: AuditService,
@@ -66,6 +68,15 @@ export class CombatService {
 
     if (!attacker || !defender) throw new BadRequestException('Kingdom not found');
     if (defender.isShielded) throw new BadRequestException('Defender is shielded');
+
+    // Alliance protection — cannot attack alliance members
+    const attackerMember = await this.allianceMemberRepo.findOne({ where: { kingdomId: attackerKingdomId } });
+    if (attackerMember) {
+      const defenderMember = await this.allianceMemberRepo.findOne({
+        where: { kingdomId: defenderKingdomId, allianceId: attackerMember.allianceId },
+      });
+      if (defenderMember) throw new BadRequestException('CANNOT_ATTACK_ALLY');
+    }
 
     // Anti-snowball protection (disabled — to be replaced with better logic)
     const attackerScore = attacker.score || 0;
@@ -220,9 +231,9 @@ export class CombatService {
     const wallLevel = defenderBuildings.find(b => b.type === BuildingType.WALL)?.level ?? 0;
     const wallBonus = wallLevel * WALL_DEFENSE_BONUS_PER_LEVEL;
 
-    // Arcane Tower (VIP): +10% attack power per level for all attacker units
+    // Arcane Tower (VIP): +5% attack power per level for all attacker units
     const arcaneLevel = attackerBuildings.find(b => b.type === BuildingType.ARCANE_TOWER)?.level ?? 0;
-    const arcaneMult = 1 + arcaneLevel * 0.1;
+    const arcaneMult = 1 + arcaneLevel * 0.05;
 
     // Watch Tower: +10% defense power multiplier per level
     const watchTowerLevel = defenderBuildings.find(b => b.type === BuildingType.WATCH_TOWER)?.level ?? 0;
@@ -278,9 +289,9 @@ export class CombatService {
     const losses: Record<string, number> = {};
     for (const unit of units) {
       if (unit.count > 0) {
-        const raw = unit.count * lossRate;
-        // For single units (heroes), use round so a 25%+ loss rate shows at least 1 loss
-        losses[unit.type] = unit.count === 1 ? Math.round(raw) : Math.floor(raw);
+        const rate = HERO_TYPES.has(unit.type as any) ? lossRate * 0.5 : lossRate;
+        const raw = unit.count * rate;
+        losses[unit.type] = Math.round(raw);
       }
     }
     return losses;

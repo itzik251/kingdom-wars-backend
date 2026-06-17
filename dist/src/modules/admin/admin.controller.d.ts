@@ -5,10 +5,10 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
 import { TonService } from '../ton/ton.service';
-import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AntiBotService } from '../antibot/antibot.service';
 import { AuditService } from '../audit/audit.service';
 import { ExplorationService } from '../exploration/exploration.service';
+import { WithdrawalService } from '../withdrawal/withdrawal.service';
 type ResourceType = 'gems' | 'gold' | 'wood' | 'stone' | 'food' | 'usdt' | 'vip';
 export declare class AdminController {
     private userRepo;
@@ -16,11 +16,11 @@ export declare class AdminController {
     private config;
     private notifService;
     private tonService;
-    private cryptoBotService;
     private antiBotService;
     private auditService;
     private explorationService;
-    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, cryptoBotService: CryptoBotService, antiBotService: AntiBotService, auditService: AuditService, explorationService: ExplorationService);
+    private withdrawalService;
+    constructor(userRepo: Repository<User>, kingdomRepo: Repository<Kingdom>, config: ConfigService, notifService: NotificationService, tonService: TonService, antiBotService: AntiBotService, auditService: AuditService, explorationService: ExplorationService, withdrawalService: WithdrawalService);
     dashboard(res: Response): void;
     private getWalletConfig;
     private guard;
@@ -136,36 +136,6 @@ export declare class AdminController {
     getWalletBalance(headers: any): Promise<any>;
     getAuditLogs(headers: any): Promise<import("../audit/audit-log.entity").AuditLog[]>;
     getAuditLogsForKingdom(headers: any, kingdomId: string): Promise<import("../audit/audit-log.entity").AuditLog[]>;
-    getPendingWithdrawals(headers: any): Promise<{
-        kingdomId: string;
-        kingdomName: string;
-        telegramId: string;
-        username: string;
-        amount: number;
-        wallet: string;
-    }[]>;
-    approveWithdrawal(headers: any, kingdomId: string): Promise<{
-        error: string;
-        success?: undefined;
-        amount?: undefined;
-        wallet?: undefined;
-        note?: undefined;
-    } | {
-        success: boolean;
-        amount: number;
-        wallet: string;
-        note: string;
-        error?: undefined;
-    }>;
-    rejectWithdrawal(headers: any, kingdomId: string, body: {
-        reason?: string;
-    }): Promise<{
-        error: string;
-        success?: undefined;
-    } | {
-        success: boolean;
-        error?: undefined;
-    }>;
     giveVip(headers: any, telegramId: string, body: {
         days?: number;
     }): Promise<{
@@ -252,6 +222,17 @@ export declare class AdminController {
         success: boolean;
         kingdomId: string;
         error?: undefined;
+    }>;
+    getWithdrawals(headers: any): Promise<import("../withdrawal/withdrawal.entity").Withdrawal[]>;
+    getPendingWithdrawals(headers: any): Promise<import("../withdrawal/withdrawal.entity").Withdrawal[]>;
+    approveWithdrawal(headers: any, id: string): Promise<{
+        success: boolean;
+        txId: string;
+    }>;
+    rejectWithdrawal(headers: any, id: string, body: {
+        reason?: string;
+    }): Promise<{
+        success: boolean;
     }>;
 }
 export {};

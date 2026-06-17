@@ -7,6 +7,7 @@ const client_1 = require("../api/client");
 const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("../components/Countdown");
+const ResIcon_1 = require("../components/ResIcon");
 function RepairScreen() {
     const { buildings, refresh } = (0, gameStore_1.useGameStore)();
     const [repairing, setRepairing] = (0, react_1.useState)(null);
@@ -91,9 +92,9 @@ function RepairScreen() {
                     {rc && (<div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12 }}>
                         <div style={{ color: '#a0845a', marginBottom: 5 }}>💸 {t('repair_cost')}:</div>
                         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                          {rc.cost.gold > 0 && <span>💰 {(0, format_1.fmt)(rc.cost.gold)}</span>}
-                          {rc.cost.wood > 0 && <span>🪵 {(0, format_1.fmt)(rc.cost.wood)}</span>}
-                          {rc.cost.stone > 0 && <span>🪨 {(0, format_1.fmt)(rc.cost.stone)}</span>}
+                          {rc.cost.gold > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="gold"/> {(0, format_1.fmt)(rc.cost.gold)}</span>}
+                          {rc.cost.wood > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="wood"/> {(0, format_1.fmt)(rc.cost.wood)}</span>}
+                          {rc.cost.stone > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="stone"/> {(0, format_1.fmt)(rc.cost.stone)}</span>}
                         </div>
                         <div style={{ color: '#666', marginTop: 5 }}>
                           ⏱️ {t('repair_time')}: ~{Math.ceil(rc.repairTimeSeconds / 60)} {t('minutes')}

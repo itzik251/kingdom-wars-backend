@@ -39,6 +39,12 @@ export class Building {
   @Column({ name: 'upgrade_ends_at', nullable: true })
   upgradeEndsAt: Date;
 
+  @Column({ name: 'grid_x', nullable: true, type: 'integer' })
+  gridX: number | null;
+
+  @Column({ name: 'grid_y', nullable: true, type: 'integer' })
+  gridY: number | null;
+
   @Column({ name: 'needs_repair', default: false })
   needsRepair: boolean;
 

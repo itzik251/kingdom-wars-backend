@@ -23,23 +23,23 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const config_1 = require("@nestjs/config");
 const notification_service_1 = require("../notifications/notification.service");
 const ton_service_1 = require("../ton/ton.service");
-const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 const antibot_service_1 = require("../antibot/antibot.service");
 const audit_service_1 = require("../audit/audit.service");
 const exploration_service_1 = require("../exploration/exploration.service");
+const withdrawal_service_1 = require("../withdrawal/withdrawal.service");
 const game_constants_1 = require("../../constants/game.constants");
 const WALLET_CFG_PATH = (0, path_1.resolve)(process.cwd(), 'wallet_config.json');
 let AdminController = class AdminController {
-    constructor(userRepo, kingdomRepo, config, notifService, tonService, cryptoBotService, antiBotService, auditService, explorationService) {
+    constructor(userRepo, kingdomRepo, config, notifService, tonService, antiBotService, auditService, explorationService, withdrawalService) {
         this.userRepo = userRepo;
         this.kingdomRepo = kingdomRepo;
         this.config = config;
         this.notifService = notifService;
         this.tonService = tonService;
-        this.cryptoBotService = cryptoBotService;
         this.antiBotService = antiBotService;
         this.auditService = auditService;
         this.explorationService = explorationService;
+        this.withdrawalService = withdrawalService;
     }
     dashboard(res) {
         res.sendFile((0, path_1.join)(__dirname, 'admin-dashboard.html'));
@@ -253,22 +253,16 @@ let AdminController = class AdminController {
     }
     async getWalletBalance(headers) {
         this.guard(headers);
-        const cryptoBalance = await this.cryptoBotService.getBalance();
-        const result = {
-            usdtBalance: parseFloat(cryptoBalance['USDT'] || '0'),
-            tonBalance: parseFloat(cryptoBalance['TON'] || '0'),
-            source: 'CryptoBot',
-            network: 'TON/CryptoBot',
-        };
         const cfg = this.getWalletConfig();
+        const result = { source: 'TON', network: 'TON' };
         if (cfg.address && this.tonService.isValidAddress(cfg.address)) {
             const [chainUsdt, chainTon] = await Promise.all([
                 this.tonService.getUsdtBalance(cfg.address),
                 this.tonService.getTonBalance(cfg.address),
             ]);
             result.chainAddress = cfg.address;
-            result.chainUsdtBalance = chainUsdt;
-            result.chainTonBalance = chainTon;
+            result.usdtBalance = chainUsdt;
+            result.tonBalance = chainTon;
         }
         return result;
     }
@@ -279,66 +273,6 @@ let AdminController = class AdminController {
     async getAuditLogsForKingdom(headers, kingdomId) {
         this.guard(headers);
         return this.auditService.getForKingdom(kingdomId, 200);
-    }
-    async getPendingWithdrawals(headers) {
-        this.guard(headers);
-        const kingdoms = await this.kingdomRepo
-            .createQueryBuilder('k')
-            .leftJoinAndSelect('k.user', 'u')
-            .where('k.withdrawal_status = :s', { s: 'pending' })
-            .orderBy('k.created_at', 'DESC')
-            .getMany();
-        return kingdoms.map(k => ({
-            kingdomId: k.id,
-            kingdomName: k.name,
-            telegramId: k.user?.telegramId,
-            username: k.user?.username || k.user?.firstName,
-            amount: k.withdrawalPending,
-            wallet: k.withdrawalWallet,
-        }));
-    }
-    async approveWithdrawal(headers, kingdomId) {
-        this.guard(headers);
-        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
-        if (!kingdom)
-            return { error: 'Not found' };
-        if (kingdom.withdrawalStatus !== 'pending' && kingdom.withdrawalStatus !== 'processing')
-            return { error: 'Not pending' };
-        if (kingdom.withdrawalStatus === 'processing')
-            return { error: 'Already being processed' };
-        const amount = kingdom.withdrawalPending;
-        const wallet = kingdom.withdrawalWallet;
-        kingdom.withdrawalStatus = 'processing';
-        await this.kingdomRepo.save(kingdom);
-        kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
-        kingdom.withdrawalPending = 0;
-        kingdom.withdrawalStatus = 'approved';
-        kingdom.withdrawalWallet = null;
-        await this.kingdomRepo.save(kingdom);
-        if (kingdom.user) {
-            await this.notifService.create(kingdom.user.id, 'withdrawal_approved', {
-                amount: amount.toFixed(4),
-                language: kingdom.user.language,
-            }).catch(() => { });
-        }
-        return { success: true, amount, wallet, note: `שלח ידנית ${amount} USDT-TON ל: ${wallet}` };
-    }
-    async rejectWithdrawal(headers, kingdomId, body) {
-        this.guard(headers);
-        const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
-        if (!kingdom)
-            return { error: 'Not found' };
-        kingdom.withdrawalPending = 0;
-        kingdom.withdrawalStatus = 'rejected';
-        kingdom.withdrawalWallet = null;
-        await this.kingdomRepo.save(kingdom);
-        if (kingdom.user) {
-            await this.notifService.create(kingdom.user.id, 'withdrawal_rejected', {
-                reason: body.reason ? ': ' + body.reason : '',
-                language: kingdom.user.language,
-            }).catch(() => { });
-        }
-        return { success: true };
     }
     async giveVip(headers, telegramId, body) {
         this.guard(headers);
@@ -485,6 +419,22 @@ let AdminController = class AdminController {
         await this.explorationService.resetMap(kingdom.id);
         return { success: true, kingdomId: kingdom.id };
     }
+    async getWithdrawals(headers) {
+        this.guard(headers);
+        return this.withdrawalService.listAll(100);
+    }
+    async getPendingWithdrawals(headers) {
+        this.guard(headers);
+        return this.withdrawalService.listPending();
+    }
+    async approveWithdrawal(headers, id) {
+        this.guard(headers);
+        return this.withdrawalService.approve(id);
+    }
+    async rejectWithdrawal(headers, id, body) {
+        this.guard(headers);
+        return this.withdrawalService.reject(id, body.reason);
+    }
 };
 exports.AdminController = AdminController;
 __decorate([
@@ -593,30 +543,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getAuditLogsForKingdom", null);
 __decorate([
-    (0, common_1.Get)('withdrawals'),
-    __param(0, (0, common_1.Headers)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], AdminController.prototype, "getPendingWithdrawals", null);
-__decorate([
-    (0, common_1.Post)('withdrawals/:kingdomId/approve'),
-    __param(0, (0, common_1.Headers)()),
-    __param(1, (0, common_1.Param)('kingdomId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", Promise)
-], AdminController.prototype, "approveWithdrawal", null);
-__decorate([
-    (0, common_1.Post)('withdrawals/:kingdomId/reject'),
-    __param(0, (0, common_1.Headers)()),
-    __param(1, (0, common_1.Param)('kingdomId')),
-    __param(2, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Object]),
-    __metadata("design:returntype", Promise)
-], AdminController.prototype, "rejectWithdrawal", null);
-__decorate([
     (0, common_1.Post)('give-vip/:telegramId'),
     __param(0, (0, common_1.Headers)()),
     __param(1, (0, common_1.Param)('telegramId')),
@@ -681,6 +607,37 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "resetMap", null);
+__decorate([
+    (0, common_1.Get)('withdrawals'),
+    __param(0, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getWithdrawals", null);
+__decorate([
+    (0, common_1.Get)('withdrawals/pending'),
+    __param(0, (0, common_1.Headers)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getPendingWithdrawals", null);
+__decorate([
+    (0, common_1.Post)('withdrawals/:id/approve'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "approveWithdrawal", null);
+__decorate([
+    (0, common_1.Post)('withdrawals/:id/reject'),
+    __param(0, (0, common_1.Headers)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "rejectWithdrawal", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
@@ -690,9 +647,9 @@ exports.AdminController = AdminController = __decorate([
         config_1.ConfigService,
         notification_service_1.NotificationService,
         ton_service_1.TonService,
-        cryptobot_service_1.CryptoBotService,
         antibot_service_1.AntiBotService,
         audit_service_1.AuditService,
-        exploration_service_1.ExplorationService])
+        exploration_service_1.ExplorationService,
+        withdrawal_service_1.WithdrawalService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

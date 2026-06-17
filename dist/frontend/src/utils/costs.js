@@ -12,10 +12,10 @@ exports.BUILDING_BASE_COSTS = {
     academy: { gold: 500, wood: 300, stone: 200 },
     wall: { gold: 200, wood: 0, stone: 400 },
     watch_tower: { gold: 150, wood: 200, stone: 100 },
-    hospital: { gold: 400, wood: 200, stone: 200 },
-    arcane_tower: { gold: 600, wood: 300, stone: 300 },
+    hospital: { gold: 300, wood: 200, stone: 100 },
+    arcane_tower: { gold: 800, wood: 400, stone: 400 },
 };
-const GROWTH = 1.35;
+const GROWTH = 1.25;
 function upgradeCost(type, currentLevel) {
     const base = exports.BUILDING_BASE_COSTS[type] || { gold: 0, wood: 0, stone: 0 };
     const mult = Math.pow(GROWTH, currentLevel);

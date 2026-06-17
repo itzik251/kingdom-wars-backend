@@ -1,11 +1,15 @@
-import { Controller, Get, Post, Body, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { KingdomService } from './kingdom.service';
+import { WithdrawalService } from '../withdrawal/withdrawal.service';
 
 @Controller('kingdom')
 @UseGuards(JwtAuthGuard)
 export class KingdomController {
-  constructor(private kingdomService: KingdomService) {}
+  constructor(
+    private kingdomService: KingdomService,
+    private withdrawalService: WithdrawalService,
+  ) {}
 
   @Get()
   getMyKingdom(@Request() req) {
@@ -45,13 +49,22 @@ export class KingdomController {
   @Get('usdt-balance')
   async getUsdtBalance(@Request() req) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-    return this.kingdomService.getWithdrawalStatus(kingdom.id);
+    const history = await this.withdrawalService.getUserHistory(req.user.userId);
+    const pending = history.find(w => w.status === 'pending');
+    return {
+      usdtBalance: kingdom.usdtBalance ?? 0,
+      withdrawalStatus: pending ? 'pending' : 'none',
+      withdrawalPending: pending?.amount ?? 0,
+      withdrawalWallet: pending?.walletAddress ?? '',
+      history: history.slice(0, 5),
+    };
   }
 
   @Post('request-withdrawal')
-  async requestWithdrawal(@Request() req, @Body() body: { walletAddress: string }) {
+  async requestWithdrawal(@Request() req, @Body() body: { walletAddress: string; amount: number }) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-    return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
+    const amount = body.amount ?? kingdom.usdtBalance;
+    return this.withdrawalService.request(req.user.userId, amount, body.walletAddress);
   }
 
   @Post('build-gem-forge')
@@ -82,6 +95,16 @@ export class KingdomController {
   async buyGiant(@Request() req) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.kingdomService.buyGiantHero(kingdom.id);
+  }
+
+  @Get('messages')
+  async getMessages(@Request() req) {
+    return this.kingdomService.getMessages(req.user.userId);
+  }
+
+  @Delete('messages')
+  async clearMessages(@Request() req) {
+    return this.kingdomService.clearMessages(req.user.userId);
   }
 
   @Post('withdraw-usdt')

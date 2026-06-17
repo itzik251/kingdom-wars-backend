@@ -7,23 +7,28 @@ const format_1 = require("../utils/format");
 const Countdown_1 = require("../components/Countdown");
 const client_1 = require("../api/client");
 const useT_1 = require("../i18n/useT");
+const ResIcon_1 = require("../components/ResIcon");
 const REGULAR_UNITS = ['spearman', 'archer', 'swordsman', 'cavalry', 'catapult', 'elite_guard'];
 const GOLD_HEROES = ['knight'];
 const VIP_UNITS = ['paladin', 'dragon_rider'];
 const SPECIAL_UNITS = ['titan', 'giant'];
+const EXPLORATION_HEROES = ['ogre', 'mage', 'dwarf_fighter'];
 const UNIT_CONFIG = {
-    spearman: { icon: '🗡️', gold: 10, power: 1, def: 1, color: '#aaa', upkeep: 1 },
-    archer: { icon: '🏹', gold: 20, power: 2, def: 1, color: '#7dbb3f', upkeep: 1 },
-    swordsman: { icon: '⚔️', gold: 40, power: 4, def: 3, color: '#3498db', upkeep: 2 },
-    cavalry: { icon: '🐴', gold: 80, power: 9, def: 5, color: '#9b59b6', upkeep: 3 },
-    catapult: { icon: '💣', gold: 200, power: 15, def: 2, color: '#e67e22', upkeep: 5 },
-    elite_guard: { icon: '🛡️', gold: 500, power: 25, def: 20, color: '#f4d03f', upkeep: 8 },
-    knight: { icon: '🗡️', gold: 800, power: 40, def: 30, color: '#85c1e9', upkeep: 2, isHero: true, dailySalaryGems: 1 },
-    paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5, isHero: true, dailySalaryGems: 3, canSoloAttack: true },
-    dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15, isHero: true, dailySalaryGems: 5, canSoloAttack: true },
-    ragnar: { icon: '🦸', gold: 0, gems: 200, power: 400, def: 300, color: '#e67e22', referralHero: true, upkeep: 20, isHero: true, dailySalaryGems: 2, canSoloAttack: true, gemsPerHour: 2 },
-    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 25, isHero: true, dailySalaryGems: 4, canSoloAttack: true },
-    giant: { icon: '👹', gold: 0, usdtCost: 0.5, power: 2000, def: 1200, color: '#8e44ad', usdtUnit: true, upkeep: 50, isHero: true, dailySalaryGems: 10, canSoloAttack: true },
+    spearman: { icon: '🗡️', gold: 10, power: 1, def: 1, color: '#aaaaaa', upkeep: 1, trainingSecs: 10 },
+    archer: { icon: '🏹', gold: 20, power: 2, def: 1, color: '#7dbb3f', upkeep: 1, trainingSecs: 20 },
+    swordsman: { icon: '⚔️', gold: 40, power: 4, def: 3, color: '#3498db', upkeep: 2, trainingSecs: 40 },
+    cavalry: { icon: '🐴', gold: 80, power: 9, def: 5, color: '#9b59b6', upkeep: 3, trainingSecs: 80 },
+    catapult: { icon: '💣', gold: 200, power: 15, def: 2, color: '#e67e22', upkeep: 5, trainingSecs: 200 },
+    elite_guard: { icon: '🛡️', gold: 500, power: 25, def: 20, color: '#f4d03f', upkeep: 8, trainingSecs: 600 },
+    knight: { icon: '🗡️', gold: 800, power: 40, def: 30, color: '#85c1e9', upkeep: 2, isHero: true, dailySalaryGems: 1, trainingSecs: 120 },
+    paladin: { icon: '⚔️', gold: 0, gems: 100, power: 80, def: 60, color: '#f1c40f', vip: true, upkeep: 5, isHero: true, dailySalaryGems: 3, canSoloAttack: true, trainingSecs: 300 },
+    dragon_rider: { icon: '🐉', gold: 0, gems: 300, power: 250, def: 150, color: '#e74c3c', vip: true, upkeep: 15, isHero: true, dailySalaryGems: 5, canSoloAttack: true, trainingSecs: 600 },
+    ragnar: { icon: '🦸', gold: 0, gems: 200, power: 400, def: 300, color: '#e67e22', referralHero: true, upkeep: 20, isHero: true, dailySalaryGems: 2, canSoloAttack: true, gemsPerHour: 2, trainingSecs: 900 },
+    titan: { icon: '🗿', gold: 0, usdtCost: 0.1, power: 800, def: 600, color: '#c0392b', usdtUnit: true, upkeep: 25, isHero: true, dailySalaryGems: 4, canSoloAttack: true, trainingSecs: 300 },
+    giant: { icon: '👹', gold: 0, usdtCost: 0.5, power: 2000, def: 1200, color: '#8e44ad', usdtUnit: true, upkeep: 50, isHero: true, dailySalaryGems: 10, canSoloAttack: true, trainingSecs: 600 },
+    ogre: { icon: '👹', gold: 0, gems: 150, power: 350, def: 500, color: '#c0392b', upkeep: 18, isHero: true, dailySalaryGems: 4, canSoloAttack: true, trainingSecs: 1800 },
+    mage: { icon: '🔮', gold: 0, gems: 180, power: 600, def: 200, color: '#8e44ad', upkeep: 12, isHero: true, dailySalaryGems: 6, canSoloAttack: true, trainingSecs: 2400 },
+    dwarf_fighter: { icon: '⚒️', gold: 0, gems: 120, power: 280, def: 320, color: '#e67e22', upkeep: 10, isHero: true, dailySalaryGems: 3, canSoloAttack: true, trainingSecs: 1200 },
 };
 const RAGNAR_REQUIRED = 10;
 function ArmyScreen() {
@@ -35,6 +40,15 @@ function ArmyScreen() {
     const [referral, setReferral] = (0, react_1.useState)(null);
     const [claiming, setClaiming] = (0, react_1.useState)(false);
     const t = (0, useT_1.useT)();
+    (0, react_1.useEffect)(() => {
+        const reset = () => {
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            document.querySelector('[data-scroll-container]')?.scrollTo(0, 0);
+        };
+        reset();
+        requestAnimationFrame(reset);
+    }, []);
     (0, react_1.useEffect)(() => {
         client_1.api.get('/referral').then(setReferral).catch(() => { });
     }, []);
@@ -58,11 +72,15 @@ function ArmyScreen() {
         }
     }
     const totalPower = units.reduce((s, u) => s + u.count * (UNIT_CONFIG[u.type]?.power || 0), 0);
+    const totalDef = units.reduce((s, u) => s + u.count * (UNIT_CONFIG[u.type]?.def || 0), 0);
     const totalFoodUpkeep = units.reduce((s, u) => s + u.count * (UNIT_CONFIG[u.type]?.upkeep || 0), 0);
     const foodProduction = productionRates.food || 0;
     const foodBalance = foodProduction - totalFoodUpkeep;
     const ragnarUnit = units.find(u => u.type === 'ragnar');
     const ragnarInArmy = ragnarUnit && ragnarUnit.count > 0;
+    const gemsProduction = productionRates.gems || 0;
+    const gemsConsumptionPerHour = productionRates.gemsSalary || 0;
+    const gemsBalance = gemsProduction - gemsConsumptionPerHour;
     async function train(type) {
         const cfg = UNIT_CONFIG[type];
         const amount = amounts[type] || 1;
@@ -122,12 +140,14 @@ function ArmyScreen() {
         const isVipUnit = !!cfg?.vip;
         const isRagnar = !!cfg?.referralHero;
         const isUsdtUnit = !!cfg?.usdtUnit;
+        const isExplorationHero = EXPLORATION_HEROES.includes(u.type);
         const vipLocked = isVipUnit && !isVip;
         const qty = amounts[u.type] || 1;
         const usdtBal = kingdom?.usdtBalance ?? 0;
         const usdtCostTotal = isUsdtUnit ? parseFloat((qty * (cfg?.usdtCost || 0.1)).toFixed(4)) : 0;
-        const cost = isUsdtUnit ? 0 : qty * ((isVipUnit || isRagnar) ? (cfg?.gems || 0) : (cfg?.gold || 0));
-        const have = (isVipUnit || isRagnar) ? (kingdom?.gems || 0) : (kingdom?.gold || 0);
+        const paysWithGems = isVipUnit || isRagnar || isExplorationHero;
+        const cost = isUsdtUnit ? 0 : qty * (paysWithGems ? (cfg?.gems || 0) : (cfg?.gold || 0));
+        const have = paysWithGems ? (kingdom?.gems || 0) : (kingdom?.gold || 0);
         const canAfford = isUsdtUnit ? usdtBal >= usdtCostTotal : (have >= cost && !vipLocked);
         return (<div style={{
                 background: isRagnar
@@ -159,10 +179,10 @@ function ArmyScreen() {
               <div style={{ color: '#a0845a', fontSize: 11, display: 'flex', gap: 8, marginTop: 2, flexWrap: 'wrap' }}>
                 <span>⚔️ {cfg?.power}</span>
                 <span>🛡️ {cfg?.def}</span>
-                {(cfg?.upkeep ?? 0) > 0 && <span style={{ color: '#7dbb3f' }}>🌾 {t('upkeep_per_hr', { n: cfg.upkeep })}</span>}
+                {(cfg?.upkeep ?? 0) > 0 && <span style={{ color: '#7dbb3f', display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="food"/> {t('upkeep_per_hr', { n: cfg.upkeep })}</span>}
                 {isUsdtUnit ? <span style={{ color: '#27ae60', display: 'flex', alignItems: 'center', gap: 2 }}><img src="/assets/icon_dollar.png" style={{ width: 11, height: 11 }}/>${cfg?.usdtCost}{t('per_unit')}</span>
                 : isVipUnit ? <span style={{ color: '#f1c40f', display: 'flex', alignItems: 'center', gap: 2 }}><img src="/assets/icon_gem.png" style={{ width: 11, height: 11 }}/>{cfg?.gems}{t('per_unit')}</span>
-                    : <span>💰 {cfg?.gold}{t('per_unit')}</span>}
+                    : <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="gold"/> {cfg?.gold}{t('per_unit')}</span>}
               </div>
               {cfg?.isHero && cfg.dailySalaryGems && (<div style={{ fontSize: 10, color: '#a78bfa', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <img src="/assets/icon_gem.png" style={{ width: 10, height: 10 }}/>
@@ -206,14 +226,25 @@ function ArmyScreen() {
                     ? t('add_to_queue', { n: amounts[u.type] || 1 })
                     : isUsdtUnit
                         ? <>{t('recruit')} {amounts[u.type] || 1} (<img src="/assets/icon_dollar.png" style={{ width: 12, height: 12, verticalAlign: 'middle' }}/>${usdtCostTotal})</>
-                        : isVipUnit || isRagnar
+                        : paysWithGems
                             ? <>{t('recruit')} {amounts[u.type] || 1} (<img src="/assets/icon_gem.png" style={{ width: 12, height: 12, verticalAlign: 'middle' }}/>{(0, format_1.fmt)(cost)})</>
-                            : `${t('recruit')} ${amounts[u.type] || 1} (💰 ${(0, format_1.fmt)(cost)})`}
+                            : <>{t('recruit')} {amounts[u.type] || 1} (<ResIcon_1.ResIcon type="gold" size={12}/>{(0, format_1.fmt)(cost)})</>}
             </button>
             {!canAfford && (<div style={{ fontSize: 11, color: '#e74c3c', textAlign: 'center' }}>
                 {isUsdtUnit
                         ? <><img src="/assets/icon_dollar.png" style={{ width: 11, height: 11, verticalAlign: 'middle' }}/> {t('missing_usdt_balance') || 'יתרת USDT לא מספיקה'} ({usdtBal.toFixed(4)}/${usdtCostTotal})</>
-                        : isVipUnit || isRagnar ? t('missing_gems', { n: (0, format_1.fmt)(cost - (kingdom?.gems || 0)) }) : t('missing_gold', { n: (0, format_1.fmt)(cost - (kingdom?.gold || 0)) })}
+                        : paysWithGems ? t('missing_gems', { n: (0, format_1.fmt)(cost - (kingdom?.gems || 0)) }) : t('missing_gold', { n: (0, format_1.fmt)(cost - (kingdom?.gold || 0)) })}
+              </div>)}
+            {(cfg?.trainingSecs ?? 0) > 0 && (<div style={{ fontSize: 10, color: isVip ? '#f4d03f' : '#666', textAlign: 'center', marginTop: 2 }}>
+                {(() => {
+                        const baseSecs = (cfg.trainingSecs) * (amounts[u.type] || 1);
+                        const secs = isVip ? Math.ceil(baseSecs * 0.5) : baseSecs;
+                        const h = Math.floor(secs / 3600);
+                        const m = Math.floor((secs % 3600) / 60);
+                        const s = secs % 60;
+                        const timeStr = h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : m > 0 ? `${m}m${s > 0 ? ` ${s}s` : ''}` : `${s}s`;
+                        return `⏱️ ${t('exp_train_time')}: ${timeStr}${isVip ? ' ⚡' : ''}`;
+                    })()}
               </div>)}
           </div>)}
       </div>);
@@ -235,7 +266,9 @@ function ArmyScreen() {
       <div style={{ background: 'linear-gradient(135deg,rgba(231,76,60,0.15),rgba(192,57,43,0.1))', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 14, padding: '14px 20px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ color: '#a0845a', fontSize: 12 }}>{t('total_power')}</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#e74c3c', textShadow: '0 0 10px rgba(231,76,60,0.4)' }}>⚔️ {(0, format_1.fmt)(totalPower)}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#e74c3c', textShadow: '0 0 10px rgba(231,76,60,0.4)' }}>⚔️ {(0, format_1.fmt)(totalPower)}</div>
+          <div style={{ fontSize: 13, color: '#3498db', fontWeight: 600, marginTop: 2 }}>🛡️ {(0, format_1.fmt)(totalDef)}</div>
+          {kingdom?.magic > 0 && <div style={{ fontSize: 13, color: '#9b59b6', fontWeight: 600, marginTop: 2 }}>✨ {kingdom.magic}</div>}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#a0845a', fontSize: 12 }}>{t('soldiers')}</div>
@@ -274,11 +307,11 @@ function ArmyScreen() {
           </div>);
         })()}
 
-      <div style={{ background: foodBalance < 0 ? 'rgba(231,76,60,0.12)' : 'rgba(120,192,48,0.10)', border: `1px solid ${foodBalance < 0 ? 'rgba(231,76,60,0.35)' : 'rgba(120,192,48,0.3)'}`, borderRadius: 12, padding: '10px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ background: foodBalance < 0 ? 'rgba(231,76,60,0.12)' : 'rgba(120,192,48,0.10)', border: `1px solid ${foodBalance < 0 ? 'rgba(231,76,60,0.35)' : 'rgba(120,192,48,0.3)'}`, borderRadius: 12, padding: '10px 16px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ color: '#a0845a', fontSize: 11 }}>{t('food_balance')}</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: foodBalance < 0 ? '#e74c3c' : '#7dbb3f' }}>
-            🌾 {foodBalance >= 0 ? '+' : ''}{(0, format_1.fmt)(foodBalance)}{t('per_hour')}
+            <ResIcon_1.ResIcon type="food" size={16}/> {foodBalance >= 0 ? '+' : ''}{(0, format_1.fmt)(foodBalance)}{t('per_hour')}
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: 11, color: '#a0845a' }}>
@@ -287,6 +320,20 @@ function ArmyScreen() {
           {foodBalance < 0 && <div style={{ color: '#e74c3c', fontWeight: 700, marginTop: 2 }}>{t('desert_warning')}</div>}
         </div>
       </div>
+
+      {(gemsProduction > 0 || gemsConsumptionPerHour > 0) && (<div style={{ background: gemsBalance < 0 ? 'rgba(231,76,60,0.12)' : 'rgba(155,89,182,0.10)', border: `1px solid ${gemsBalance < 0 ? 'rgba(231,76,60,0.35)' : 'rgba(155,89,182,0.3)'}`, borderRadius: 12, padding: '10px 16px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ color: '#a0845a', fontSize: 11 }}>מאזן אבני חן</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: gemsBalance < 0 ? '#e74c3c' : '#9b59b6' }}>
+              <ResIcon_1.ResIcon type="gem" size={16}/> {gemsBalance >= 0 ? '+' : ''}{gemsBalance.toFixed(2)}{t('per_hour')}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: 11, color: '#a0845a' }}>
+            <div>ייצור: +{gemsProduction.toFixed(2)}/שעה</div>
+            <div>שכר גיבורים: -{gemsConsumptionPerHour}/שעה</div>
+            {gemsBalance < 0 && <div style={{ color: '#e74c3c', fontWeight: 700, marginTop: 2 }}>⚠️ גירעון באבני חן</div>}
+          </div>
+        </div>)}
 
       {msg && (<div style={{ padding: '10px 14px', borderRadius: 10, marginBottom: 12, background: msg.startsWith('✅') ? 'rgba(39,174,96,0.15)' : 'rgba(231,76,60,0.15)', border: `1px solid ${msg.startsWith('✅') ? '#27ae60' : '#e74c3c'}44`, color: msg.startsWith('✅') ? '#27ae60' : '#e74c3c', fontSize: 13, textAlign: 'center' }}>
           {msg}
@@ -305,7 +352,7 @@ function ArmyScreen() {
             return (<>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#85c1e9' }}>🗡️ {t('gold_heroes')}</div>
-              <span style={{ fontSize: 10, color: '#85c1e9', background: 'rgba(133,193,233,0.12)', borderRadius: 8, padding: '2px 8px', fontWeight: 700 }}>💰 {t('gold')}</span>
+              <span style={{ fontSize: 10, color: '#85c1e9', background: 'rgba(133,193,233,0.12)', borderRadius: 8, padding: '2px 8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="gold" size={11}/> {t('gold')}</span>
             </div>
             <div style={{ fontSize: 11, color: '#555', marginBottom: 10 }}>{t('gold_heroes_desc')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
@@ -337,6 +384,19 @@ function ArmyScreen() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               {specialUnitsInArmy.map(u => <UnitCard key={u.type} u={u}/>)}
+            </div>
+          </>);
+        })()}
+
+      
+      {(() => {
+            const explorationUnits = units.filter(u => EXPLORATION_HEROES.includes(u.type) && u.count > 0);
+            if (explorationUnits.length === 0)
+                return null;
+            return (<>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#16a085', marginBottom: 6 }}>🗺️ {t('exploration_heroes') || 'גיבורי חקירה'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {explorationUnits.map(u => <UnitCard key={u.type} u={u}/>)}
             </div>
           </>);
         })()}
@@ -377,7 +437,7 @@ function ArmyScreen() {
             <div style={{ fontSize: 11, color: '#a0845a', marginTop: 3, display: 'flex', gap: 10 }}>
               <span>⚔️ 400</span>
               <span>🛡️ 300</span>
-              <span>🌾 -20{t('per_hour')}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="food"/> -20{t('per_hour')}</span>
             </div>
             <div style={{ fontSize: 10, color: '#a0845a', marginTop: 2 }}>
               {ragnarClaimed ? t('ragnar_claimed') : t('ragnar_required', { n: RAGNAR_REQUIRED })}

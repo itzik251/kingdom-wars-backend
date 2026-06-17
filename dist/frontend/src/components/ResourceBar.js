@@ -1,57 +1,69 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ResourceBar;
-const react_1 = require("react");
 const gameStore_1 = require("../store/gameStore");
 const format_1 = require("../utils/format");
-const LanguageSwitcher_1 = require("./LanguageSwitcher");
 const RESOURCES = [
-    { key: 'gold', icon: '/assets/icon_gold.png', maxKey: 'maxGold' },
-    { key: 'wood', icon: '/assets/icon_wood.png', maxKey: 'maxWood' },
-    { key: 'stone', icon: '/assets/icon_stone.png', maxKey: 'maxStone' },
-    { key: 'food', icon: '/assets/icon_food.png', maxKey: 'maxFood' },
-    { key: 'gems', icon: '/assets/icon_gem.png', maxKey: null },
+    { key: 'gold', icon: '/assets/icon_gold.png', maxKey: 'maxGold', color: '#f4d03f' },
+    { key: 'wood', icon: '/assets/icon_wood.png', maxKey: 'maxWood', color: '#c8874a' },
+    { key: 'stone', icon: '/assets/icon_stone.png', maxKey: 'maxStone', color: '#b0b8c0' },
+    { key: 'food', icon: '/assets/icon_food.png', maxKey: 'maxFood', color: '#7dbb3f' },
+    { key: 'gems', icon: '/assets/icon_gem.png', maxKey: null, color: '#1aafbf' },
 ];
 function ResourceBar() {
     const kingdom = (0, gameStore_1.useGameStore)(s => s.kingdom);
-    const refresh = (0, gameStore_1.useGameStore)(s => s.refresh);
-    const [spinning, setSpinning] = (0, react_1.useState)(false);
+    const productionRates = (0, gameStore_1.useGameStore)(s => s.productionRates);
     if (!kingdom)
         return null;
-    async function handleRefreshUsdt() {
-        if (spinning)
-            return;
-        setSpinning(true);
-        await refresh().catch(() => { });
-        window.dispatchEvent(new Event('usdt-balance-refresh'));
-        setTimeout(() => setSpinning(false), 1000);
+    const workers = kingdom.workers ?? 0;
+    const explorers = kingdom.explorerCount ?? 0;
+    function openWorkers() {
+        window.dispatchEvent(new Event('open-workers'));
     }
-    return (<div className="resource-bar" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', flexWrap: 'wrap' }}>
-      
-      {RESOURCES.map(({ key, icon, maxKey }) => {
-            const val = kingdom[key];
-            const max = maxKey ? kingdom[maxKey] : 0;
+    return (<div style={{
+            display: 'flex', alignItems: 'center',
+            padding: '4px 6px',
+            background: 'linear-gradient(180deg, rgba(8,4,0,0.97) 0%, rgba(14,8,0,0.95) 100%)',
+            borderBottom: '1px solid rgba(244,208,63,0.1)',
+            flexShrink: 0,
+            gap: 2,
+        }}>
+      {RESOURCES.map(({ key, icon, maxKey, color }) => {
+            const val = kingdom[key] ?? 0;
+            const max = maxKey ? kingdom[maxKey] ?? 0 : 0;
+            const rate = productionRates[key] ?? 0;
             const pct = max > 0 ? val / max : 1;
-            const low = maxKey && pct < 0.15;
-            const full = maxKey && pct >= 0.99;
-            const glow = full ? '0 0 8px rgba(231,76,60,0.6)' : low ? '0 0 8px rgba(243,156,18,0.6)' : 'none';
-            return (<div key={key} className="resource-item" title={maxKey ? `${(0, format_1.fmt)(val)} / ${(0, format_1.fmt)(max)}` : undefined} style={{ boxShadow: glow, borderRadius: 8, padding: glow !== 'none' ? '2px 7px' : undefined, color: full ? '#e74c3c' : low ? '#f39c12' : undefined, transition: 'box-shadow 0.3s', flexShrink: 0 }}>
-            <img src={icon} alt={key} style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginBottom: 1 }}/>
-            <span>{(0, format_1.fmt)(val)}{maxKey ? `/${(0, format_1.fmt)(max)}` : ''}</span>
+            const isFull = !!maxKey && pct >= 0.99;
+            const isLow = !!maxKey && pct < 0.15;
+            const valColor = isFull ? '#e74c3c' : isLow ? '#f39c12' : color;
+            return (<div key={key} title={maxKey ? `${(0, format_1.fmt)(val)} / ${(0, format_1.fmt)(max)}` : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, gap: 0 }}>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <img src={icon} alt={key} style={{ width: 13, height: 13, objectFit: 'contain' }}/>
+              <span style={{ fontSize: 11, fontWeight: 700, color: valColor, lineHeight: 1 }}>{(0, format_1.fmt)(val)}</span>
+            </div>
+            
+            {maxKey && rate !== 0 && (<span style={{ fontSize: 8.5, color: rate > 0 ? '#5a8' : '#c55', lineHeight: 1, marginTop: 1 }}>
+                {rate > 0 ? '+' : ''}{(0, format_1.fmt)(rate)}/h
+              </span>)}
+            
+            {maxKey && (<div style={{ width: '85%', height: 2, borderRadius: 1, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginTop: 2 }}>
+                <div style={{ height: '100%', borderRadius: 1, width: `${Math.min(100, pct * 100)}%`, background: valColor, transition: 'width 0.4s' }}/>
+              </div>)}
           </div>);
         })}
 
       
-      <div className="resource-item" onClick={handleRefreshUsdt} style={{ color: '#27ae60', fontWeight: 700, flexShrink: 0, cursor: 'pointer', userSelect: 'none' }} title="לחץ לרענון">
-        <img src="/assets/icon_dollar.png" alt="usdt" style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginBottom: 1 }}/>
-        ${(kingdom.usdtBalance || 0).toFixed(3)}
-        <span style={{ marginLeft: 3, opacity: 0.6, fontSize: 9, transition: 'transform 0.5s', display: 'inline-block', transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)' }}>🔄</span>
-      </div>
+      <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,0.07)', margin: '0 2px', flexShrink: 0 }}/>
 
       
-      <div style={{ flexShrink: 0, marginLeft: 'auto' }}>
-        <LanguageSwitcher_1.default />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <img src="/assets/icon_dollar.png" alt="usdt" style={{ width: 12, height: 12, objectFit: 'contain' }}/>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#27ae60' }}>${(kingdom.usdtBalance || 0).toFixed(3)}</span>
+        </div>
       </div>
+
     </div>);
 }
 //# sourceMappingURL=ResourceBar.js.map

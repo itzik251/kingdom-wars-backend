@@ -3,6 +3,7 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { Unit } from '../units/unit.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { User } from '../user/user.entity';
+import { AllianceMember } from '../alliance/alliance-member.entity';
 import { EconomyService } from '../economy/economy.service';
 import { NotificationService } from '../notifications/notification.service';
 import { AuditService } from '../audit/audit.service';
@@ -36,10 +37,11 @@ export declare class CombatService {
     private unitRepo;
     private buildingRepo;
     private userRepo;
+    private allianceMemberRepo;
     private economyService;
     private notifService;
     private auditService;
-    constructor(kingdomRepo: Repository<Kingdom>, unitRepo: Repository<Unit>, buildingRepo: Repository<Building>, userRepo: Repository<User>, economyService: EconomyService, notifService: NotificationService, auditService: AuditService);
+    constructor(kingdomRepo: Repository<Kingdom>, unitRepo: Repository<Unit>, buildingRepo: Repository<Building>, userRepo: Repository<User>, allianceMemberRepo: Repository<AllianceMember>, economyService: EconomyService, notifService: NotificationService, auditService: AuditService);
     attack(attackerKingdomId: string, defenderKingdomId: string, heroType?: string, squadInput?: Record<string, number>): Promise<BattleReport>;
     getTargets(myKingdom: Kingdom): Promise<Kingdom[]>;
     getKingdomProfile(myKingdomId: string, targetKingdomId: string): Promise<{

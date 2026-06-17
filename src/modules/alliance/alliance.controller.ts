@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { IsString, MaxLength, IsOptional } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AllianceService } from './alliance.service';
@@ -12,6 +12,14 @@ class CreateAllianceDto {
 
 class JoinAllianceDto {
   @IsString() allianceId: string;
+}
+
+class KickDto {
+  @IsString() targetKingdomId: string;
+}
+
+class TransferDto {
+  @IsString() targetKingdomId: string;
 }
 
 @Controller('alliances')
@@ -49,5 +57,29 @@ export class AllianceController {
   async leave(@Request() req) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
     return this.allianceService.leave(kingdom.id);
+  }
+
+  @Post('kick')
+  async kick(@Request() req, @Body() dto: KickDto) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.allianceService.kick(kingdom.id, dto.targetKingdomId);
+  }
+
+  @Post('transfer-leadership')
+  async transfer(@Request() req, @Body() dto: TransferDto) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.allianceService.transferLeadership(kingdom.id, dto.targetKingdomId);
+  }
+
+  @Post('promote/:kingdomId')
+  async promote(@Request() req, @Param('kingdomId') targetKingdomId: string) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.allianceService.promote(kingdom.id, targetKingdomId);
+  }
+
+  @Delete('disband')
+  async disband(@Request() req) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.allianceService.disband(kingdom.id);
   }
 }

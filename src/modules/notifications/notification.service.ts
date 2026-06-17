@@ -183,6 +183,46 @@ const MESSAGES: Record<string, Record<Lang, string>> = {
     pt: '🧭 Seu explorador voltou... não encontrou nada desta vez 😔',
     ar: '🧭 عاد مستكشفك... لم يجد شيئاً هذه المرة 😔',
   },
+  shield_purchased: {
+    en: '🛡️ Shield activated — protected for 24h',
+    he: '🛡️ מגן הופעל — מוגן ל-24 שעות',
+    es: '🛡️ Escudo activado — protegido por 24h',
+    fr: '🛡️ Bouclier activé — protégé 24h',
+    de: '🛡️ Schild aktiviert — 24h geschützt',
+    ru: '🛡️ Щит активирован — защита 24ч',
+    pt: '🛡️ Escudo ativado — protegido por 24h',
+    ar: '🛡️ تم تفعيل الدرع — محمي لمدة 24 ساعة',
+  },
+  storage_expanded: {
+    en: '📦 Storage expanded — capacity ×1.5 for 24h',
+    he: '📦 האחסון הורחב — קיבולת ×1.5 ל-24 שעות',
+    es: '📦 Almacenamiento ampliado — capacidad ×1.5 por 24h',
+    fr: '📦 Stockage élargi — capacité ×1.5 pendant 24h',
+    de: '📦 Lager erweitert — Kapazität ×1.5 für 24h',
+    ru: '📦 Хранилище расширено — ёмкость ×1.5 на 24ч',
+    pt: '📦 Armazenamento expandido — capacidade ×1.5 por 24h',
+    ar: '📦 تم توسيع التخزين — السعة ×1.5 لمدة 24 ساعة',
+  },
+  worker_hired: {
+    en: '👷 New worker hired — production +4%',
+    he: '👷 עובד חדש גויס — ייצור +4%',
+    es: '👷 Nuevo trabajador contratado — producción +4%',
+    fr: '👷 Nouveau travailleur embauché — production +4%',
+    de: '👷 Neuer Arbeiter eingestellt — Produktion +4%',
+    ru: '👷 Нанят новый рабочий — производство +4%',
+    pt: '👷 Novo trabalhador contratado — produção +4%',
+    ar: '👷 تم توظيف عامل جديد — الإنتاج +4%',
+  },
+  worker_fired: {
+    en: '👷 Worker dismissed — received 25 gold',
+    he: '👷 עובד פוטר — קיבלת 25 זהב',
+    es: '👷 Trabajador despedido — recibiste 25 de oro',
+    fr: '👷 Travailleur licencié — vous avez reçu 25 or',
+    de: '👷 Arbeiter entlassen — 25 Gold erhalten',
+    ru: '👷 Рабочий уволен — получено 25 золота',
+    pt: '👷 Trabalhador demitido — recebeu 25 de ouro',
+    ar: '👷 تم فصل العامل — حصلت على 25 ذهباً',
+  },
   negative_production: {
     en: '📉 Production deficit! Food: {food} | Production: {prod}/h | Upkeep: {upkeep}/h — upgrade Farms or reduce your army',
     he: '📉 גירעון ייצור! אוכל: {food} | ייצור: {prod}/שעה | צריכה: {upkeep}/שעה — שדרג חוות או צמצם את הצבא',
@@ -237,6 +277,44 @@ export class NotificationService {
       order: { createdAt: 'DESC' },
       take: 20,
     });
+  }
+
+  async getMessages(userId: string, lang: Lang = 'en') {
+    const notifs = await this.notifRepo.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+      take: 100,
+    });
+    const VALID: Lang[] = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];
+    if (!VALID.includes(lang)) lang = 'en';
+    return notifs.map(n => {
+      let text = '';
+      try {
+        if (n.type === 'explorer_returned') {
+          const foundNodes = n.payload.foundNodes ?? [];
+          const resolvedType = foundNodes.length > 0 ? 'explorer_returned_found' : 'explorer_returned_empty';
+          const tpl = MESSAGES[resolvedType]?.[lang] ?? MESSAGES[resolvedType]?.['en'] ?? '';
+          const result = translateExplorerResult(foundNodes, lang);
+          text = formatMessage(tpl, { result });
+        } else {
+          const tpl = MESSAGES[n.type]?.[lang] ?? MESSAGES[n.type]?.['en'] ?? n.type;
+          const translatedPayload = {
+            ...n.payload,
+            building: n.payload.building ? translateBuilding(n.payload.building, lang) : undefined,
+            unit:     n.payload.unit     ? translateUnit(n.payload.unit, lang)         : undefined,
+          };
+          text = formatMessage(tpl, translatedPayload);
+        }
+      } catch { text = n.type; }
+      return { id: n.id, type: n.type, text, read: n.read, createdAt: n.createdAt };
+    });
+  }
+
+  async clearMessages(userId: string) {
+    await this.notifRepo.createQueryBuilder()
+      .delete()
+      .where('user_id = :userId', { userId })
+      .execute();
   }
 
   async markRead(userId: string) {

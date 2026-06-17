@@ -27,13 +27,9 @@ const unit_entity_1 = require("../units/unit.entity");
 const unit_entity_2 = require("../units/unit.entity");
 const notification_service_1 = require("../notifications/notification.service");
 function maxExplorers(academyLevel) {
-    if (academyLevel >= 10)
-        return 5;
-    if (academyLevel >= 6)
-        return 3;
-    if (academyLevel >= 3)
-        return 2;
-    return 1;
+    if (academyLevel <= 0)
+        return 0;
+    return Math.ceil(academyLevel / 3);
 }
 function explorerTrainingSecs(academyLevel, isVip) {
     let secs;
@@ -47,24 +43,16 @@ function explorerTrainingSecs(academyLevel, isVip) {
         secs = 4 * 60 * 60;
     return isVip ? Math.floor(secs * 0.75) : secs;
 }
-function raidCooldownDays(academyLevel) {
-    if (academyLevel >= 10)
-        return 1;
-    if (academyLevel >= 6)
-        return 3;
-    if (academyLevel >= 3)
-        return 5;
-    return 7;
+function raidCooldownDays(_academyLevel) {
+    return 1;
 }
 function missionHours(distance) {
-    return Math.min(12, Math.max(1, Math.round(distance * 0.5)));
+    return Math.min(24, Math.max(1, Math.round(distance * 0.5)));
 }
-function fogRadius(explorerCount, academyLevel) {
-    if (academyLevel <= 0 || explorerCount <= 0)
+function fogRadius(_explorerCount, academyLevel) {
+    if (academyLevel <= 0)
         return 0;
-    const base = Math.round(3 + (academyLevel - 1) * (22 / 29));
-    const explorerBonus = (explorerCount - 1) * 1.5;
-    return Math.min(25, Math.round(base + explorerBonus));
+    return Math.min(22, Math.round(2 + (academyLevel - 1) * 20 / 29));
 }
 const EXPLORATION_HEROES = [unit_entity_2.UnitType.OGRE, unit_entity_2.UnitType.MAGE, unit_entity_2.UnitType.DWARF_FIGHTER];
 const RESOURCE_TYPES = ['gold', 'wood', 'stone', 'food'];
@@ -169,17 +157,25 @@ let ExplorationService = class ExplorationService {
             raidCooldownDays: raidCooldownDays(academyLevel),
             canRaid: this.canRaid(n, academyLevel),
         }));
-        if (kingdom.explorerTrainingEndsAt && new Date() >= new Date(kingdom.explorerTrainingEndsAt)) {
-            kingdom.explorerCount += 1;
-            kingdom.explorerTrainingEndsAt = null;
+        const now = new Date();
+        const queue = kingdom.explorerTrainingQueueJson
+            ? JSON.parse(kingdom.explorerTrainingQueueJson) : [];
+        const completed = queue.filter(t => new Date(t) <= now);
+        const remaining = queue.filter(t => new Date(t) > now);
+        if (completed.length > 0) {
+            kingdom.explorerCount += completed.length;
+            kingdom.explorerTrainingQueueJson = remaining.length ? JSON.stringify(remaining) : null;
             await this.kingdomRepo.save(kingdom);
         }
+        const trainingQueue = remaining;
         return {
             fogRadius: radius,
             academyLevel,
             explorerCount: kingdom.explorerCount,
             maxExplorers: maxExplorers(academyLevel),
             explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt ?? null,
+            explorerTrainingCount: kingdom.explorerTrainingCount ?? 0,
+            trainingQueue,
             activeMissions,
             returnedMissions,
             nodes: visibleNodes,
@@ -192,12 +188,13 @@ let ExplorationService = class ExplorationService {
         if (!academy || academy.level < 1)
             throw new common_1.BadRequestException('Academy required');
         const max = maxExplorers(academy.level);
-        const totalExplorers = kingdom.explorerCount + (kingdom.explorerTrainingEndsAt ? 1 : 0);
+        const nowTs = new Date();
+        const qNow = kingdom.explorerTrainingQueueJson
+            ? JSON.parse(kingdom.explorerTrainingQueueJson).filter((t) => new Date(t) > nowTs) : [];
+        const inTraining = qNow.length;
+        const totalExplorers = kingdom.explorerCount + inTraining;
         if (totalExplorers >= max)
             throw new common_1.BadRequestException(`Max explorers for Academy level: ${max}`);
-        if (kingdom.explorerTrainingEndsAt && new Date() < new Date(kingdom.explorerTrainingEndsAt)) {
-            throw new common_1.BadRequestException('חוקר כבר באימון — המתן לסיום');
-        }
         const COST_GOLD = 200;
         const COST_GEMS = 20;
         if (kingdom.gold < COST_GOLD)
@@ -208,12 +205,15 @@ let ExplorationService = class ExplorationService {
         kingdom.gems = (kingdom.gems ?? 0) - COST_GEMS;
         const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
         const trainSecs = explorerTrainingSecs(academy.level, !!isVip);
-        kingdom.explorerTrainingEndsAt = new Date(Date.now() + trainSecs * 1000);
+        const q = kingdom.explorerTrainingQueueJson
+            ? JSON.parse(kingdom.explorerTrainingQueueJson) : [];
+        q.push(new Date(Date.now() + trainSecs * 1000).toISOString());
+        kingdom.explorerTrainingQueueJson = JSON.stringify(q);
         await this.kingdomRepo.save(kingdom);
         return {
             explorerCount: kingdom.explorerCount,
             maxExplorers: max,
-            explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt,
+            trainingQueue: JSON.parse(kingdom.explorerTrainingQueueJson),
             trainingSecs: trainSecs,
         };
     }
@@ -269,12 +269,14 @@ let ExplorationService = class ExplorationService {
         const chance = this.discoveryChance(academyLevel);
         const discoveredNodeIds = [];
         if (Math.random() < chance) {
-            const DISCOVER_RADIUS = 4;
+            const DISCOVER_RADIUS = 3;
             const undiscovered = await this.nodeRepo.find({ where: { kingdomId: mission.kingdomId, discovered: false } });
             const nearby = undiscovered.filter(n => {
                 const dx = n.x - mission.targetX;
                 const dy = n.y - mission.targetY;
-                return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
+                const distToTarget = Math.sqrt(dx * dx + dy * dy);
+                const distToCenter = Math.sqrt(n.x * n.x + n.y * n.y);
+                return distToTarget <= DISCOVER_RADIUS && distToCenter <= radius;
             });
             const toDiscover = nearby.sort(() => Math.random() - 0.5).slice(0, 1);
             if (toDiscover.length > 0) {
@@ -310,9 +312,9 @@ let ExplorationService = class ExplorationService {
         if (kingdom2?.user) {
             let foundNodes = [];
             if (discoveredNodeIds.length > 0) {
-                foundNodes = await this.nodeRepo.findByIds(discoveredNodeIds);
+                foundNodes = await this.nodeRepo.findBy({ id: (0, typeorm_2.In)(discoveredNodeIds) });
             }
-            this.notificationService.create(kingdom2.user.id, 'explorer_returned', { foundNodes }).catch(() => { });
+            this.notificationService.create(kingdom2.user.id, 'explorer_returned', { missionId: mission.id, foundNodes }).catch(() => { });
         }
     }
     async raidNode(kingdomId, nodeId) {
@@ -321,6 +323,8 @@ let ExplorationService = class ExplorationService {
             throw new common_1.BadRequestException('Node not found or not discovered');
         if (node.type === map_node_entity_1.MapNodeType.HERO)
             throw new common_1.BadRequestException('Cannot raid a hero node');
+        if (!node.resourceType)
+            throw new common_1.BadRequestException('Node has no resource type');
         const academy = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: building_entity_1.BuildingType.ACADEMY } });
         if (!this.canRaid(node, academy?.level ?? 0)) {
             throw new common_1.BadRequestException('Raid cooldown not expired');
@@ -380,6 +384,10 @@ let ExplorationService = class ExplorationService {
         unit.count += 1;
         await this.unitRepo.save(unit);
         return { heroType: node.heroType, count: unit.count };
+    }
+    async clearCompletedMissions(kingdomId) {
+        await this.missionRepo.delete({ kingdomId, status: exploration_mission_entity_1.MissionStatus.RETURNED });
+        return { ok: true };
     }
     canRaid(node, academyLevel) {
         if (!node.discovered)

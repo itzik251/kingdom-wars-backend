@@ -33,15 +33,15 @@ export class BuildingService {
       manager.findOne(Kingdom, { where: { id: kingdomId } }),
     ]);
 
-    if (!building) throw new BadRequestException('Building not found');
-    if (building.isUpgrading) throw new BadRequestException('Building already upgrading');
-    if (building.level >= MAX_BUILDING_LEVEL) throw new BadRequestException('Building at max level');
+    if (!building) throw new BadRequestException('BUILDING_NOT_FOUND');
+    if (building.isUpgrading) throw new BadRequestException('ALREADY_UPGRADING');
+    if (building.level >= MAX_BUILDING_LEVEL) throw new BadRequestException('BUILDING_MAX_LEVEL');
 
     const cost = this.getUpgradeCost(building.type as BuildingType, building.level);
 
-    if (kingdom.gold < cost.gold) throw new BadRequestException('Not enough gold');
-    if (kingdom.wood < cost.wood) throw new BadRequestException('Not enough wood');
-    if (kingdom.stone < cost.stone) throw new BadRequestException('Not enough stone');
+    if (kingdom.gold < cost.gold) throw new BadRequestException('NOT_ENOUGH_GOLD');
+    if (kingdom.wood < cost.wood) throw new BadRequestException('NOT_ENOUGH_WOOD');
+    if (kingdom.stone < cost.stone) throw new BadRequestException('NOT_ENOUGH_STONE');
 
     // Atomic resource deduction using UPDATE WHERE to prevent race condition
     const deductResult = await manager
@@ -58,7 +58,7 @@ export class BuildingService {
       .execute();
 
     if (!deductResult.affected || deductResult.affected === 0) {
-      throw new BadRequestException('Not enough resources');
+      throw new BadRequestException('NOT_ENOUGH_RESOURCES');
     }
 
     // Start upgrade timer
@@ -100,7 +100,7 @@ export class BuildingService {
     const secsLeft = Math.max(0, (new Date(building.upgradeEndsAt).getTime() - Date.now()) / 1000);
     const gemCost = Math.max(1, Math.ceil(secsLeft / 60)); // 1 gem per minute
 
-    if (kingdom.gems < gemCost) throw new BadRequestException(`Need ${gemCost} gems`);
+    if (kingdom.gems < gemCost) throw new BadRequestException('NOT_ENOUGH_GEMS');
 
     kingdom.gems -= gemCost;
     building.level += 1;
@@ -109,7 +109,7 @@ export class BuildingService {
 
     // Expand storage caps on level-up
     if (building.type === BuildingType.TOWN_HALL) {
-      const mult = 1 + (building.level - 1) * 0.3;
+      const mult = 1 + (building.level - 1) * 3.2;
       await this.kingdomRepo.update({ id: kingdomId }, {
         maxGold:  Math.floor(5000 * mult),
         maxWood:  Math.floor(4000 * mult),
@@ -164,7 +164,7 @@ export class BuildingService {
 
     // VIP-only buildings
     if (buildingType === BuildingType.ARCANE_TOWER && !kingdom.isVip) {
-      throw new BadRequestException('VIP required');
+      throw new BadRequestException('VIP_REQUIRED');
     }
 
     // Cost multiplier for duplicates: 1st = 1×, 2nd = 2×, 3rd = 4×
@@ -175,9 +175,9 @@ export class BuildingService {
       stone: Math.floor(baseCost.stone * mult),
     };
 
-    if (kingdom.gold < cost.gold) throw new BadRequestException('Not enough gold');
-    if (kingdom.wood < cost.wood) throw new BadRequestException('Not enough wood');
-    if (kingdom.stone < cost.stone) throw new BadRequestException('Not enough stone');
+    if (kingdom.gold < cost.gold) throw new BadRequestException('NOT_ENOUGH_GOLD');
+    if (kingdom.wood < cost.wood) throw new BadRequestException('NOT_ENOUGH_WOOD');
+    if (kingdom.stone < cost.stone) throw new BadRequestException('NOT_ENOUGH_STONE');
 
     kingdom.gold  -= cost.gold;
     kingdom.wood  -= cost.wood;
@@ -215,9 +215,9 @@ export class BuildingService {
 
     const { cost, repairTimeSeconds } = this.getRepairCost(building.type as BuildingType, building.level);
 
-    if (kingdom.gold < cost.gold) throw new BadRequestException('Not enough gold');
-    if (kingdom.wood < cost.wood) throw new BadRequestException('Not enough wood');
-    if (kingdom.stone < cost.stone) throw new BadRequestException('Not enough stone');
+    if (kingdom.gold < cost.gold) throw new BadRequestException('NOT_ENOUGH_GOLD');
+    if (kingdom.wood < cost.wood) throw new BadRequestException('NOT_ENOUGH_WOOD');
+    if (kingdom.stone < cost.stone) throw new BadRequestException('NOT_ENOUGH_STONE');
 
     kingdom.gold -= cost.gold; kingdom.wood -= cost.wood; kingdom.stone -= cost.stone;
     building.repairEndsAt = new Date(Date.now() + repairTimeSeconds * 1000);
@@ -234,6 +234,16 @@ export class BuildingService {
       b.repairEndsAt = null;
       await this.buildingRepo.save(b);
     }
+  }
+
+  async moveBuilding(kingdomId: string, buildingId: string, gridX: number, gridY: number) {
+    const building = await this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } });
+    if (!building) throw new BadRequestException('Building not found');
+    if (gridX < 0 || gridX > 15 || gridY < 0 || gridY > 15) throw new BadRequestException('Invalid position');
+    building.gridX = gridX;
+    building.gridY = gridY;
+    await this.buildingRepo.save(building);
+    return { id: building.id, gridX, gridY };
   }
 
   async getAllUpgradeCosts(kingdomId: string) {

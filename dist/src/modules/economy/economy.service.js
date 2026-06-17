@@ -21,11 +21,12 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const building_entity_1 = require("../building/building.entity");
 const unit_entity_1 = require("../units/unit.entity");
 const user_entity_1 = require("../user/user.entity");
+const alliance_member_entity_1 = require("../alliance/alliance-member.entity");
 const notification_service_1 = require("../notifications/notification.service");
+const notification_entity_1 = require("../notifications/notification.entity");
 const game_constants_1 = require("../../constants/game.constants");
 const unit_entity_2 = require("../units/unit.entity");
 const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const lastNegativeProdNotif = new Map();
 const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.GOLD_MINE]: 'gold_mine',
     [building_entity_1.BuildingType.LUMBER_MILL]: 'lumber_mill',
@@ -33,11 +34,13 @@ const PRODUCER_BUILDINGS = {
     [building_entity_1.BuildingType.FARM]: 'farm',
 };
 let EconomyService = class EconomyService {
-    constructor(kingdomRepo, buildingRepo, unitRepo, userRepo, notifService) {
+    constructor(kingdomRepo, buildingRepo, unitRepo, userRepo, notifRepo, allianceMemberRepo, notifService) {
         this.kingdomRepo = kingdomRepo;
         this.buildingRepo = buildingRepo;
         this.unitRepo = unitRepo;
         this.userRepo = userRepo;
+        this.notifRepo = notifRepo;
+        this.allianceMemberRepo = allianceMemberRepo;
         this.notifService = notifService;
     }
     async tickAllKingdoms() {
@@ -71,8 +74,17 @@ let EconomyService = class EconomyService {
         const workerProductionBonus = 1 + workerCount * 0.04;
         const academy = buildings.find(b => b.type === building_entity_1.BuildingType.ACADEMY && !b.needsRepair);
         const academyBonus = academy ? academy.level * 0.02 : 0;
-        const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus) * workerProductionBonus;
+        const allianceMember = await this.allianceMemberRepo.findOne({ where: { kingdomId } });
+        let allianceBonus = 0;
+        if (allianceMember) {
+            const memberCount = await this.allianceMemberRepo.count({ where: { allianceId: allianceMember.allianceId } });
+            allianceBonus = Math.min(0.15, memberCount * 0.03);
+        }
+        const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus + allianceBonus) * workerProductionBonus;
         const workerSalary = workerCount * 5 * hoursElapsed;
+        const explorerCount = kingdom.explorerCount ?? 0;
+        const explorerGoldSalary = explorerCount * 10 * hoursElapsed;
+        const explorerFoodSalary = explorerCount * 3 * hoursElapsed;
         const HERO_SALARY_INTERVAL_HOURS = 1;
         const heroSalaryTicks = Math.floor(hoursElapsed / HERO_SALARY_INTERVAL_HOURS);
         if (heroSalaryTicks > 0) {
@@ -88,16 +100,18 @@ let EconomyService = class EconomyService {
         }
         const newFood = kingdom.food + production.food * bonus - upkeep;
         const foodShortfall = Math.max(0, -newFood);
-        kingdom.gold = Math.min(kingdom.maxGold, Math.max(0, Math.floor(kingdom.gold + production.gold * bonus - workerSalary)));
-        kingdom.wood = Math.min(kingdom.maxWood, Math.floor(kingdom.wood + production.wood * bonus));
-        kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
-        kingdom.food = Math.min(kingdom.maxFood, Math.max(0, Math.floor(newFood)));
+        const storageBoostActive = !!(kingdom.storageBoostUntil && now < new Date(kingdom.storageBoostUntil));
+        const sMult = storageBoostActive ? 1.5 : 1;
+        kingdom.gold = Math.min(Math.floor(kingdom.maxGold * sMult), Math.max(0, Math.floor(kingdom.gold + production.gold * bonus - workerSalary - explorerGoldSalary)));
+        kingdom.wood = Math.min(Math.floor(kingdom.maxWood * sMult), Math.floor(kingdom.wood + production.wood * bonus));
+        kingdom.stone = Math.min(Math.floor(kingdom.maxStone * sMult), Math.floor(kingdom.stone + production.stone * bonus));
+        kingdom.food = Math.min(Math.floor(kingdom.maxFood * sMult), Math.max(0, Math.floor(newFood - explorerFoodSalary)));
         const ragnar = units.find(u => u.type === 'ragnar' && u.count > 0);
         if (ragnar) {
             kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
         }
         const gemMines = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair);
-        const gemMineRate = gemMines.reduce((sum, b) => sum + b.level * 3, 0);
+        const gemMineRate = gemMines.reduce((sum, b) => sum + Math.floor(5 * Math.pow(1.2, b.level - 1)), 0);
         if (gemMineRate > 0) {
             kingdom.gems = Math.floor((kingdom.gems || 0) + gemMineRate * hoursElapsed);
         }
@@ -147,22 +161,35 @@ let EconomyService = class EconomyService {
             const hasHeroes = units.some(u => unit_entity_2.HERO_TYPES.has(u.type) && u.count > 0);
             if (userId && hasHeroes) {
                 const hourlyGemsCost = units.reduce((s, u) => unit_entity_2.HERO_TYPES.has(u.type) && u.count > 0 ? s + (unit_entity_2.HERO_SALARY_GEMS[u.type] ?? 0) : s, 0);
-                if (hourlyGemsCost > 0 && (kingdom.gems ?? 0) < hourlyGemsCost * 10) {
-                    this.notifService.create(resolvedUserId, 'low_gems', { ...userPayload, gems: kingdom.gems ?? 0 }).catch(() => { });
+                const gemsLeft = kingdom.gems ?? 0;
+                const ragnarCount = units.find(u => u.type === 'ragnar' && u.count > 0)?.count ?? 0;
+                const gemMineRate = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair)
+                    .reduce((s, b) => s + Math.floor(5 * Math.pow(1.2, b.level - 1)), 0) + (ragnarCount > 0 ? 2 : 0);
+                const isGemsDeficit = hourlyGemsCost > gemMineRate;
+                const lastGemsSent = await this.notifRepo.findOne({ where: { user: { id: resolvedUserId }, type: 'low_gems' }, order: { createdAt: 'DESC' } });
+                const gemsCooldownOk = !lastGemsSent || Date.now() - new Date(lastGemsSent.createdAt).getTime() > NOTIF_COOLDOWN_MS;
+                if (hourlyGemsCost > 0 && gemsLeft < hourlyGemsCost * 12 && gemsCooldownOk) {
+                    this.notifService.create(resolvedUserId, 'low_gems', {
+                        ...userPayload,
+                        gems: gemsLeft,
+                        salary: hourlyGemsCost,
+                        prod: gemMineRate,
+                        deficit: isGemsDeficit,
+                    }).catch(() => { });
                 }
             }
             if (userId) {
-                const hourlyFoodProduction = Math.floor(this.calculateProduction(buildings, 1).food);
+                const hourlyFoodProduction = Math.floor(this.calculateProduction(buildings, 1).food * bonus);
                 const hourlyUpkeep = Math.floor(this.calculateUpkeep(units, 1));
                 const foodLeft = kingdom.food ?? 0;
                 const hoursLeft = hourlyUpkeep > 0 ? foodLeft / hourlyUpkeep : Infinity;
-                const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
                 const isDeficit = hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep;
                 const isLow = hoursLeft < 12;
-                const hourlyFoodWithUpgrades = Math.floor(this.calculateProduction(buildings.map(b => b.isUpgrading ? { ...b, isUpgrading: false } : b), 1).food);
+                const hourlyFoodWithUpgrades = Math.floor(this.calculateProduction(buildings.map(b => b.isUpgrading ? { ...b, isUpgrading: false } : b), 1).food * bonus);
                 const wouldBeDeficitWithoutUpgrades = hourlyUpkeep > 0 && hourlyFoodWithUpgrades < hourlyUpkeep;
-                if (isDeficit && isLow && wouldBeDeficitWithoutUpgrades && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
-                    lastNegativeProdNotif.set(kingdomId, Date.now());
+                const lastProdSent = await this.notifRepo.findOne({ where: { user: { id: resolvedUserId }, type: 'negative_production' }, order: { createdAt: 'DESC' } });
+                const prodCooldownOk = !lastProdSent || Date.now() - new Date(lastProdSent.createdAt).getTime() > NOTIF_COOLDOWN_MS;
+                if (isDeficit && isLow && wouldBeDeficitWithoutUpgrades && prodCooldownOk) {
                     this.notifService.create(resolvedUserId, 'negative_production', {
                         ...userPayload,
                         food: foodLeft,
@@ -239,7 +266,7 @@ let EconomyService = class EconomyService {
                 if (building.type === building_entity_1.BuildingType.TOWN_HALL) {
                     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
                     if (kingdom) {
-                        const mult = 1 + (building.level - 1) * 0.3;
+                        const mult = 1 + (building.level - 1) * 0.6;
                         kingdom.maxGold = Math.floor(5000 * mult);
                         kingdom.maxWood = Math.floor(4000 * mult);
                         kingdom.maxStone = Math.floor(3000 * mult);
@@ -292,7 +319,7 @@ let EconomyService = class EconomyService {
         const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonusInRates) * workerProductionBonus;
         const workerSalary = workerCount * 5;
         const gemMinesForRate = buildings.filter(b => b.type === building_entity_1.BuildingType.GEM_FORGE && !b.needsRepair);
-        const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 3, 0);
+        const gemMineRate = gemMinesForRate.reduce((s, b) => s + Math.floor(5 * Math.pow(1.2, b.level - 1)), 0);
         const unitsArr = units ?? [];
         const ragnarCount = unitsArr.find(u => u.type === 'ragnar')?.count ?? 0;
         const gemsPerHour = gemMineRate + ragnarCount * 2;
@@ -320,8 +347,12 @@ exports.EconomyService = EconomyService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __param(2, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
     __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
+    __param(4, (0, typeorm_1.InjectRepository)(notification_entity_1.Notification)),
+    __param(5, (0, typeorm_1.InjectRepository)(alliance_member_entity_1.AllianceMember)),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

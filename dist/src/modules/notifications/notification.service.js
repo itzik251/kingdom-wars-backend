@@ -41,6 +41,9 @@ const UNIT_NAMES = {
     elite_guard: { en: 'Elite Guards', he: 'שומרי עילית', es: 'Guardias élite', fr: 'Gardes d\'élite', de: 'Elitegarden', ru: 'Элитная стража', pt: 'Guardas de elite', ar: 'الحرس النخبوي' },
     paladin: { en: 'Paladins', he: 'פלדינים', es: 'Paladines', fr: 'Paladins', de: 'Paladine', ru: 'Паладины', pt: 'Paladinos', ar: 'الفرسان المقدسون' },
     dragon_rider: { en: 'Dragon Riders', he: 'רוכבי דרקון', es: 'Jinetes dragón', fr: 'Cavaliers dragons', de: 'Drachenreiter', ru: 'Всадники дракона', pt: 'Cavaleiros dragão', ar: 'راكبو التنانين' },
+    ogre: { en: 'Forest Ogre', he: 'שמן היער', es: 'Ogro del bosque', fr: 'Ogre des forêts', de: 'Waldoger', ru: 'Лесной огр', pt: 'Ogro da floresta', ar: 'وحش الغابة' },
+    mage: { en: 'White Wizard', he: 'קוסם לבן', es: 'Mago blanco', fr: 'Mage blanc', de: 'Weißer Magier', ru: 'Белый маг', pt: 'Mago branco', ar: 'الساحر الأبيض' },
+    dwarf_fighter: { en: 'Dwarf Fighter', he: 'גמד לוחם', es: 'Guerrero enano', fr: 'Guerrier nain', de: 'Zwergenkämpfer', ru: 'Боец-гном', pt: 'Guerreiro anão', ar: 'محارب الأقزام' },
 };
 const RESOURCE_ICONS = {
     gold: '💰', wood: '🪵', stone: '🪨', food: '🌾', magic: '🔮', gems: '💎',
@@ -64,8 +67,10 @@ function translateUnit(type, lang) {
 }
 function translateExplorerResult(foundNodes, lang) {
     return foundNodes.map(n => {
-        if (n.type === 'hero')
-            return `🦸 ${HERO_LABEL[lang]}: ${n.heroType}`;
+        if (n.type === 'hero') {
+            const heroName = UNIT_NAMES[n.heroType ?? '']?.[lang] ?? n.heroType ?? HERO_LABEL[lang];
+            return `🦸 ${heroName}`;
+        }
         const icon = RESOURCE_ICONS[n.resourceType ?? ''] ?? '📦';
         const name = RESOURCE_NAMES[n.resourceType ?? '']?.[lang] ?? n.resourceType ?? '?';
         return `${icon} ${name}`;
@@ -153,14 +158,14 @@ const MESSAGES = {
         ar: '🌾 الطعام ينفد! سيهرب الجنود إذا لم تنتج المزيد من الطعام',
     },
     low_gems: {
-        en: '💎 Gems running low ({gems} left)! Heroes won\'t fight without salary',
-        he: '💎 אבני החן אוזלות ({gems} נותרו)! גיבורים לא ייצאו לקרב ללא משכורת',
-        es: '💎 ¡Pocas gemas ({gems} restantes)! Los héroes no lucharán sin salario',
-        fr: '💎 Gemmes épuisées ({gems} restantes)! Les héros ne combattront pas sans salaire',
-        de: '💎 Edelsteine werden knapp ({gems} übrig)! Helden kämpfen ohne Gehalt nicht',
-        ru: '💎 Камней мало ({gems} осталось)! Герои не будут сражаться без зарплаты',
-        pt: '💎 Poucas gemas ({gems} restantes)! Heróis não lutarão sem salário',
-        ar: '💎 الجواهر تنفد ({gems} متبقية)! الأبطال لن يقاتلوا بدون راتب',
+        en: '💎 Gems low! {gems} left · Salary: {salary}/h · Production: {prod}/h',
+        he: '💎 אבני חן אוזלות! נותרו {gems} · משכורת גיבורים: {salary}/שעה · ייצור: {prod}/שעה',
+        es: '💎 ¡Gemas bajas! {gems} restantes · Salario: {salary}/h · Producción: {prod}/h',
+        fr: '💎 Gemmes basses! {gems} restantes · Salaire: {salary}/h · Production: {prod}/h',
+        de: '💎 Wenig Edelsteine! {gems} übrig · Gehalt: {salary}/h · Produktion: {prod}/h',
+        ru: '💎 Мало камней! {gems} осталось · Зарплата: {salary}/ч · Добыча: {prod}/ч',
+        pt: '💎 Gemas baixas! {gems} restantes · Salário: {salary}/h · Produção: {prod}/h',
+        ar: '💎 الجواهر تنخفض! {gems} متبقية · الراتب: {salary}/س · الإنتاج: {prod}/س',
     },
     explorer_returned_found: {
         en: '🧭 Your explorer returned! Found: {result}',
@@ -181,6 +186,46 @@ const MESSAGES = {
         ru: '🧭 Исследователь вернулся... на этот раз ничего не нашёл 😔',
         pt: '🧭 Seu explorador voltou... não encontrou nada desta vez 😔',
         ar: '🧭 عاد مستكشفك... لم يجد شيئاً هذه المرة 😔',
+    },
+    shield_purchased: {
+        en: '🛡️ Shield activated — protected for 24h',
+        he: '🛡️ מגן הופעל — מוגן ל-24 שעות',
+        es: '🛡️ Escudo activado — protegido por 24h',
+        fr: '🛡️ Bouclier activé — protégé 24h',
+        de: '🛡️ Schild aktiviert — 24h geschützt',
+        ru: '🛡️ Щит активирован — защита 24ч',
+        pt: '🛡️ Escudo ativado — protegido por 24h',
+        ar: '🛡️ تم تفعيل الدرع — محمي لمدة 24 ساعة',
+    },
+    storage_expanded: {
+        en: '📦 Storage expanded — capacity ×1.5 for 24h',
+        he: '📦 האחסון הורחב — קיבולת ×1.5 ל-24 שעות',
+        es: '📦 Almacenamiento ampliado — capacidad ×1.5 por 24h',
+        fr: '📦 Stockage élargi — capacité ×1.5 pendant 24h',
+        de: '📦 Lager erweitert — Kapazität ×1.5 für 24h',
+        ru: '📦 Хранилище расширено — ёмкость ×1.5 на 24ч',
+        pt: '📦 Armazenamento expandido — capacidade ×1.5 por 24h',
+        ar: '📦 تم توسيع التخزين — السعة ×1.5 لمدة 24 ساعة',
+    },
+    worker_hired: {
+        en: '👷 New worker hired — production +4%',
+        he: '👷 עובד חדש גויס — ייצור +4%',
+        es: '👷 Nuevo trabajador contratado — producción +4%',
+        fr: '👷 Nouveau travailleur embauché — production +4%',
+        de: '👷 Neuer Arbeiter eingestellt — Produktion +4%',
+        ru: '👷 Нанят новый рабочий — производство +4%',
+        pt: '👷 Novo trabalhador contratado — produção +4%',
+        ar: '👷 تم توظيف عامل جديد — الإنتاج +4%',
+    },
+    worker_fired: {
+        en: '👷 Worker dismissed — received 25 gold',
+        he: '👷 עובד פוטר — קיבלת 25 זהב',
+        es: '👷 Trabajador despedido — recibiste 25 de oro',
+        fr: '👷 Travailleur licencié — vous avez reçu 25 or',
+        de: '👷 Arbeiter entlassen — 25 Gold erhalten',
+        ru: '👷 Рабочий уволен — получено 25 золота',
+        pt: '👷 Trabalhador demitido — recebeu 25 de ouro',
+        ar: '👷 تم فصل العامل — حصلت على 25 ذهباً',
     },
     negative_production: {
         en: '📉 Production deficit! Food: {food} | Production: {prod}/h | Upkeep: {upkeep}/h — upgrade Farms or reduce your army',
@@ -228,6 +273,47 @@ let NotificationService = class NotificationService {
             take: 20,
         });
     }
+    async getMessages(userId, lang = 'en') {
+        const notifs = await this.notifRepo.find({
+            where: { user: { id: userId } },
+            order: { createdAt: 'DESC' },
+            take: 100,
+        });
+        const VALID = ['en', 'he', 'es', 'fr', 'de', 'ru', 'pt', 'ar'];
+        if (!VALID.includes(lang))
+            lang = 'en';
+        return notifs.map(n => {
+            let text = '';
+            try {
+                if (n.type === 'explorer_returned') {
+                    const foundNodes = n.payload.foundNodes ?? [];
+                    const resolvedType = foundNodes.length > 0 ? 'explorer_returned_found' : 'explorer_returned_empty';
+                    const tpl = MESSAGES[resolvedType]?.[lang] ?? MESSAGES[resolvedType]?.['en'] ?? '';
+                    const result = translateExplorerResult(foundNodes, lang);
+                    text = formatMessage(tpl, { result });
+                }
+                else {
+                    const tpl = MESSAGES[n.type]?.[lang] ?? MESSAGES[n.type]?.['en'] ?? n.type;
+                    const translatedPayload = {
+                        ...n.payload,
+                        building: n.payload.building ? translateBuilding(n.payload.building, lang) : undefined,
+                        unit: n.payload.unit ? translateUnit(n.payload.unit, lang) : undefined,
+                    };
+                    text = formatMessage(tpl, translatedPayload);
+                }
+            }
+            catch {
+                text = n.type;
+            }
+            return { id: n.id, type: n.type, text, read: n.read, createdAt: n.createdAt };
+        });
+    }
+    async clearMessages(userId) {
+        await this.notifRepo.createQueryBuilder()
+            .delete()
+            .where('user_id = :userId', { userId })
+            .execute();
+    }
     async markRead(userId) {
         await this.notifRepo
             .createQueryBuilder()
@@ -258,12 +344,15 @@ let NotificationService = class NotificationService {
         if (!VALID.includes(lang))
             lang = 'en';
         if (type === 'explorer_returned') {
+            const missionKey = `${userId}:explorer_returned:${payload.missionId ?? Date.now()}`;
+            if (this.recentSends.get(missionKey))
+                return;
+            this.recentSends.set(missionKey, Date.now());
             const foundNodes = payload.foundNodes ?? [];
             const resolvedType = foundNodes.length > 0 ? 'explorer_returned_found' : 'explorer_returned_empty';
             const msgTemplates = MESSAGES[resolvedType];
             const result = translateExplorerResult(foundNodes, lang);
             const text = formatMessage(msgTemplates[lang] ?? msgTemplates['en'], { result });
-            const botUsername = this.config.get('TELEGRAM_BOT_USERNAME') || 'KingdomWarsBot';
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

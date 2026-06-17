@@ -6,7 +6,9 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { Building, BuildingType } from '../building/building.entity';
 import { Unit } from '../units/unit.entity';
 import { User } from '../user/user.entity';
+import { AllianceMember } from '../alliance/alliance-member.entity';
 import { NotificationService } from '../notifications/notification.service';
+import { Notification } from '../notifications/notification.entity';
 import {
   BASE_PRODUCTION,
   PRODUCTION_MULTIPLIER,
@@ -16,8 +18,6 @@ import {
 import { HERO_TYPES, HERO_SALARY_GEMS } from '../units/unit.entity';
 
 const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
-const lastNegativeProdNotif = new Map<string, number>(); // kingdomId → timestamp
-const lastLowGemsNotif = new Map<string, number>(); // kingdomId → timestamp
 
 const PRODUCER_BUILDINGS: Partial<Record<BuildingType, keyof typeof BASE_PRODUCTION>> = {
   [BuildingType.GOLD_MINE]:    'gold_mine',
@@ -33,6 +33,8 @@ export class EconomyService {
     @InjectRepository(Building) private buildingRepo: Repository<Building>,
     @InjectRepository(Unit) private unitRepo: Repository<Unit>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Notification) private notifRepo: Repository<Notification>,
+    @InjectRepository(AllianceMember) private allianceMemberRepo: Repository<AllianceMember>,
     @Inject(forwardRef(() => NotificationService)) private notifService: NotificationService,
   ) {}
 
@@ -76,10 +78,21 @@ export class EconomyService {
     const workerProductionBonus = 1 + workerCount * 0.04; // +4% per worker
     const academy = buildings.find(b => b.type === BuildingType.ACADEMY && !b.needsRepair);
     const academyBonus = academy ? academy.level * 0.02 : 0; // +2% per academy level
-    const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus) * workerProductionBonus;
+    const allianceMember = await this.allianceMemberRepo.findOne({ where: { kingdomId } });
+    let allianceBonus = 0;
+    if (allianceMember) {
+      const memberCount = await this.allianceMemberRepo.count({ where: { allianceId: allianceMember.allianceId } });
+      allianceBonus = Math.min(0.15, memberCount * 0.03); // +3% per member, max +15%
+    }
+    const bonus = (1 + weakBonus + boostBonus + vipBonus + academyBonus + allianceBonus) * workerProductionBonus;
 
     // Worker salary: 5 gold/hour per worker
     const workerSalary = workerCount * 5 * hoursElapsed;
+
+    // Explorer salary: 10 gold/hour + 3 food/hour per explorer (requires academy)
+    const explorerCount = kingdom.explorerCount ?? 0;
+    const explorerGoldSalary = explorerCount * 10 * hoursElapsed;
+    const explorerFoodSalary = explorerCount * 3 * hoursElapsed;
 
     // Hero salary: deduct gems daily; if not enough gems, deduct what we can (heroes stay)
     const HERO_SALARY_INTERVAL_HOURS = 1;
@@ -100,10 +113,14 @@ export class EconomyService {
     const newFood = kingdom.food + production.food * bonus - upkeep;
     const foodShortfall = Math.max(0, -newFood); // how much food we're short
 
-    kingdom.gold  = Math.min(kingdom.maxGold,  Math.max(0, Math.floor(kingdom.gold  + production.gold  * bonus - workerSalary)));
-    kingdom.wood  = Math.min(kingdom.maxWood,  Math.floor(kingdom.wood  + production.wood  * bonus));
-    kingdom.stone = Math.min(kingdom.maxStone, Math.floor(kingdom.stone + production.stone * bonus));
-    kingdom.food  = Math.min(kingdom.maxFood,  Math.max(0, Math.floor(newFood)));
+    // Storage boost: ×1.5 cap when active (base values kept in DB)
+    const storageBoostActive = !!(kingdom.storageBoostUntil && now < new Date(kingdom.storageBoostUntil));
+    const sMult = storageBoostActive ? 1.5 : 1;
+
+    kingdom.gold  = Math.min(Math.floor(kingdom.maxGold  * sMult), Math.max(0, Math.floor(kingdom.gold  + production.gold  * bonus - workerSalary - explorerGoldSalary)));
+    kingdom.wood  = Math.min(Math.floor(kingdom.maxWood  * sMult), Math.floor(kingdom.wood  + production.wood  * bonus));
+    kingdom.stone = Math.min(Math.floor(kingdom.maxStone * sMult), Math.floor(kingdom.stone + production.stone * bonus));
+    kingdom.food  = Math.min(Math.floor(kingdom.maxFood  * sMult), Math.max(0, Math.floor(newFood - explorerFoodSalary)));
 
     // Ragnar hero generates 2 gems/hour
     const ragnar = units.find(u => u.type === 'ragnar' && u.count > 0);
@@ -111,9 +128,9 @@ export class EconomyService {
       kingdom.gems = Math.floor(kingdom.gems + 2 * hoursElapsed);
     }
 
-    // Gem Mine: each mine generates level*2 gems/hour
+    // Gem Mine: floor(5 × 1.15^(level-1)) gems/hour
     const gemMines = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair);
-    const gemMineRate = gemMines.reduce((sum, b) => sum + b.level * 3, 0);
+    const gemMineRate = gemMines.reduce((sum, b) => sum + Math.floor(5 * Math.pow(1.2, b.level - 1)), 0);
     if (gemMineRate > 0) {
       kingdom.gems = Math.floor((kingdom.gems || 0) + gemMineRate * hoursElapsed);
     }
@@ -180,12 +197,13 @@ export class EconomyService {
         const hourlyGemsCost = units.reduce((s, u) =>
           HERO_TYPES.has(u.type) && u.count > 0 ? s + (HERO_SALARY_GEMS[u.type] ?? 0) : s, 0);
         const gemsLeft = kingdom.gems ?? 0;
+        const ragnarCount = units.find(u => u.type === 'ragnar' && u.count > 0)?.count ?? 0;
         const gemMineRate = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair)
-          .reduce((s, b) => s + b.level * 3, 0);
+          .reduce((s, b) => s + Math.floor(5 * Math.pow(1.2, b.level - 1)), 0) + (ragnarCount > 0 ? 2 : 0);
         const isGemsDeficit = hourlyGemsCost > gemMineRate; // salary outpaces production
-        const lastGemsSent = lastLowGemsNotif.get(kingdomId) ?? 0;
-        if (hourlyGemsCost > 0 && gemsLeft < hourlyGemsCost * 12 && Date.now() - lastGemsSent > NOTIF_COOLDOWN_MS) {
-          lastLowGemsNotif.set(kingdomId, Date.now());
+        const lastGemsSent = await this.notifRepo.findOne({ where: { user: { id: resolvedUserId }, type: 'low_gems' }, order: { createdAt: 'DESC' } });
+        const gemsCooldownOk = !lastGemsSent || Date.now() - new Date(lastGemsSent.createdAt).getTime() > NOTIF_COOLDOWN_MS;
+        if (hourlyGemsCost > 0 && gemsLeft < hourlyGemsCost * 12 && gemsCooldownOk) {
           this.notifService.create(resolvedUserId, 'low_gems', {
             ...userPayload,
             gems: gemsLeft,
@@ -198,19 +216,19 @@ export class EconomyService {
 
       // Production deficit warning — once per 24h, only when food < 12h of upkeep
       if (userId) {
-        const hourlyFoodProduction = Math.floor(this.calculateProduction(buildings, 1).food);
+        const hourlyFoodProduction = Math.floor(this.calculateProduction(buildings, 1).food * bonus);
         const hourlyUpkeep = Math.floor(this.calculateUpkeep(units, 1));
         const foodLeft = kingdom.food ?? 0;
         const hoursLeft = hourlyUpkeep > 0 ? foodLeft / hourlyUpkeep : Infinity;
-        const lastSent = lastNegativeProdNotif.get(kingdomId) ?? 0;
         const isDeficit = hourlyUpkeep > 0 && hourlyFoodProduction < hourlyUpkeep;
         const isLow = hoursLeft < 12;
         // Skip notification if the deficit is only due to buildings being upgraded (temporary)
         const hourlyFoodWithUpgrades = Math.floor(this.calculateProduction(
-          buildings.map(b => b.isUpgrading ? ({ ...b, isUpgrading: false } as any) : b), 1).food);
+          buildings.map(b => b.isUpgrading ? ({ ...b, isUpgrading: false } as any) : b), 1).food * bonus);
         const wouldBeDeficitWithoutUpgrades = hourlyUpkeep > 0 && hourlyFoodWithUpgrades < hourlyUpkeep;
-        if (isDeficit && isLow && wouldBeDeficitWithoutUpgrades && Date.now() - lastSent > NOTIF_COOLDOWN_MS) {
-          lastNegativeProdNotif.set(kingdomId, Date.now());
+        const lastProdSent = await this.notifRepo.findOne({ where: { user: { id: resolvedUserId }, type: 'negative_production' }, order: { createdAt: 'DESC' } });
+        const prodCooldownOk = !lastProdSent || Date.now() - new Date(lastProdSent.createdAt).getTime() > NOTIF_COOLDOWN_MS;
+        if (isDeficit && isLow && wouldBeDeficitWithoutUpgrades && prodCooldownOk) {
           this.notifService.create(resolvedUserId, 'negative_production', {
             ...userPayload,
             food: foodLeft,
@@ -294,7 +312,7 @@ export class EconomyService {
         if (building.type === BuildingType.TOWN_HALL) {
           const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
           if (kingdom) {
-            const mult = 1 + (building.level - 1) * 0.3;
+            const mult = 1 + (building.level - 1) * 0.6;
             kingdom.maxGold  = Math.floor(5000 * mult);
             kingdom.maxWood  = Math.floor(4000 * mult);
             kingdom.maxStone = Math.floor(3000 * mult);
@@ -351,7 +369,7 @@ export class EconomyService {
     const workerSalary = workerCount * 5;
 
     const gemMinesForRate = buildings.filter(b => b.type === BuildingType.GEM_FORGE && !b.needsRepair);
-    const gemMineRate = gemMinesForRate.reduce((s, b) => s + b.level * 3, 0);
+    const gemMineRate = gemMinesForRate.reduce((s, b) => s + Math.floor(5 * Math.pow(1.2, b.level - 1)), 0);
 
     const unitsArr = units ?? [];
     const ragnarCount = unitsArr.find(u => u.type === 'ragnar')?.count ?? 0;

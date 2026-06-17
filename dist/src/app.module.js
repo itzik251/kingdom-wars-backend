@@ -26,10 +26,10 @@ const vip_module_1 = require("./modules/vip/vip.module");
 const ads_module_1 = require("./modules/ads/ads.module");
 const telegram_module_1 = require("./modules/telegram/telegram.module");
 const admin_module_1 = require("./modules/admin/admin.module");
-const cryptobot_full_module_1 = require("./modules/cryptobot/cryptobot.full.module");
 const antibot_module_1 = require("./modules/antibot/antibot.module");
 const dev_module_1 = require("./modules/dev/dev.module");
 const exploration_module_1 = require("./modules/exploration/exploration.module");
+const withdrawal_module_1 = require("./modules/withdrawal/withdrawal.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -78,10 +78,10 @@ exports.AppModule = AppModule = __decorate([
             ads_module_1.AdsModule,
             telegram_module_1.TelegramModule,
             admin_module_1.AdminModule,
-            cryptobot_full_module_1.CryptoBotFullModule,
             antibot_module_1.AntiBotModule,
             dev_module_1.DevModule,
             exploration_module_1.ExplorationModule,
+            withdrawal_module_1.WithdrawalModule,
         ],
     })
 ], AppModule);

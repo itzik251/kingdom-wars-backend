@@ -10,12 +10,10 @@ import { Unit } from '../units/unit.entity';
 import { UnitType } from '../units/unit.entity';
 import { NotificationService } from '../notifications/notification.service';
 
-// Academy level → max explorers
+// Academy level → max explorers (1 per 3 levels)
 function maxExplorers(academyLevel: number): number {
-  if (academyLevel >= 10) return 5;
-  if (academyLevel >= 6)  return 3;
-  if (academyLevel >= 3)  return 2;
-  return 1;
+  if (academyLevel <= 0) return 0;
+  return Math.ceil(academyLevel / 3);
 }
 
 // Academy level → training time in seconds
@@ -28,26 +26,21 @@ function explorerTrainingSecs(academyLevel: number, isVip: boolean): number {
   return isVip ? Math.floor(secs * 0.75) : secs;
 }
 
-// Academy level → raid cooldown in days
-function raidCooldownDays(academyLevel: number): number {
-  if (academyLevel >= 10) return 1;
-  if (academyLevel >= 6)  return 3;
-  if (academyLevel >= 3)  return 5;
-  return 7;
+// Raid cooldown: fixed 24 hours for all
+function raidCooldownDays(_academyLevel: number): number {
+  return 1;
 }
 
-// Distance → mission duration in hours (0.5h per tile, min 1h, max 12h)
+// Distance → mission duration in hours (0.5h per tile, min 1h, max 24h)
 function missionHours(distance: number): number {
-  return Math.min(12, Math.max(1, Math.round(distance * 0.5)));
+  return Math.min(24, Math.max(1, Math.round(distance * 0.5)));
 }
 
 // How many tiles each research-power level can see (fog radius)
 // Linear: lvl 1=1, lvl 30=22 (full map clear). Each level adds ~0.73 tiles.
-export function fogRadius(explorerCount: number, academyLevel: number): number {
-  if (academyLevel <= 0 || explorerCount <= 0) return 0;
-  const base = Math.round(academyLevel * 22 / 30);
-  const explorerBonus = (explorerCount - 1) * 1.5;
-  return Math.min(25, Math.round(base + explorerBonus));
+export function fogRadius(_explorerCount: number, academyLevel: number): number {
+  if (academyLevel <= 0) return 0;
+  return Math.min(22, Math.round(2 + (academyLevel - 1) * 20 / 29));
 }
 
 const EXPLORATION_HEROES = [UnitType.OGRE, UnitType.MAGE, UnitType.DWARF_FIGHTER];
@@ -175,12 +168,18 @@ export class ExplorationService {
         canRaid: this.canRaid(n, academyLevel),
       }));
 
-    // Complete training if timer expired
-    if (kingdom.explorerTrainingEndsAt && new Date() >= new Date(kingdom.explorerTrainingEndsAt)) {
-      kingdom.explorerCount += 1;
-      kingdom.explorerTrainingEndsAt = null;
+    // Complete training — independent timers per explorer
+    const now = new Date();
+    const queue: string[] = kingdom.explorerTrainingQueueJson
+      ? JSON.parse(kingdom.explorerTrainingQueueJson) : [];
+    const completed = queue.filter(t => new Date(t) <= now);
+    const remaining = queue.filter(t => new Date(t) > now);
+    if (completed.length > 0) {
+      kingdom.explorerCount += completed.length;
+      kingdom.explorerTrainingQueueJson = remaining.length ? JSON.stringify(remaining) : null;
       await this.kingdomRepo.save(kingdom);
     }
+    const trainingQueue = remaining;
 
     return {
       fogRadius: radius,
@@ -188,6 +187,8 @@ export class ExplorationService {
       explorerCount: kingdom.explorerCount,
       maxExplorers: maxExplorers(academyLevel),
       explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt ?? null,
+      explorerTrainingCount: kingdom.explorerTrainingCount ?? 0,
+      trainingQueue,
       activeMissions,
       returnedMissions,
       nodes: visibleNodes,
@@ -202,11 +203,12 @@ export class ExplorationService {
 
     if (!academy || academy.level < 1) throw new BadRequestException('Academy required');
     const max = maxExplorers(academy.level);
-    const totalExplorers = kingdom.explorerCount + (kingdom.explorerTrainingEndsAt ? 1 : 0);
+    const nowTs = new Date();
+    const qNow: string[] = kingdom.explorerTrainingQueueJson
+      ? JSON.parse(kingdom.explorerTrainingQueueJson).filter((t: string) => new Date(t) > nowTs) : [];
+    const inTraining = qNow.length;
+    const totalExplorers = kingdom.explorerCount + inTraining;
     if (totalExplorers >= max) throw new BadRequestException(`Max explorers for Academy level: ${max}`);
-    if (kingdom.explorerTrainingEndsAt && new Date() < new Date(kingdom.explorerTrainingEndsAt)) {
-      throw new BadRequestException('חוקר כבר באימון — המתן לסיום');
-    }
 
     const COST_GOLD = 200;
     const COST_GEMS = 20;
@@ -218,13 +220,18 @@ export class ExplorationService {
 
     const isVip = kingdom.vipExpiresAt && new Date() < new Date(kingdom.vipExpiresAt);
     const trainSecs = explorerTrainingSecs(academy.level, !!isVip);
-    kingdom.explorerTrainingEndsAt = new Date(Date.now() + trainSecs * 1000);
+
+    // Independent timer — each hire gets its own 30-min countdown
+    const q: string[] = kingdom.explorerTrainingQueueJson
+      ? JSON.parse(kingdom.explorerTrainingQueueJson) : [];
+    q.push(new Date(Date.now() + trainSecs * 1000).toISOString());
+    kingdom.explorerTrainingQueueJson = JSON.stringify(q);
 
     await this.kingdomRepo.save(kingdom);
     return {
       explorerCount: kingdom.explorerCount,
       maxExplorers: max,
-      explorerTrainingEndsAt: kingdom.explorerTrainingEndsAt,
+      trainingQueue: JSON.parse(kingdom.explorerTrainingQueueJson),
       trainingSecs: trainSecs,
     };
   }
@@ -285,12 +292,15 @@ export class ExplorationService {
     const discoveredNodeIds: string[] = [];
 
     if (Math.random() < chance) {
-      const DISCOVER_RADIUS = 4;
+      const DISCOVER_RADIUS = 3;
       const undiscovered = await this.nodeRepo.find({ where: { kingdomId: mission.kingdomId, discovered: false } });
       const nearby = undiscovered.filter(n => {
         const dx = n.x - mission.targetX;
         const dy = n.y - mission.targetY;
-        return Math.sqrt(dx * dx + dy * dy) <= DISCOVER_RADIUS;
+        const distToTarget = Math.sqrt(dx * dx + dy * dy);
+        const distToCenter = Math.sqrt(n.x * n.x + n.y * n.y);
+        // Only discover nodes within the fog-clear radius AND near the mission target
+        return distToTarget <= DISCOVER_RADIUS && distToCenter <= radius;
       });
 
       // Always discover exactly 1 node per mission
@@ -344,6 +354,7 @@ export class ExplorationService {
     const node = await this.nodeRepo.findOne({ where: { id: nodeId, kingdomId } });
     if (!node || !node.discovered) throw new BadRequestException('Node not found or not discovered');
     if (node.type === MapNodeType.HERO) throw new BadRequestException('Cannot raid a hero node');
+    if (!node.resourceType) throw new BadRequestException('Node has no resource type');
 
     const academy = await this.buildingRepo.findOne({ where: { kingdom: { id: kingdomId }, type: BuildingType.ACADEMY } });
     if (!this.canRaid(node, academy?.level ?? 0)) {
@@ -406,6 +417,12 @@ export class ExplorationService {
     unit.count += 1;
     await this.unitRepo.save(unit);
     return { heroType: node.heroType, count: unit.count };
+  }
+
+  // ── Clear completed missions ───────────────────────────────────────────────
+  async clearCompletedMissions(kingdomId: string) {
+    await this.missionRepo.delete({ kingdomId, status: MissionStatus.RETURNED });
+    return { ok: true };
   }
 
   private canRaid(node: MapNode, academyLevel: number): boolean {

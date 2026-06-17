@@ -16,9 +16,11 @@ exports.KingdomController = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const kingdom_service_1 = require("./kingdom.service");
+const withdrawal_service_1 = require("../withdrawal/withdrawal.service");
 let KingdomController = class KingdomController {
-    constructor(kingdomService) {
+    constructor(kingdomService, withdrawalService) {
         this.kingdomService = kingdomService;
+        this.withdrawalService = withdrawalService;
     }
     getMyKingdom(req) {
         return this.kingdomService.getKingdomByUser(req.user.userId);
@@ -45,11 +47,20 @@ let KingdomController = class KingdomController {
     }
     async getUsdtBalance(req) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.kingdomService.getWithdrawalStatus(kingdom.id);
+        const history = await this.withdrawalService.getUserHistory(req.user.userId);
+        const pending = history.find(w => w.status === 'pending');
+        return {
+            usdtBalance: kingdom.usdtBalance ?? 0,
+            withdrawalStatus: pending ? 'pending' : 'none',
+            withdrawalPending: pending?.amount ?? 0,
+            withdrawalWallet: pending?.walletAddress ?? '',
+            history: history.slice(0, 5),
+        };
     }
     async requestWithdrawal(req, body) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
-        return this.kingdomService.requestWithdrawal(kingdom.id, body.walletAddress);
+        const amount = body.amount ?? kingdom.usdtBalance;
+        return this.withdrawalService.request(req.user.userId, amount, body.walletAddress);
     }
     async buildGemForge(req) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -70,6 +81,12 @@ let KingdomController = class KingdomController {
     async buyGiant(req) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.kingdomService.buyGiantHero(kingdom.id);
+    }
+    async getMessages(req) {
+        return this.kingdomService.getMessages(req.user.userId);
+    }
+    async clearMessages(req) {
+        return this.kingdomService.clearMessages(req.user.userId);
     }
     withdrawUsdt() {
         throw new common_1.BadRequestException('נא להשתמש בטופס המשיכה החדש עם כתובת ארנק');
@@ -172,6 +189,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], KingdomController.prototype, "buyGiant", null);
 __decorate([
+    (0, common_1.Get)('messages'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "getMessages", null);
+__decorate([
+    (0, common_1.Delete)('messages'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], KingdomController.prototype, "clearMessages", null);
+__decorate([
     (0, common_1.Post)('withdraw-usdt'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
@@ -180,6 +211,7 @@ __decorate([
 exports.KingdomController = KingdomController = __decorate([
     (0, common_1.Controller)('kingdom'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [kingdom_service_1.KingdomService])
+    __metadata("design:paramtypes", [kingdom_service_1.KingdomService,
+        withdrawal_service_1.WithdrawalService])
 ], KingdomController);
 //# sourceMappingURL=kingdom.controller.js.map

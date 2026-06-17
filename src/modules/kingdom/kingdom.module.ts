@@ -9,9 +9,10 @@ import { User } from '../user/user.entity';
 import { EconomyModule } from '../economy/economy.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { AuditModule } from '../audit/audit.module';
+import { WithdrawalModule } from '../withdrawal/withdrawal.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule, AuditModule],
+  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule, AuditModule, WithdrawalModule],
   controllers: [KingdomController],
   providers: [KingdomService],
   exports: [KingdomService],

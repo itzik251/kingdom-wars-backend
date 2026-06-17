@@ -14,9 +14,9 @@ function useCountdown(endsAt, onEnd) {
         const id = setInterval(() => {
             const t = (0, format_1.timeLeft)(endsAt);
             setDisplay(t);
-            if (!t && onEnd) {
+            if (t === '✓' && onEnd) {
                 clearInterval(id);
-                onEnd();
+                setTimeout(onEnd, 500);
             }
         }, 1000);
         return () => clearInterval(id);

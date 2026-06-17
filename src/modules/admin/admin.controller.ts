@@ -9,10 +9,10 @@ import { Kingdom } from '../kingdom/kingdom.entity';
 import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notifications/notification.service';
 import { TonService } from '../ton/ton.service';
-import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AntiBotService } from '../antibot/antibot.service';
 import { AuditService } from '../audit/audit.service';
 import { ExplorationService } from '../exploration/exploration.service';
+import { WithdrawalService } from '../withdrawal/withdrawal.service';
 import { VIP_DURATION_DAYS } from '../../constants/game.constants';
 
 const WALLET_CFG_PATH = resolve(process.cwd(), 'wallet_config.json');
@@ -27,10 +27,10 @@ export class AdminController {
     private config: ConfigService,
     private notifService: NotificationService,
     private tonService: TonService,
-    private cryptoBotService: CryptoBotService,
     private antiBotService: AntiBotService,
     private auditService: AuditService,
     private explorationService: ExplorationService,
+    private withdrawalService: WithdrawalService,
   ) {}
 
   @Get()
@@ -262,25 +262,17 @@ export class AdminController {
   @Get('wallet/balance')
   async getWalletBalance(@Headers() headers: any) {
     this.guard(headers);
-    // Primary: CryptoBot balance (no wallet address needed)
-    const cryptoBalance = await this.cryptoBotService.getBalance();
-    const result: any = {
-      usdtBalance: parseFloat(cryptoBalance['USDT'] || '0'),
-      tonBalance: parseFloat(cryptoBalance['TON'] || '0'),
-      source: 'CryptoBot',
-      network: 'TON/CryptoBot',
-    };
-
-    // Secondary: on-chain TON wallet (if configured)
     const cfg = this.getWalletConfig();
+    const result: any = { source: 'TON', network: 'TON' };
+
     if (cfg.address && this.tonService.isValidAddress(cfg.address)) {
       const [chainUsdt, chainTon] = await Promise.all([
         this.tonService.getUsdtBalance(cfg.address),
         this.tonService.getTonBalance(cfg.address),
       ]);
       result.chainAddress = cfg.address;
-      result.chainUsdtBalance = chainUsdt;
-      result.chainTonBalance = chainTon;
+      result.usdtBalance = chainUsdt;
+      result.tonBalance = chainTon;
     }
 
     return result;
@@ -296,84 +288,6 @@ export class AdminController {
   async getAuditLogsForKingdom(@Headers() headers: any, @Param('kingdomId') kingdomId: string) {
     this.guard(headers);
     return this.auditService.getForKingdom(kingdomId, 200);
-  }
-
-  @Get('withdrawals')
-  async getPendingWithdrawals(@Headers() headers: any) {
-    this.guard(headers);
-    const kingdoms = await this.kingdomRepo
-      .createQueryBuilder('k')
-      .leftJoinAndSelect('k.user', 'u')
-      .where('k.withdrawal_status = :s', { s: 'pending' })
-      .orderBy('k.created_at', 'DESC')
-      .getMany();
-
-    return kingdoms.map(k => ({
-      kingdomId: k.id,
-      kingdomName: k.name,
-      telegramId: k.user?.telegramId,
-      username: k.user?.username || k.user?.firstName,
-      amount: k.withdrawalPending,
-      wallet: k.withdrawalWallet,
-    }));
-  }
-
-  @Post('withdrawals/:kingdomId/approve')
-  async approveWithdrawal(@Headers() headers: any, @Param('kingdomId') kingdomId: string) {
-    this.guard(headers);
-    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
-    if (!kingdom) return { error: 'Not found' };
-    if (kingdom.withdrawalStatus !== 'pending' && kingdom.withdrawalStatus !== 'processing') return { error: 'Not pending' };
-    if (kingdom.withdrawalStatus === 'processing') return { error: 'Already being processed' };
-
-    const amount = kingdom.withdrawalPending;
-    const wallet = kingdom.withdrawalWallet;
-
-    // Lock the row immediately to prevent double-send on concurrent approval clicks
-    kingdom.withdrawalStatus = 'processing';
-    await this.kingdomRepo.save(kingdom);
-
-    // ⚠️ MANUAL TRANSFER REQUIRED:
-    // Admin must manually send ${amount} USDT-TON from @wallet to: ${wallet}
-    // After sending, click Approve to mark as done in DB.
-    // (Automated transfer removed to avoid CryptoBot $3.5 fee)
-
-    // Mark as approved + deduct balance (admin confirmed manual send)
-    kingdom.usdtBalance = Math.max(0, (kingdom.usdtBalance ?? 0) - amount);
-    kingdom.withdrawalPending = 0;
-    kingdom.withdrawalStatus = 'approved';
-    kingdom.withdrawalWallet = null;
-    await this.kingdomRepo.save(kingdom);
-
-    if (kingdom.user) {
-      await this.notifService.create(kingdom.user.id, 'withdrawal_approved', {
-        amount: amount.toFixed(4),
-        language: kingdom.user.language,
-      }).catch(() => {});
-    }
-
-    return { success: true, amount, wallet, note: `שלח ידנית ${amount} USDT-TON ל: ${wallet}` };
-  }
-
-  @Post('withdrawals/:kingdomId/reject')
-  async rejectWithdrawal(@Headers() headers: any, @Param('kingdomId') kingdomId: string, @Body() body: { reason?: string }) {
-    this.guard(headers);
-    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
-    if (!kingdom) return { error: 'Not found' };
-
-    kingdom.withdrawalPending = 0;
-    kingdom.withdrawalStatus = 'rejected';
-    kingdom.withdrawalWallet = null;
-    await this.kingdomRepo.save(kingdom);
-
-    if (kingdom.user) {
-      await this.notifService.create(kingdom.user.id, 'withdrawal_rejected', {
-        reason: body.reason ? ': ' + body.reason : '',
-        language: kingdom.user.language,
-      }).catch(() => {});
-    }
-
-    return { success: true };
   }
 
   @Post('give-vip/:telegramId')
@@ -550,5 +464,30 @@ export class AdminController {
     if (!kingdom) return { error: 'Kingdom not found' };
     await this.explorationService.resetMap(kingdom.id);
     return { success: true, kingdomId: kingdom.id };
+  }
+
+  // ── Withdrawals ──────────────────────────────────────────────────
+  @Get('withdrawals')
+  async getWithdrawals(@Headers() headers: any) {
+    this.guard(headers);
+    return this.withdrawalService.listAll(100);
+  }
+
+  @Get('withdrawals/pending')
+  async getPendingWithdrawals(@Headers() headers: any) {
+    this.guard(headers);
+    return this.withdrawalService.listPending();
+  }
+
+  @Post('withdrawals/:id/approve')
+  async approveWithdrawal(@Headers() headers: any, @Param('id') id: string) {
+    this.guard(headers);
+    return this.withdrawalService.approve(id);
+  }
+
+  @Post('withdrawals/:id/reject')
+  async rejectWithdrawal(@Headers() headers: any, @Param('id') id: string, @Body() body: { reason?: string }) {
+    this.guard(headers);
+    return this.withdrawalService.reject(id, body.reason);
   }
 }

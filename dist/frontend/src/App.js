@@ -18,6 +18,7 @@ const ShopScreen_1 = require("./screens/ShopScreen");
 const LeaderboardScreen_1 = require("./screens/LeaderboardScreen");
 const QuestScreen_1 = require("./screens/QuestScreen");
 const WorldMapScreen_1 = require("./screens/WorldMapScreen");
+const MessagesScreen_1 = require("./screens/MessagesScreen");
 const TermsModal_1 = require("./components/TermsModal");
 const OnboardingModal_1 = require("./components/OnboardingModal");
 const TutorialOverlay_1 = require("./components/TutorialOverlay");
@@ -290,8 +291,9 @@ function AppInner() {
             tg.BackButton?.hide?.();
             const startParam = tg.initDataUnsafe?.start_param || '';
             const params = new URLSearchParams(window.location.search);
-            const urlStartapp = params.get('startapp') || params.get('ref') || '';
-            const rawRef = startParam || urlStartapp;
+            const urlRef = params.get('ref') || '';
+            const rawRef = startParam || urlRef;
+            const deepLinkScreen = params.get('screen') || null;
             const REF_KEY = 'kw_pending_ref';
             const REF_EXP = 'kw_pending_ref_exp';
             const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -311,11 +313,7 @@ function AppInner() {
                     localStorage.removeItem(REF_EXP);
                 }
             }
-            const ref = effectiveRawRef.startsWith('ref_') ? effectiveRawRef.slice(4) : (effectiveRawRef || undefined);
-            if (rawRef === 'tab_leaderboard') {
-                const { setActiveScreen } = gameStore_1.useGameStore.getState();
-                setTimeout(() => setActiveScreen('leaderboard'), 500);
-            }
+            const ref = effectiveRawRef.startsWith('ref_') ? effectiveRawRef.slice(4) : undefined;
             if (savedToken)
                 setToken(savedToken);
             client_1.api.post('/auth/login', { initData: tg.initData, referralCode: ref })
@@ -332,6 +330,9 @@ function AppInner() {
                     const firstName = tg.initDataUnsafe?.user?.first_name || '';
                     setTgFirstName(firstName);
                     setShowOnboarding(true);
+                }
+                else if (deepLinkScreen) {
+                    gameStore_1.useGameStore.getState().setActiveScreen(deepLinkScreen);
                 }
             })
                 .catch((e) => {
@@ -366,6 +367,12 @@ function AppInner() {
             lastInterstitialRef.current = Date.now();
         }
     }, [token]);
+    (0, react_1.useEffect)(() => {
+        const el = document.querySelector('[data-scroll-container]');
+        if (el)
+            el.scrollTop = 0;
+        window.scrollTo(0, 0);
+    }, [activeScreen]);
     (0, react_1.useEffect)(() => {
         if (!token || !kingdom)
             return;
@@ -431,7 +438,7 @@ function AppInner() {
       {pendingBattleReport && <BattleResultPopup report={pendingBattleReport} onClose={clearPendingBattleReport} onAttackAgain={clearPendingBattleReport}/>}
       <ResourceBar_1.default />
       
-      <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: activeScreen === 'home' || activeScreen === 'worldmap' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div data-scroll-container key={activeScreen} style={{ flex: 1, minHeight: 0, position: 'relative', overflow: activeScreen === 'home' || activeScreen === 'worldmap' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column' }}>
         {activeScreen === 'home' && <HomeScreen_1.default />}
         {activeScreen === 'repair' && <RepairScreen_1.default />}
         {activeScreen === 'army' && <ArmyScreen_1.default />}
@@ -442,6 +449,7 @@ function AppInner() {
         {activeScreen === 'leaderboard' && <LeaderboardScreen_1.default />}
         {activeScreen === 'quests' && <QuestScreen_1.default />}
         {activeScreen === 'worldmap' && <WorldMapScreen_1.default />}
+        {activeScreen === 'messages' && <MessagesScreen_1.default />}
       </div>
       <NavBar_1.default />
       {import.meta.env.DEV && (<button onClick={() => {

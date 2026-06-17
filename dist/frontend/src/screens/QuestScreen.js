@@ -55,7 +55,7 @@ function ReferralSection() {
         { every: 1, label: t('friend'), reward: <><GemIcon size={13}/> +100 {t('gems')}</> },
         { every: 5, label: t('friends'), reward: <><GemIcon size={13}/> +200 {t('gems')} {t('bonus')}</> },
         { every: 10, label: t('friends'), reward: <>🦸 {t('ragnar_name')} ({t('referral_hero')})</> },
-        { every: 20, label: t('friends'), reward: <>👑 VIP 30 {t('days_free')}</> },
+        { every: 20, label: t('friends'), reward: <>👑 30 {t('days_free')}</> },
     ];
     return (<div style={{ marginBottom: 8 }}>
       
@@ -67,7 +67,7 @@ function ReferralSection() {
           {claimedCount > 0 && (<div style={{ fontSize: 11, color: '#555' }}>✅ {t('claimed')}: {claimedCount}</div>)}
         </div>
         
-        {totalReferredCount > referredCount && (<div style={{ fontSize: 10, color: '#27ae60', marginBottom: 4 }}>
+        {totalReferredCount > 0 && (<div style={{ fontSize: 10, color: '#27ae60', marginBottom: 4 }}>
             ⚡ {referredCount} {t('active_friends')} · ⏳ {totalReferredCount - referredCount} {t('pending_activation')}
           </div>)}
         <div style={{ fontSize: 10, color: '#666', marginBottom: 4, lineHeight: 1.4 }}>
@@ -117,7 +117,7 @@ function ReferralSection() {
     </div>);
 }
 const QUEST_TKEYS = {
-    collect_gold_1000: { tkey: 'quest_collect_gold', icon: '💰' },
+    collect_gold_1000: { tkey: 'quest_collect_gold', icon: 'img:gold' },
     upgrade_building: { tkey: 'quest_upgrade_building', icon: '🏗️' },
     perform_attack: { tkey: 'quest_perform_attack', icon: '⚔️' },
     train_500_soldiers: { tkey: 'quest_train_soldiers', icon: '🪖' },
@@ -180,7 +180,9 @@ function QuestScreen() {
             }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>{info.icon}</span>
+            {info.icon.startsWith('img:')
+                ? <img src={`/assets/icon_${info.icon.slice(4)}.png`} style={{ width: 24, height: 24, objectFit: 'contain' }}/>
+                : <span style={{ fontSize: 24 }}>{info.icon}</span>}
             <div>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{info.label}</div>
               <div style={{ fontSize: 11, color: '#a0845a', marginTop: 1, display: 'flex', alignItems: 'center', gap: 3 }}><GemIcon size={13}/> {reward} {t('gems')}</div>

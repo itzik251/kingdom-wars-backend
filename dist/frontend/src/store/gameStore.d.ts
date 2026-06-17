@@ -17,6 +17,8 @@ export interface Building {
     upgradeEndsAt: string | null;
     isUpgrading: boolean;
     needsRepair?: boolean;
+    gridX?: number | null;
+    gridY?: number | null;
 }
 export interface Unit {
     type: string;
@@ -46,7 +48,7 @@ interface GameState {
     units: Unit[];
     productionRates: Record<string, number>;
     isLoading: boolean;
-    activeScreen: 'home' | 'repair' | 'army' | 'attack' | 'alliance' | 'referral' | 'shop' | 'leaderboard' | 'quests' | 'worldmap';
+    activeScreen: 'home' | 'repair' | 'army' | 'attack' | 'alliance' | 'referral' | 'shop' | 'leaderboard' | 'quests' | 'worldmap' | 'messages';
     marchingSquads: Record<string, Record<string, number>>;
     marchMeta: Record<string, {
         squad?: Record<string, number>;

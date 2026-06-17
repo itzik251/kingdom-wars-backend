@@ -1,1 +1,2 @@
-export default function HomeScreen(): import("react").JSX.Element;
+import React from 'react';
+export default function HomeScreen(): React.JSX.Element;

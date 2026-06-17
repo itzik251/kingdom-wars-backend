@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ExplorationService } from './exploration.service';
 import { KingdomService } from '../kingdom/kingdom.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -39,5 +39,10 @@ export class ExplorationController {
   @Post('recruit/:nodeId')
   async recruitHero(@Req() req: any, @Param('nodeId') nodeId: string) {
     return this.explorationService.recruitHero(await this.getKingdomId(req), nodeId);
+  }
+
+  @Delete('missions/completed')
+  async clearCompleted(@Req() req: any) {
+    return this.explorationService.clearCompletedMissions(await this.getKingdomId(req));
   }
 }

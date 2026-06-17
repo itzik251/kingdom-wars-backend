@@ -7,6 +7,7 @@ const format_1 = require("../utils/format");
 const client_1 = require("../api/client");
 const KingdomProfileSheet_1 = require("../components/KingdomProfileSheet");
 const useT_1 = require("../i18n/useT");
+const ResIcon_1 = require("../components/ResIcon");
 const KINGDOM_AVATARS = ['🏰', '🗺️', '⚔️', '🏯', '🛡️', '👑', '🌋', '🏔️', '🗡️', '⚡'];
 const runningMarches = new Set();
 function AttackScreen() {
@@ -103,7 +104,27 @@ function AttackScreen() {
     async function attack(profile, squadOptions) {
         if (runningMarches.has(profile.id))
             return;
-        const baseMarch = profile.marchSeconds || 5;
+        const baseMarch = profile.marchSeconds ?? 5;
+        if (baseMarch === 0) {
+            runningMarches.add(profile.id);
+            try {
+                const result = await client_1.api.post('/combat/attack', {
+                    defenderKingdomId: profile.id,
+                    heroType: squadOptions?.heroType,
+                    squad: squadOptions?.squad,
+                });
+                runningMarches.delete(profile.id);
+                setProfileId(null);
+                setPendingBattleReport(result);
+                await refresh();
+                setTargets(prev => prev.filter(t => t.id !== profile.id));
+            }
+            catch (e) {
+                runningMarches.delete(profile.id);
+                setPendingError(e?.response?.data?.message || t('error'));
+            }
+            return;
+        }
         const marchSecs = attackBoostActive ? Math.max(1, Math.ceil(baseMarch / 2)) : baseMarch;
         const endsAt = Date.now() + marchSecs * 1000;
         cancelRefs.current[profile.id] = false;
@@ -127,7 +148,7 @@ function AttackScreen() {
                 </div>
                 {h.loot && (h.loot.gold > 0 || h.loot.wood > 0) && (<div style={{ fontSize: 12, color: '#a0845a' }}>
                     {h.isAttacker && h.won ? '🎁 ' : '💸 '}
-                    💰{(0, format_1.fmt)(h.loot.gold)} 🪵{(0, format_1.fmt)(h.loot.wood)} 🪨{(0, format_1.fmt)(h.loot.stone)}
+                    <ResIcon_1.ResIcon type="gold"/>{(0, format_1.fmt)(h.loot.gold)} <ResIcon_1.ResIcon type="wood"/>{(0, format_1.fmt)(h.loot.wood)} <ResIcon_1.ResIcon type="stone"/>{(0, format_1.fmt)(h.loot.stone)}
                   </div>)}
               </div>))}
           </div>
@@ -179,7 +200,7 @@ function AttackScreen() {
                     <div style={{ fontSize: 9, color: '#f4d03f', fontWeight: 700, background: 'rgba(0,0,0,0.7)', borderRadius: 4, padding: '1px 5px', marginTop: 2, whiteSpace: 'nowrap' }}>
                       {(tgt.user?.firstName || tgt.name).substring(0, 8)}
                     </div>
-                    <div style={{ fontSize: 8, color: '#e74c3c', marginTop: 1 }}>💰{(0, format_1.fmt)(tgt.gold)}</div>
+                    <div style={{ fontSize: 8, color: '#e74c3c', marginTop: 1, display: 'flex', alignItems: 'center', gap: 1 }}><ResIcon_1.ResIcon type="gold" size={8}/>{(0, format_1.fmt)(tgt.gold)}</div>
                   </div>);
             })}
 
@@ -208,8 +229,8 @@ function AttackScreen() {
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{tgt.name}</div>
                   <div style={{ fontSize: 11, color: '#a0845a' }}>@{tgt.user?.username || tgt.user?.firstName || '?'}</div>
                   <div style={{ display: 'flex', gap: 10, fontSize: 12, marginTop: 4 }}>
-                    <span>💰 {(0, format_1.fmt)(tgt.gold)}</span>
-                    <span>🪵 {(0, format_1.fmt)(tgt.wood)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="gold"/> {(0, format_1.fmt)(tgt.gold)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><ResIcon_1.ResIcon type="wood"/> {(0, format_1.fmt)(tgt.wood)}</span>
                     <span>🏆 {(0, format_1.fmt)(tgt.score)}</span>
                   </div>
                 </div>

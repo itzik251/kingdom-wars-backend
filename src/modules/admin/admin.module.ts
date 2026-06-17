@@ -5,9 +5,9 @@ import { User } from '../user/user.entity';
 import { Kingdom } from '../kingdom/kingdom.entity';
 import { NotificationModule } from '../notifications/notification.module';
 import { TonModule } from '../ton/ton.module';
-import { CryptoBotService } from '../cryptobot/cryptobot.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExplorationModule } from '../exploration/exploration.module';
+import { WithdrawalModule } from '../withdrawal/withdrawal.module';
 
 @Module({
   imports: [
@@ -16,8 +16,9 @@ import { ExplorationModule } from '../exploration/exploration.module';
     TonModule,
     AuditModule,
     ExplorationModule,
+    WithdrawalModule,
   ],
   controllers: [AdminController],
-  providers: [CryptoBotService],
+  providers: [],
 })
 export class AdminModule {}

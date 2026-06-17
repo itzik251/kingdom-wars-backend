@@ -86,7 +86,14 @@ export declare class KingdomService {
         usdtBalance: number;
     }>;
     expandStorage(kingdomId: string): Promise<{
-        maxGold: number;
-        maxWood: number;
+        storageBoostUntil: Date;
     }>;
+    getMessages(userId: string): Promise<{
+        id: string;
+        type: string;
+        text: string;
+        read: boolean;
+        createdAt: Date;
+    }[]>;
+    clearMessages(userId: string): Promise<void>;
 }

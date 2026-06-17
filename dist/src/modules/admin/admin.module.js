@@ -14,9 +14,9 @@ const user_entity_1 = require("../user/user.entity");
 const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const notification_module_1 = require("../notifications/notification.module");
 const ton_module_1 = require("../ton/ton.module");
-const cryptobot_service_1 = require("../cryptobot/cryptobot.service");
 const audit_module_1 = require("../audit/audit.module");
 const exploration_module_1 = require("../exploration/exploration.module");
+const withdrawal_module_1 = require("../withdrawal/withdrawal.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -28,9 +28,10 @@ exports.AdminModule = AdminModule = __decorate([
             ton_module_1.TonModule,
             audit_module_1.AuditModule,
             exploration_module_1.ExplorationModule,
+            withdrawal_module_1.WithdrawalModule,
         ],
         controllers: [admin_controller_1.AdminController],
-        providers: [cryptobot_service_1.CryptoBotService],
+        providers: [],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map

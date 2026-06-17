@@ -37,18 +37,18 @@ let BuildingService = class BuildingService {
                 manager.findOne(kingdom_entity_1.Kingdom, { where: { id: kingdomId } }),
             ]);
             if (!building)
-                throw new common_1.BadRequestException('Building not found');
+                throw new common_1.BadRequestException('BUILDING_NOT_FOUND');
             if (building.isUpgrading)
-                throw new common_1.BadRequestException('Building already upgrading');
+                throw new common_1.BadRequestException('ALREADY_UPGRADING');
             if (building.level >= game_constants_1.MAX_BUILDING_LEVEL)
-                throw new common_1.BadRequestException('Building at max level');
+                throw new common_1.BadRequestException('BUILDING_MAX_LEVEL');
             const cost = this.getUpgradeCost(building.type, building.level);
             if (kingdom.gold < cost.gold)
-                throw new common_1.BadRequestException('Not enough gold');
+                throw new common_1.BadRequestException('NOT_ENOUGH_GOLD');
             if (kingdom.wood < cost.wood)
-                throw new common_1.BadRequestException('Not enough wood');
+                throw new common_1.BadRequestException('NOT_ENOUGH_WOOD');
             if (kingdom.stone < cost.stone)
-                throw new common_1.BadRequestException('Not enough stone');
+                throw new common_1.BadRequestException('NOT_ENOUGH_STONE');
             const deductResult = await manager
                 .createQueryBuilder()
                 .update(kingdom_entity_1.Kingdom)
@@ -62,7 +62,7 @@ let BuildingService = class BuildingService {
             })
                 .execute();
             if (!deductResult.affected || deductResult.affected === 0) {
-                throw new common_1.BadRequestException('Not enough resources');
+                throw new common_1.BadRequestException('NOT_ENOUGH_RESOURCES');
             }
             let buildTime = this.getBuildTime(building.type, building.level);
             if (isVip)
@@ -98,13 +98,13 @@ let BuildingService = class BuildingService {
         const secsLeft = Math.max(0, (new Date(building.upgradeEndsAt).getTime() - Date.now()) / 1000);
         const gemCost = Math.max(1, Math.ceil(secsLeft / 60));
         if (kingdom.gems < gemCost)
-            throw new common_1.BadRequestException(`Need ${gemCost} gems`);
+            throw new common_1.BadRequestException('NOT_ENOUGH_GEMS');
         kingdom.gems -= gemCost;
         building.level += 1;
         building.upgradeEndsAt = null;
         await Promise.all([this.kingdomRepo.save(kingdom), this.buildingRepo.save(building)]);
         if (building.type === building_entity_1.BuildingType.TOWN_HALL) {
-            const mult = 1 + (building.level - 1) * 0.3;
+            const mult = 1 + (building.level - 1) * 3.2;
             await this.kingdomRepo.update({ id: kingdomId }, {
                 maxGold: Math.floor(5000 * mult),
                 maxWood: Math.floor(4000 * mult),
@@ -153,7 +153,7 @@ let BuildingService = class BuildingService {
         if (existing.length >= 6)
             throw new common_1.BadRequestException('Maximum 6 of this building');
         if (buildingType === building_entity_1.BuildingType.ARCANE_TOWER && !kingdom.isVip) {
-            throw new common_1.BadRequestException('VIP required');
+            throw new common_1.BadRequestException('VIP_REQUIRED');
         }
         const mult = Math.pow(2, existing.length);
         const cost = {
@@ -162,11 +162,11 @@ let BuildingService = class BuildingService {
             stone: Math.floor(baseCost.stone * mult),
         };
         if (kingdom.gold < cost.gold)
-            throw new common_1.BadRequestException('Not enough gold');
+            throw new common_1.BadRequestException('NOT_ENOUGH_GOLD');
         if (kingdom.wood < cost.wood)
-            throw new common_1.BadRequestException('Not enough wood');
+            throw new common_1.BadRequestException('NOT_ENOUGH_WOOD');
         if (kingdom.stone < cost.stone)
-            throw new common_1.BadRequestException('Not enough stone');
+            throw new common_1.BadRequestException('NOT_ENOUGH_STONE');
         kingdom.gold -= cost.gold;
         kingdom.wood -= cost.wood;
         kingdom.stone -= cost.stone;
@@ -201,11 +201,11 @@ let BuildingService = class BuildingService {
             throw new common_1.BadRequestException('Already repairing');
         const { cost, repairTimeSeconds } = this.getRepairCost(building.type, building.level);
         if (kingdom.gold < cost.gold)
-            throw new common_1.BadRequestException('Not enough gold');
+            throw new common_1.BadRequestException('NOT_ENOUGH_GOLD');
         if (kingdom.wood < cost.wood)
-            throw new common_1.BadRequestException('Not enough wood');
+            throw new common_1.BadRequestException('NOT_ENOUGH_WOOD');
         if (kingdom.stone < cost.stone)
-            throw new common_1.BadRequestException('Not enough stone');
+            throw new common_1.BadRequestException('NOT_ENOUGH_STONE');
         kingdom.gold -= cost.gold;
         kingdom.wood -= cost.wood;
         kingdom.stone -= cost.stone;
@@ -222,6 +222,17 @@ let BuildingService = class BuildingService {
             b.repairEndsAt = null;
             await this.buildingRepo.save(b);
         }
+    }
+    async moveBuilding(kingdomId, buildingId, gridX, gridY) {
+        const building = await this.buildingRepo.findOne({ where: { id: buildingId, kingdom: { id: kingdomId } } });
+        if (!building)
+            throw new common_1.BadRequestException('Building not found');
+        if (gridX < 0 || gridX > 15 || gridY < 0 || gridY > 15)
+            throw new common_1.BadRequestException('Invalid position');
+        building.gridX = gridX;
+        building.gridY = gridY;
+        await this.buildingRepo.save(building);
+        return { id: building.id, gridX, gridY };
     }
     async getAllUpgradeCosts(kingdomId) {
         const buildings = await this.buildingRepo.find({ where: { kingdom: { id: kingdomId } } });

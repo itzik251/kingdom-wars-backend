@@ -79,6 +79,15 @@ export class KingdomService {
 
     const productionRates = this.economyService.getProductionRates(buildings, updated, units);
 
+    // Apply storage boost to max values in response only (DB keeps base values)
+    const storageBoostActive = !!(updated.storageBoostUntil && new Date() < new Date(updated.storageBoostUntil));
+    if (storageBoostActive) {
+      updated.maxGold  = Math.floor(updated.maxGold  * 1.5);
+      updated.maxWood  = Math.floor(updated.maxWood  * 1.5);
+      updated.maxStone = Math.floor(updated.maxStone * 1.5);
+      updated.maxFood  = Math.floor(updated.maxFood  * 1.5);
+    }
+
     return {
       kingdom: updated,
       buildings,
@@ -88,7 +97,7 @@ export class KingdomService {
       shieldUntil: updated.shieldUntil,
       isVip: !!updated.isVip,
       workers: updated.workers ?? 0,
-      maxWorkers: updated.maxWorkers ?? 5,
+      maxWorkers: 3 + (buildings.find(b => b.type === 'town_hall')?.level ?? 1),
     };
   }
 
@@ -169,10 +178,14 @@ export class KingdomService {
     const SHIELD_COST = 50;
     if (kingdom.gems < SHIELD_COST) throw new BadRequestException('Need 50 gems');
     kingdom.gems -= SHIELD_COST;
-    kingdom.shieldUntil = new Date(Date.now() + 24 * 3600 * 1000);
-    kingdom.shieldExpiredNotifiedAt = null; // reset so we notify again when this shield expires
+    const base = kingdom.shieldUntil && new Date() < new Date(kingdom.shieldUntil)
+      ? new Date(kingdom.shieldUntil) : new Date();
+    kingdom.shieldUntil = new Date(base.getTime() + 24 * 3600 * 1000);
+    kingdom.shieldExpiredNotifiedAt = null;
     await this.kingdomRepo.save(kingdom);
     this.auditService.log(AuditAction.BUY_SHIELD, kingdomId, { gemsSpent: SHIELD_COST, shieldUntil: kingdom.shieldUntil });
+    const userId = (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
+    if (userId) this.notifService.create(userId, 'shield_purchased', {}).catch(() => {});
     return { shieldUntil: kingdom.shieldUntil };
   }
 
@@ -191,21 +204,22 @@ export class KingdomService {
       .set({ workers: () => 'workers + 1', maxWorkers, gold: () => `gold - ${HIRE_COST}` })
       .where('id = :id AND workers < :max AND gold >= :cost', { id: kingdomId, max: maxWorkers, cost: HIRE_COST })
       .execute();
-    const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+    if (updated?.user?.id) this.notifService.create(updated.user.id, 'worker_hired', {}).catch(() => {});
     return { workers: updated.workers, maxWorkers };
   }
 
   async fireWorker(kingdomId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     if (!kingdom.workers || kingdom.workers <= 0) throw new BadRequestException('NO_WORKERS_TO_FIRE');
-    // Atomic update — prevents race condition with the economy cron
     await this.kingdomRepo
       .createQueryBuilder()
       .update()
       .set({ workers: () => 'workers - 1', gold: () => 'gold + 25' })
       .where('id = :id AND workers > 0', { id: kingdomId })
       .execute();
-    const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    const updated = await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] });
+    if (updated?.user?.id) this.notifService.create(updated.user.id, 'worker_fired', {}).catch(() => {});
     return { workers: updated.workers };
   }
 
@@ -295,14 +309,14 @@ export class KingdomService {
     if (!kingdom) throw new BadRequestException('Kingdom not found');
     const forge = await this.buildingRepo.findOne({ where: { id: buildingId }, relations: ['kingdom'] });
     if (!forge || forge.kingdom?.id !== kingdomId || forge.type !== BuildingType.GEM_FORGE) throw new BadRequestException('Gem mine not found');
-    if (forge.level >= 10) throw new BadRequestException('Max level reached');
-    const COST = parseFloat(((forge.level + 1) * 0.1).toFixed(2));
+    if (forge.level >= 100) throw new BadRequestException('GEM_FORGE_MAX_LEVEL');
+    const COST = parseFloat(((forge.level + 1) * 0.05).toFixed(2));
     if (forge.upgradeEndsAt && new Date() < new Date(forge.upgradeEndsAt))
       throw new BadRequestException('Already upgrading');
     if ((kingdom.usdtBalance ?? 0) < COST) throw new BadRequestException(`נדרש $${COST} USDT`);
     kingdom.usdtBalance = parseFloat(((kingdom.usdtBalance || 0) - COST).toFixed(6));
     const BUILD_TIME_SECS = Math.floor(300 * Math.pow(1.4, forge.level));
-    const buildTime = kingdom.isVip ? Math.floor(BUILD_TIME_SECS * 0.75) : BUILD_TIME_SECS;
+    const buildTime = kingdom.isVip ? Math.floor(BUILD_TIME_SECS * 0.70) : BUILD_TIME_SECS;
     forge.upgradeEndsAt = new Date(Date.now() + buildTime * 1000);
     await this.kingdomRepo.save(kingdom);
     await this.buildingRepo.save(forge);
@@ -314,13 +328,26 @@ export class KingdomService {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
     const COST = 100;
     if (kingdom.gems < COST) throw new BadRequestException('Need 100 gems');
+    // If boost already active, extend from current expiry; otherwise from now
+    const base = kingdom.storageBoostUntil && new Date() < new Date(kingdom.storageBoostUntil)
+      ? new Date(kingdom.storageBoostUntil)
+      : new Date();
     kingdom.gems -= COST;
-    kingdom.maxGold = Math.floor(kingdom.maxGold * 1.5);
-    kingdom.maxWood = Math.floor(kingdom.maxWood * 1.5);
-    kingdom.maxStone = Math.floor(kingdom.maxStone * 1.5);
-    kingdom.maxFood = Math.floor(kingdom.maxFood * 1.5);
+    kingdom.storageBoostUntil = new Date(base.getTime() + 24 * 3_600_000);
     await this.kingdomRepo.save(kingdom);
-    this.auditService.log(AuditAction.EXPAND_STORAGE, kingdomId, { gemsSpent: COST, maxGold: kingdom.maxGold, maxWood: kingdom.maxWood });
-    return { maxGold: kingdom.maxGold, maxWood: kingdom.maxWood };
+    this.auditService.log(AuditAction.EXPAND_STORAGE, kingdomId, { gemsSpent: COST, storageBoostUntil: kingdom.storageBoostUntil });
+    const userId2 = (await this.kingdomRepo.findOne({ where: { id: kingdomId }, relations: ['user'] }))?.user?.id;
+    if (userId2) this.notifService.create(userId2, 'storage_expanded', {}).catch(() => {});
+    return { storageBoostUntil: kingdom.storageBoostUntil };
+  }
+
+  async getMessages(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    const lang = (user?.language as any) || 'en';
+    return this.notifService.getMessages(userId, lang);
+  }
+
+  async clearMessages(userId: string) {
+    return this.notifService.clearMessages(userId);
   }
 }

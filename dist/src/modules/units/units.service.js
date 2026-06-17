@@ -74,7 +74,8 @@ let UnitsService = class UnitsService {
             kingdom.gold -= totalGold;
         }
         await this.kingdomRepo.save(kingdom);
-        const trainingSeconds = stats.trainingTime * amount;
+        const baseTrainingSeconds = stats.trainingTime * amount;
+        const trainingSeconds = isVip ? Math.ceil(baseTrainingSeconds * 0.5) : baseTrainingSeconds;
         if (unitRow.trainingEndsAt && new Date() < unitRow.trainingEndsAt) {
             unitRow.trainingCount += amount;
             unitRow.trainingEndsAt = new Date(unitRow.trainingEndsAt.getTime() + trainingSeconds * 1000);

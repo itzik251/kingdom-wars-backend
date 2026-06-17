@@ -1,7 +1,9 @@
 import { KingdomService } from './kingdom.service';
+import { WithdrawalService } from '../withdrawal/withdrawal.service';
 export declare class KingdomController {
     private kingdomService;
-    constructor(kingdomService: KingdomService);
+    private withdrawalService;
+    constructor(kingdomService: KingdomService, withdrawalService: WithdrawalService);
     getMyKingdom(req: any): Promise<{
         kingdom: import("./kingdom.entity").Kingdom;
         buildings: import("../building/building.entity").Building[];
@@ -17,8 +19,7 @@ export declare class KingdomController {
         shieldUntil: Date;
     }>;
     expandStorage(req: any): Promise<{
-        maxGold: number;
-        maxWood: number;
+        storageBoostUntil: Date;
     }>;
     hireWorker(req: any): Promise<{
         workers: number;
@@ -34,16 +35,18 @@ export declare class KingdomController {
     }>;
     getUsdtBalance(req: any): Promise<{
         usdtBalance: number;
-        withdrawalPending: number;
         withdrawalStatus: string;
+        withdrawalPending: number;
         withdrawalWallet: string;
+        history: import("../withdrawal/withdrawal.entity").Withdrawal[];
     }>;
     requestWithdrawal(req: any, body: {
         walletAddress: string;
+        amount: number;
     }): Promise<{
         success: boolean;
+        id: string;
         amount: number;
-        wallet: string;
         status: string;
     }>;
     buildGemForge(req: any): Promise<{
@@ -76,5 +79,13 @@ export declare class KingdomController {
         trainingEndsAt: Date;
         usdtBalance: number;
     }>;
+    getMessages(req: any): Promise<{
+        id: string;
+        type: string;
+        text: string;
+        read: boolean;
+        createdAt: Date;
+    }[]>;
+    clearMessages(req: any): Promise<void>;
     withdrawUsdt(): void;
 }

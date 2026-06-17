@@ -41,6 +41,18 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], JoinAllianceDto.prototype, "allianceId", void 0);
+class KickDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], KickDto.prototype, "targetKingdomId", void 0);
+class TransferDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], TransferDto.prototype, "targetKingdomId", void 0);
 let AllianceController = class AllianceController {
     constructor(allianceService, kingdomService) {
         this.allianceService = allianceService;
@@ -64,6 +76,22 @@ let AllianceController = class AllianceController {
     async leave(req) {
         const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
         return this.allianceService.leave(kingdom.id);
+    }
+    async kick(req, dto) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.allianceService.kick(kingdom.id, dto.targetKingdomId);
+    }
+    async transfer(req, dto) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.allianceService.transferLeadership(kingdom.id, dto.targetKingdomId);
+    }
+    async promote(req, targetKingdomId) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.allianceService.promote(kingdom.id, targetKingdomId);
+    }
+    async disband(req) {
+        const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+        return this.allianceService.disband(kingdom.id);
     }
 };
 exports.AllianceController = AllianceController;
@@ -103,6 +131,37 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AllianceController.prototype, "leave", null);
+__decorate([
+    (0, common_1.Post)('kick'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, KickDto]),
+    __metadata("design:returntype", Promise)
+], AllianceController.prototype, "kick", null);
+__decorate([
+    (0, common_1.Post)('transfer-leadership'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, TransferDto]),
+    __metadata("design:returntype", Promise)
+], AllianceController.prototype, "transfer", null);
+__decorate([
+    (0, common_1.Post)('promote/:kingdomId'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('kingdomId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AllianceController.prototype, "promote", null);
+__decorate([
+    (0, common_1.Delete)('disband'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AllianceController.prototype, "disband", null);
 exports.AllianceController = AllianceController = __decorate([
     (0, common_1.Controller)('alliances'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

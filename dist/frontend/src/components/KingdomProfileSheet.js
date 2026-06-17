@@ -7,13 +7,17 @@ const format_1 = require("../utils/format");
 const useT_1 = require("../i18n/useT");
 const Countdown_1 = require("./Countdown");
 const gameStore_1 = require("../store/gameStore");
-const HERO_TYPES = new Set(['knight', 'paladin', 'dragon_rider', 'ragnar', 'titan', 'giant']);
-const HERO_POWER = { giant: 300, titan: 150, dragon_rider: 100, ragnar: 90, paladin: 80, knight: 40 };
+const ResIcon_1 = require("./ResIcon");
+const KingdomMapView_1 = require("./KingdomMapView");
+const BattleScreen_1 = require("../screens/BattleScreen");
+const HERO_TYPES = new Set(['knight', 'paladin', 'dragon_rider', 'ragnar', 'titan', 'giant', 'ogre', 'mage', 'dwarf_fighter']);
+const HERO_POWER = { giant: 2000, titan: 800, mage: 600, dragon_rider: 250, ragnar: 400, ogre: 350, paladin: 80, dwarf_fighter: 280, knight: 40 };
 const UNIT_ATK = {
-    spearman: 1, archer: 2, swordsman: 3, cavalry: 5, catapult: 10, elite_guard: 8,
-    knight: 40, paladin: 80, dragon_rider: 100, ragnar: 90, titan: 150, giant: 300,
+    spearman: 1, archer: 2, swordsman: 4, cavalry: 9, catapult: 15, elite_guard: 25,
+    knight: 40, paladin: 80, dragon_rider: 250, ragnar: 400, titan: 800, giant: 2000,
+    ogre: 350, mage: 600, dwarf_fighter: 280,
 };
-const HERO_SALARY = { giant: 10, titan: 0, dragon_rider: 5, paladin: 3, ragnar: 2, knight: 1 };
+const HERO_SALARY = { giant: 10, mage: 6, dragon_rider: 5, ogre: 4, ragnar: 2, dwarf_fighter: 3, paladin: 3, titan: 0, knight: 1 };
 const UNIT_META = {
     knight: { icon: '🗡️', nameKey: 'u_knight', heroColor: '#85c1e9' },
     paladin: { icon: '⚔️', nameKey: 'u_paladin', heroColor: '#f4d03f' },
@@ -21,6 +25,9 @@ const UNIT_META = {
     ragnar: { icon: '🪓', nameKey: 'u_ragnar', heroColor: '#e67e22' },
     titan: { icon: '🗿', nameKey: 'u_titan', heroColor: '#9b59b6' },
     giant: { icon: '👹', nameKey: 'u_giant', heroColor: '#8e44ad' },
+    ogre: { icon: '🧌', nameKey: 'u_ogre', heroColor: '#27ae60' },
+    mage: { icon: '🧙', nameKey: 'u_mage', heroColor: '#a29bfe' },
+    dwarf_fighter: { icon: '⛏️', nameKey: 'u_dwarf_fighter', heroColor: '#cd853f' },
     spearman: { icon: '🏹', nameKey: 'u_spearman' },
     archer: { icon: '🏹', nameKey: 'u_archer' },
     swordsman: { icon: '🗡️', nameKey: 'u_swordsman' },
@@ -29,16 +36,22 @@ const UNIT_META = {
     elite_guard: { icon: '🛡️', nameKey: 'u_elite_guard' },
 };
 function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCountdown = 0, sentSquad }) {
+    const sheetRef = (0, react_1.useRef)(null);
     const [profile, setProfile] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
     const [error, setError] = (0, react_1.useState)(false);
     const [squadCounts, setSquadCounts] = (0, react_1.useState)({});
+    const [showKingdom, setShowKingdom] = (0, react_1.useState)(false);
+    const [showBattleChoice, setShowBattleChoice] = (0, react_1.useState)(false);
+    const [showBattleScreen, setShowBattleScreen] = (0, react_1.useState)(false);
+    const [pendingSquad, setPendingSquad] = (0, react_1.useState)(null);
     const t = (0, useT_1.useT)();
     const myScore = (0, gameStore_1.useGameStore)(s => s.kingdom?.score ?? 0);
     const isVip = (0, gameStore_1.useGameStore)(s => !!s.kingdom?.isVip);
     const myUnits = (0, gameStore_1.useGameStore)(s => s.units ?? []);
     const myGems = (0, gameStore_1.useGameStore)(s => s.kingdom?.gems ?? 0);
     const anyMarching = (0, gameStore_1.useGameStore)(s => Object.keys(s.marchingSquads).length > 0);
+    const refresh = (0, gameStore_1.useGameStore)(s => s.refresh);
     const heroCanFight = (type) => {
         const salary = HERO_SALARY[type] ?? 0;
         return salary === 0 || myGems >= salary;
@@ -72,6 +85,9 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
         }
     }, [myUnits.length]);
     (0, react_1.useEffect)(() => {
+        refresh();
+    }, []);
+    (0, react_1.useEffect)(() => {
         let alive = true;
         setLoading(true);
         client_1.api.get(`/combat/profile/${kingdomId}`)
@@ -83,6 +99,10 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
             setLoading(false); });
         return () => { alive = false; };
     }, [kingdomId]);
+    (0, react_1.useEffect)(() => {
+        if (sheetRef.current)
+            sheetRef.current.scrollTop = 0;
+    }, []);
     if (loading)
         return (<div style={S.backdrop} onClick={onClose}>
       <div style={{ ...S.sheet, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120, color: '#a0845a', fontSize: 15 }}>
@@ -96,9 +116,9 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
       </div>
     </div>);
     const defScore = Number(profile.score) || 0;
-    const toWeakToAttack = !import.meta.env.DEV && myScore >= 10 && defScore >= 10 && myScore > defScore * 10;
+    const toWeakToAttack = false;
     const noFreeHero = !hasAnyHero;
-    const canAttack = hasAnyHero && !profile.isShielded && !toWeakToAttack && soldierOk && !attacking;
+    const canAttack = hasAnyHero && !profile.isShielded && soldierOk && !attacking;
     const winPct = profile.defPower > 0
         ? Math.round(Math.min(95, Math.max(5, (squadPower / (squadPower + profile.defPower)) * 100)))
         : squadPower > 0 ? 90 : 10;
@@ -110,29 +130,86 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
     const handleAttack = () => {
         if (!canAttack)
             return;
-        const squad = squadTotal > 0 ? { ...squadCounts } : undefined;
-        if (squad && effectiveCommander) {
+        const sq = squadTotal > 0 ? { ...squadCounts } : undefined;
+        if (sq && effectiveCommander) {
             const heroUnit = myHeroUnits.find(u => u.type === effectiveCommander);
-            if (heroUnit && (squad[effectiveCommander] ?? 0) === 0)
-                squad[effectiveCommander] = heroUnit.count;
+            if (heroUnit && (sq[effectiveCommander] ?? 0) === 0)
+                sq[effectiveCommander] = heroUnit.count;
         }
-        onAttack(profile, { heroType: effectiveCommander, squad });
+        const effectiveSquad = sq ?? Object.fromEntries(myUnits.filter(u => u.count > 0).map(u => [u.type, u.count]));
+        setPendingSquad({ heroType: effectiveCommander, squad: effectiveSquad });
+        setShowBattleChoice(true);
     };
     const allUnitRows = [
         ...myHeroUnits.map(u => ({ ...u, isHero: true })),
         ...mySoldierUnits.map(u => ({ ...u, isHero: false })),
     ];
+    if (showBattleScreen && profile && pendingSquad?.squad) {
+        return (<BattleScreen_1.default profile={profile} squad={pendingSquad.squad} heroType={pendingSquad.heroType} winPct={winPct} marchSeconds={profile.marchSeconds || 30} onClose={() => { setShowBattleScreen(false); onClose(); }} onFinish={() => {
+                onAttack({ ...profile, marchSeconds: 0 }, pendingSquad);
+            }}/>);
+    }
     return (<div style={S.backdrop} onClick={onClose}>
-      <div style={S.sheet} onClick={e => e.stopPropagation()}>
+      <div ref={sheetRef} style={S.sheet} onClick={e => e.stopPropagation()}>
+
+      
+      {showBattleChoice && profile && pendingSquad && (<div style={{
+                position: 'fixed', inset: 0, zIndex: 200,
+                background: 'rgba(0,0,0,0.88)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }} onClick={() => setShowBattleChoice(false)}>
+          <div style={{
+                background: '#0c0714', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 20, padding: '28px 24px', maxWidth: 300, width: '90%',
+                textAlign: 'center',
+            }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>⚔️</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
+              בחר אופן קרב
+            </div>
+            <div style={{ fontSize: 12, color: '#666', marginBottom: 20 }}>
+              תוקף את {profile.name}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => {
+                setShowBattleChoice(false);
+                setShowBattleScreen(true);
+            }} style={{
+                background: 'linear-gradient(135deg,#7b0000,#c0392b,#e74c3c)',
+                border: 'none', borderRadius: 12, padding: '14px',
+                color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                boxShadow: '0 4px 18px rgba(192,57,43,0.45)',
+            }}>
+                ⚔️ כנס להילחם
+              </button>
+              <button onClick={() => {
+                setShowBattleChoice(false);
+                onAttack(profile, pendingSquad);
+            }} style={{
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 12, padding: '12px',
+                color: '#aaa', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>
+                ➡️ המשך אוטומטי
+              </button>
+            </div>
+          </div>
+        </div>)}
 
         
         <div style={{ padding: '14px 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{ flex: 1, paddingRight: 10 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>🏰 {profile.name}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+              🏰 {profile.name}
+              <button onClick={() => setShowKingdom(true)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '2px 7px', cursor: 'pointer', fontSize: 15, color: '#a0c4ff', lineHeight: 1 }}>👁️</button>
+            </div>
             <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>@{profile.username || '?'} · 🏆{(0, format_1.fmt)(profile.score)} · 🗡️{(0, format_1.fmt)(profile.armySize)}</div>
           </div>
           <button onClick={onClose} style={S.closeBtn}>✕</button>
         </div>
+
+        
+        {showKingdom && (<KingdomMapView_1.default buildings={profile.buildings} name={profile.name} onClose={() => setShowKingdom(false)}/>)}
 
         
         {profile.isShielded && (<div style={{ margin: '8px 14px 0', background: 'rgba(52,152,219,0.12)', border: '1px solid rgba(52,152,219,0.35)', borderRadius: 10, padding: '8px 14px', color: '#5dade2', fontSize: 13, textAlign: 'center', fontWeight: 700 }}>
@@ -159,17 +236,17 @@ function KingdomProfileSheet({ kingdomId, onClose, onAttack, attacking, marchCou
           <div style={S.card}>
             <div style={{ fontSize: 10, color: '#a0845a', fontWeight: 700, marginBottom: 6, textAlign: 'center' }}>{t('loot_card_title')}</div>
             {[
-            { icon: '💰', label: t('gold'), val: profile.lootable.gold, color: '#f4d03f' },
-            { icon: '🪵', label: t('wood'), val: profile.lootable.wood, color: '#c0832a' },
-            { icon: '🪨', label: t('stone'), val: profile.lootable.stone, color: '#bdc3c7' },
-            { icon: '💎', label: t('gems_attack'), val: profile.lootable.gems ?? 0, color: '#a29bfe' },
-        ].map(({ icon, label, val, color }) => (<div key={icon} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
-                <span style={{ color: '#666' }}>{icon} {label}</span>
+            { type: 'gold', label: t('gold'), val: profile.lootable.gold, color: '#f4d03f' },
+            { type: 'wood', label: t('wood'), val: profile.lootable.wood, color: '#c0832a' },
+            { type: 'stone', label: t('stone'), val: profile.lootable.stone, color: '#bdc3c7' },
+            { type: 'gem', label: t('gems_attack'), val: profile.lootable.gems ?? 0, color: '#a29bfe' },
+        ].map(({ type, label, val, color }) => (<div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
+                <span style={{ color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}><ResIcon_1.ResIcon type={type}/> {label}</span>
                 <span style={{ fontWeight: 700, color }}>{(0, format_1.fmt)(val)}</span>
               </div>))}
             {isVip && (<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
-                <span style={{ color: '#666' }}>💵 USDT</span>
-                <span style={{ fontWeight: 700, color: '#2ecc71' }}>${((profile.usdtBalance ?? 0) * 0.20).toFixed(2)}</span>
+                <span style={{ color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}><ResIcon_1.ResIcon type="dollar"/> USDT</span>
+                <span style={{ fontWeight: 700, color: '#2ecc71' }}>${((profile.usdtBalance ?? 0) * 0.02).toFixed(2)}</span>
               </div>)}
             <div style={{ fontSize: 9, color: '#3d3d3d', marginTop: 4, textAlign: 'center' }}>{t('loot_full_transfer')}</div>
           </div>
@@ -281,17 +358,14 @@ const S = {
     backdrop: {
         position: 'fixed', inset: 0, zIndex: 50,
         background: 'rgba(0,0,0,0.88)',
-        display: 'flex', alignItems: 'flex-end',
     },
     sheet: {
-        width: '100%',
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         background: '#0c0714',
-        borderRadius: '20px 20px 0 0',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderBottom: 'none',
+        borderRadius: 0,
+        border: 'none',
         paddingBottom: 24,
         animation: 'slideUp 0.25s cubic-bezier(0.34,1.4,0.64,1)',
-        maxHeight: '90vh',
         overflowY: 'auto',
         direction: 'rtl',
     },

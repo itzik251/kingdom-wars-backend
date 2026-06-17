@@ -11,8 +11,36 @@ exports.useGameStore = (0, zustand_1.create)((set, get) => ({
     productionRates: {},
     isLoading: false,
     activeScreen: 'home',
-    marchingSquads: {},
-    marchMeta: {},
+    marchingSquads: (() => {
+        try {
+            const saved = localStorage.getItem('kw_march_meta');
+            if (!saved)
+                return {};
+            const meta = JSON.parse(saved);
+            const now = Date.now();
+            const valid = Object.fromEntries(Object.entries(meta).filter(([, v]) => v.endsAt > now));
+            const squads = {};
+            for (const [id, v] of Object.entries(valid))
+                squads[id] = v.squad ?? {};
+            return squads;
+        }
+        catch {
+            return {};
+        }
+    })(),
+    marchMeta: (() => {
+        try {
+            const saved = localStorage.getItem('kw_march_meta');
+            if (!saved)
+                return {};
+            const meta = JSON.parse(saved);
+            const now = Date.now();
+            return Object.fromEntries(Object.entries(meta).filter(([, v]) => v.endsAt > now));
+        }
+        catch {
+            return {};
+        }
+    })(),
     pendingBattleReport: null,
     pendingError: null,
     setToken: (token) => {
@@ -61,17 +89,28 @@ exports.useGameStore = (0, zustand_1.create)((set, get) => ({
         const { loadKingdom } = get();
         await loadKingdom();
     },
-    addMarchingSquad: (kingdomId, squad, heroType, endsAt) => set(state => ({
-        marchingSquads: { ...state.marchingSquads, [kingdomId]: squad ?? {} },
-        marchMeta: { ...state.marchMeta, [kingdomId]: { squad, heroType, endsAt } },
-        units: squad ? state.units.map(u => ({
-            ...u,
-            count: Math.max(0, u.count - (squad[u.type] ?? 0)),
-        })) : state.units,
-    })),
+    addMarchingSquad: (kingdomId, squad, heroType, endsAt) => set(state => {
+        const newMeta = { ...state.marchMeta, [kingdomId]: { squad, heroType, endsAt } };
+        try {
+            localStorage.setItem('kw_march_meta', JSON.stringify(newMeta));
+        }
+        catch { }
+        return {
+            marchingSquads: { ...state.marchingSquads, [kingdomId]: squad ?? {} },
+            marchMeta: newMeta,
+            units: squad ? state.units.map(u => ({
+                ...u,
+                count: Math.max(0, u.count - (squad[u.type] ?? 0)),
+            })) : state.units,
+        };
+    }),
     removeMarchingSquad: (kingdomId) => set(state => {
         const { [kingdomId]: _s, ...squads } = state.marchingSquads;
         const { [kingdomId]: _m, ...meta } = state.marchMeta;
+        try {
+            localStorage.setItem('kw_march_meta', JSON.stringify(meta));
+        }
+        catch { }
         return { marchingSquads: squads, marchMeta: meta };
     }),
     setPendingBattleReport: (report) => set({ pendingBattleReport: report }),

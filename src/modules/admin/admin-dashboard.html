@@ -211,9 +211,9 @@ async function loadWithdrawals() {
   const el = document.getElementById('withdrawalsContent');
   el.innerHTML = 'טוען...';
   try {
-    const r = await fetch(API + '/withdrawals', { headers: h() });
+    const r = await fetch(API + '/withdrawals/pending', { headers: h() });
     const list = await r.json();
-    if (!list.length) {
+    if (!Array.isArray(list) || !list.length) {
       el.innerHTML = '<p style="color:#666;text-align:center;padding:12px">✅ אין בקשות ממתינות</p>';
       return;
     }
@@ -221,20 +221,34 @@ async function loadWithdrawals() {
       <thead><tr>
         <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">שחקן</th>
         <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">סכום</th>
-        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">כתובת ארנק</th>
+        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">כתובת TON</th>
+        <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">תאריך</th>
         <th style="padding:6px 10px;text-align:right;color:#888;border-bottom:1px solid #1e2a3a;">פעולות</th>
       </tr></thead>
       <tbody>${list.map(w => `
         <tr>
-          <td style="padding:8px 10px;border-bottom:1px solid #0d1520"><strong>${w.username || '?'}</strong><br><span style="color:#555;font-size:10px">${w.telegramId}</span></td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;color:#27ae60;font-weight:700">$${w.amount.toFixed(4)} USDT</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;font-family:monospace;font-size:10px;color:#a0845a;word-break:break-all">${w.wallet}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0d1520">
-            <div style="display:flex;gap:6px;flex-direction:column">
-              <button class="btn-sm" style="background:#0088cc;color:#fff;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11px" onclick="copyAndOpenWallet('${w.wallet}',${w.amount})">🔷 העתק + פתח @wallet</button>
+            <strong>${w.user?.username || '?'}</strong><br>
+            <span style="color:#555;font-size:10px">${w.user?.telegramId || ''}</span>
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;color:#27ae60;font-weight:800;font-size:14px">
+            $${Number(w.amount).toFixed(2)} USDT
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;font-family:monospace;font-size:10px;color:#a0845a;word-break:break-all">
+            ${w.walletAddress}
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520;color:#555;font-size:10px">
+            ${new Date(w.createdAt).toLocaleString('he-IL')}
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0d1520">
+            <div style="display:flex;gap:4px;flex-direction:column">
+              <button class="btn-sm" style="background:#0088cc;color:#fff;border:none;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11px"
+                onclick="navigator.clipboard?.writeText('${w.walletAddress}');showToast('📋 הועתק!')">
+                📋 העתק כתובת
+              </button>
               <div style="display:flex;gap:4px">
-                <button class="btn-sm btn-success" onclick="approveWithdrawal('${w.kingdomId}','${w.username}',${w.amount},'${w.wallet}')">✅ סימון כנשלח</button>
-                <button class="btn-sm btn-danger" onclick="rejectWithdrawal('${w.kingdomId}','${w.username}')">❌ דחה</button>
+                <button class="btn-sm btn-success" onclick="approveWithdrawal('${w.id}',${w.amount})">✅ אשר ושלח</button>
+                <button class="btn-sm btn-danger" onclick="rejectWithdrawal('${w.id}')">❌ דחה</button>
               </div>
             </div>
           </td>
@@ -246,34 +260,31 @@ async function loadWithdrawals() {
   }
 }
 
-function copyAndOpenWallet(tonAddress, amount) {
-  navigator.clipboard?.writeText(tonAddress).catch(() => {});
-  showToast(`📋 הועתק: ${tonAddress.slice(0,12)}... | פתח @wallet ושלח ${amount} USDT`);
-  setTimeout(() => {
-    window.open('https://t.me/wallet', '_blank');
-  }, 800);
-}
-
-async function approveWithdrawal(kingdomId, name, amount, wallet) {
-  if (!confirm(`✅ אישור שליחת $${amount.toFixed(4)} USDT-TON\n\nכתובת: ${wallet}\n\n⚠️ ודא ששלחת ידנית מ-@wallet לפני אישור!`)) return;
-  showToast('⏳ מעדכן סטטוס...');
-  const r = await fetch(API + '/withdrawals/' + kingdomId + '/approve', { method: 'POST', headers: h() });
-  const d = await r.json();
-  if (d.success) {
-    showToast(`✅ ${amount.toFixed(4)} USDT נשלח!\nTx: ${d.txId?.substring(0,16)}...`);
-    loadWithdrawals();
-    loadAll();
-  } else {
-    showToast('❌ שגיאה: ' + (d.error || JSON.stringify(d)));
+async function approveWithdrawal(id, amount) {
+  if (!confirm(`✅ אישור שליחת $${Number(amount).toFixed(2)} USDT-TON\n\nהשרת ישלח אוטומטית מארנק המשחק.\nלחץ אישור להמשך.`)) return;
+  showToast('⏳ שולח USDT...');
+  try {
+    const r = await fetch(API + '/withdrawals/' + id + '/approve', { method: 'POST', headers: h() });
+    const d = await r.json();
+    if (d.success) {
+      showToast(`✅ $${Number(amount).toFixed(2)} USDT נשלח בהצלחה!${d.txId ? '\nTx: ' + d.txId.substring(0,16) + '...' : ''}`);
+      loadWithdrawals();
+    } else {
+      showToast('❌ שגיאה: ' + (d.message || JSON.stringify(d)));
+    }
+  } catch(e) {
+    showToast('❌ שגיאת חיבור');
   }
 }
 
-async function rejectWithdrawal(kingdomId, name) {
-  const reason = prompt('סיבת דחייה (אופציונלי):') || '';
-  const r = await fetch(API + '/withdrawals/' + kingdomId + '/reject', { method: 'POST', headers: h(), body: JSON.stringify({ reason }) });
-  const d = await r.json();
-  if (d.success) { showToast('🚫 משיכה נדחתה — השחקן קיבל הודעה'); loadWithdrawals(); }
-  else showToast('❌ שגיאה');
+async function rejectWithdrawal(id) {
+  const reason = prompt('סיבת דחייה (אופציונלי):') || 'נדחה על ידי אדמין';
+  try {
+    const r = await fetch(API + '/withdrawals/' + id + '/reject', { method: 'POST', headers: h(), body: JSON.stringify({ reason }), });
+    const d = await r.json();
+    if (d.success) { showToast('🚫 משיכה נדחתה — יתרה הוחזרה לשחקן'); loadWithdrawals(); }
+    else showToast('❌ שגיאה');
+  } catch(e) { showToast('❌ שגיאת חיבור'); }
 }
 
 async function loadAll() {

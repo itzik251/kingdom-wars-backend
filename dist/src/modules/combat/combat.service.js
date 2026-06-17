@@ -20,17 +20,19 @@ const kingdom_entity_1 = require("../kingdom/kingdom.entity");
 const unit_entity_1 = require("../units/unit.entity");
 const building_entity_1 = require("../building/building.entity");
 const user_entity_1 = require("../user/user.entity");
+const alliance_member_entity_1 = require("../alliance/alliance-member.entity");
 const economy_service_1 = require("../economy/economy.service");
 const notification_service_1 = require("../notifications/notification.service");
 const audit_service_1 = require("../audit/audit.service");
 const audit_log_entity_1 = require("../audit/audit-log.entity");
 const game_constants_1 = require("../../constants/game.constants");
 let CombatService = class CombatService {
-    constructor(kingdomRepo, unitRepo, buildingRepo, userRepo, economyService, notifService, auditService) {
+    constructor(kingdomRepo, unitRepo, buildingRepo, userRepo, allianceMemberRepo, economyService, notifService, auditService) {
         this.kingdomRepo = kingdomRepo;
         this.unitRepo = unitRepo;
         this.buildingRepo = buildingRepo;
         this.userRepo = userRepo;
+        this.allianceMemberRepo = allianceMemberRepo;
         this.economyService = economyService;
         this.notifService = notifService;
         this.auditService = auditService;
@@ -47,6 +49,14 @@ let CombatService = class CombatService {
             throw new common_1.BadRequestException('Kingdom not found');
         if (defender.isShielded)
             throw new common_1.BadRequestException('Defender is shielded');
+        const attackerMember = await this.allianceMemberRepo.findOne({ where: { kingdomId: attackerKingdomId } });
+        if (attackerMember) {
+            const defenderMember = await this.allianceMemberRepo.findOne({
+                where: { kingdomId: defenderKingdomId, allianceId: attackerMember.allianceId },
+            });
+            if (defenderMember)
+                throw new common_1.BadRequestException('CANNOT_ATTACK_ALLY');
+        }
         const attackerScore = attacker.score || 0;
         const defenderScore = defender.score || 0;
         const ATTACK_COOLDOWN_MS = 2_000;
@@ -172,7 +182,7 @@ let CombatService = class CombatService {
         const wallLevel = defenderBuildings.find(b => b.type === building_entity_1.BuildingType.WALL)?.level ?? 0;
         const wallBonus = wallLevel * game_constants_1.WALL_DEFENSE_BONUS_PER_LEVEL;
         const arcaneLevel = attackerBuildings.find(b => b.type === building_entity_1.BuildingType.ARCANE_TOWER)?.level ?? 0;
-        const arcaneMult = 1 + arcaneLevel * 0.1;
+        const arcaneMult = 1 + arcaneLevel * 0.05;
         const watchTowerLevel = defenderBuildings.find(b => b.type === building_entity_1.BuildingType.WATCH_TOWER)?.level ?? 0;
         const watchTowerMult = 1 + watchTowerLevel * 0.1;
         let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * (game_constants_1.UNIT_STATS[u.type]?.attackPower ?? 0), 0) * arcaneMult;
@@ -212,8 +222,9 @@ let CombatService = class CombatService {
         const losses = {};
         for (const unit of units) {
             if (unit.count > 0) {
-                const raw = unit.count * lossRate;
-                losses[unit.type] = unit.count === 1 ? Math.round(raw) : Math.floor(raw);
+                const rate = unit_entity_1.HERO_TYPES.has(unit.type) ? lossRate * 0.5 : lossRate;
+                const raw = unit.count * rate;
+                losses[unit.type] = Math.round(raw);
             }
         }
         return losses;
@@ -324,7 +335,9 @@ exports.CombatService = CombatService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(unit_entity_1.Unit)),
     __param(2, (0, typeorm_1.InjectRepository)(building_entity_1.Building)),
     __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(4, (0, typeorm_1.InjectRepository)(alliance_member_entity_1.AllianceMember)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

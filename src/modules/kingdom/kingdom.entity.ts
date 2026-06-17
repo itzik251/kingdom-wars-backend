@@ -88,6 +88,9 @@ export class Kingdom {
   @Column({ name: 'attack_speed_boost_until', nullable: true })
   attackSpeedBoostUntil: Date;
 
+  @Column({ name: 'storage_boost_until', nullable: true })
+  storageBoostUntil: Date;
+
   @Column({ name: 'withdrawal_wallet', nullable: true })
   withdrawalWallet: string;
 
@@ -111,6 +114,12 @@ export class Kingdom {
 
   @Column({ name: 'explorer_training_ends_at', nullable: true })
   explorerTrainingEndsAt: Date;
+
+  @Column({ name: 'explorer_training_count', default: 0 })
+  explorerTrainingCount: number;
+
+  @Column({ name: 'explorer_training_queue', type: 'text', nullable: true })
+  explorerTrainingQueueJson: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

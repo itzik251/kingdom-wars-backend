@@ -178,6 +178,17 @@ export class EconomyService {
     // Complete finished repairs
     await this.completeRepairs(buildings, now);
 
+    // Reload storage caps in case completeBuildingUpgrades updated them (prevents overwrite)
+    if (completedBuildings.length > 0) {
+      const fresh = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+      if (fresh) {
+        kingdom.maxGold  = fresh.maxGold;
+        kingdom.maxWood  = fresh.maxWood;
+        kingdom.maxStone = fresh.maxStone;
+        kingdom.maxFood  = fresh.maxFood;
+      }
+    }
+
     const saved = await this.kingdomRepo.save(kingdom);
 
     // Send push notifications if we have a userId (from cron or passed by caller)
@@ -313,7 +324,7 @@ export class EconomyService {
         if (building.type === BuildingType.TOWN_HALL) {
           const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
           if (kingdom) {
-            const mult = 1 + (building.level - 1) * 0.6;
+            const mult = 1 + (building.level - 1) * 3.2;
             kingdom.maxGold  = Math.floor(5000 * mult);
             kingdom.maxWood  = Math.floor(4000 * mult);
             kingdom.maxStone = Math.floor(3000 * mult);

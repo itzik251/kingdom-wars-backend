@@ -2,9 +2,11 @@
   "name": "kingdom-wars-backend",
   "version": "1.0.1",
   "scripts": {
-    "build": "echo build skipped - dist pre-compiled",
+    "build": "npx tsc -p tsconfig.build.json",
     "start": "node dist/src/main.js",
-    "start:dev": "ts-node -r tsconfig-paths/register src/main.ts"
+    "start:dev": "ts-node -r tsconfig-paths/register src/main.ts",
+    "deploy": "node deploy.js",
+    "deploy:fe": "node deploy-frontend.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

@@ -25,6 +25,7 @@ export class UnitsService {
     ]);
 
     if (!barracks) throw new BadRequestException('No Barracks');
+    if (kingdom.strikeStartedAt) throw new BadRequestException('strike_active');
 
     const stats = UNIT_STATS[unitType];
     if (barracks.level < stats.requiredBarracksLevel) {
@@ -67,7 +68,11 @@ export class UnitsService {
     await this.kingdomRepo.save(kingdom);
 
     const baseTrainingSeconds = stats.trainingTime * amount;
-    const trainingSeconds = isVip ? Math.ceil(baseTrainingSeconds * 0.5) : baseTrainingSeconds;
+    // Barracks level bonus: -2% training time per level (max -58% at L30)
+    const barracksDiscount = Math.min(0.58, (barracks.level - 1) * 0.02);
+    const trainingSeconds = isVip
+      ? Math.ceil(baseTrainingSeconds * (1 - barracksDiscount) * 0.5)
+      : Math.ceil(baseTrainingSeconds * (1 - barracksDiscount));
     if (unitRow.trainingEndsAt && new Date() < unitRow.trainingEndsAt) {
       // Stack on existing training queue instead of blocking
       unitRow.trainingCount += amount;

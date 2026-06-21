@@ -2,6 +2,7 @@ import { Controller, Get, Post, Delete, Body, UseGuards, Request, BadRequestExce
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { KingdomService } from './kingdom.service';
 import { WithdrawalService } from '../withdrawal/withdrawal.service';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('kingdom')
 @UseGuards(JwtAuthGuard)
@@ -9,6 +10,7 @@ export class KingdomController {
   constructor(
     private kingdomService: KingdomService,
     private withdrawalService: WithdrawalService,
+    private config: ConfigService,
   ) {}
 
   @Get()
@@ -79,6 +81,12 @@ export class KingdomController {
     return this.kingdomService.upgradeGemForge(kingdom.id, body.buildingId);
   }
 
+  @Post('exchange-gems')
+  async exchangeGems(@Request() req, @Body() body: { resource: 'gold' | 'wood' | 'stone' | 'food'; amount: number }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.exchangeGems(kingdom.id, body.resource, body.amount);
+  }
+
   @Post('buy-gems')
   async buyGems(@Request() req, @Body() body: { gems: number }) {
     const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
@@ -110,5 +118,28 @@ export class KingdomController {
   @Post('withdraw-usdt')
   withdrawUsdt() {
     throw new BadRequestException('נא להשתמש בטופס המשיכה החדש עם כתובת ארנק');
+  }
+
+  @Post('use-magic')
+  async useMagic(@Request() req, @Body() body: { amount: number }) {
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    return this.kingdomService.useMagic(kingdom.id, body.amount ?? 1);
+  }
+
+  @Post('contact')
+  async sendContact(@Request() req, @Body() body: { subject: string; message: string }) {
+    const { subject, message } = body;
+    if (!subject?.trim() || !message?.trim()) throw new BadRequestException('subject and message required');
+    const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    const adminId = this.config.get<string>('ADMIN_TELEGRAM_ID');
+    if (!botToken || !adminId) return { ok: true };
+    const { kingdom } = await this.kingdomService.getKingdomByUser(req.user.userId);
+    const text = `📩 <b>פנייה חדשה מהמשחק</b>\n\n👤 ממלכה: <b>${kingdom?.name ?? 'unknown'}</b>\n📌 נושא: ${subject}\n\n${message}`;
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: adminId, text, parse_mode: 'HTML' }),
+    });
+    return { ok: true };
   }
 }

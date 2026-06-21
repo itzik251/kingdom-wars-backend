@@ -121,6 +121,16 @@ export class Kingdom {
   @Column({ name: 'explorer_training_queue', type: 'text', nullable: true })
   explorerTrainingQueueJson: string;
 
+  // Strike system
+  @Column({ name: 'strike_started_at', nullable: true })
+  strikeStartedAt: Date;
+
+  @Column({ name: 'strike_notified_at', nullable: true })
+  strikeNotifiedAt: Date;
+
+  @Column({ name: 'strike_removal_notified_at', nullable: true })
+  strikeRemovalNotifiedAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

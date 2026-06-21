@@ -145,23 +145,23 @@
     </div>
     <div class="table-wrap">
     <table>
-      <thead>
+      <thead id="usersTableHead">
         <tr>
-          <th>שם / יוזר</th>
-          <th>Telegram ID</th>
-          <th>ממלכה</th>
-          <th>שפה</th>
-          <th>ניקוד</th>
-          <th>💎</th>
-          <th>💰</th>
-          <th>🪵</th>
-          <th>🪨</th>
-          <th>🌾</th>
-          <th>💵 USDT</th>
-          <th>VIP</th>
-          <th>תקנון</th>
-          <th>הפניות</th>
-          <th>כניסה</th>
+          <th data-col="name" onclick="sortUsers('name')">שם / יוזר<span class="sort-arrow"></span></th>
+          <th data-col="telegramId" onclick="sortUsers('telegramId')">Telegram ID<span class="sort-arrow"></span></th>
+          <th data-col="kingdomName" onclick="sortUsers('kingdomName')">ממלכה<span class="sort-arrow"></span></th>
+          <th data-col="language" onclick="sortUsers('language')">שפה<span class="sort-arrow"></span></th>
+          <th data-col="score" onclick="sortUsers('score')">ניקוד<span class="sort-arrow"></span></th>
+          <th data-col="gems" onclick="sortUsers('gems')">💎<span class="sort-arrow"></span></th>
+          <th data-col="gold" onclick="sortUsers('gold')">💰<span class="sort-arrow"></span></th>
+          <th data-col="wood" onclick="sortUsers('wood')">🪵<span class="sort-arrow"></span></th>
+          <th data-col="stone" onclick="sortUsers('stone')">🪨<span class="sort-arrow"></span></th>
+          <th data-col="food" onclick="sortUsers('food')">🌾<span class="sort-arrow"></span></th>
+          <th data-col="usdtBalance" onclick="sortUsers('usdtBalance')">💵 USDT<span class="sort-arrow"></span></th>
+          <th data-col="isVip" onclick="sortUsers('isVip')">VIP<span class="sort-arrow"></span></th>
+          <th data-col="termsAccepted" onclick="sortUsers('termsAccepted')">תקנון<span class="sort-arrow"></span></th>
+          <th data-col="referralsActive" onclick="sortUsers('referralsActive')">הפניות<span class="sort-arrow"></span></th>
+          <th data-col="lastLogin" onclick="sortUsers('lastLogin')">כניסה<span class="sort-arrow"></span></th>
           <th>פעולות</th>
         </tr>
       </thead>
@@ -326,22 +326,59 @@ function renderStats(data) {
   `).join('');
 }
 
+let SORT_FIELD = 'lastLogin';
+let SORT_DIR = -1; // -1 = desc (newest first), 1 = asc
+
+function sortUsers(field) {
+  if (SORT_FIELD === field) { SORT_DIR *= -1; }
+  else { SORT_FIELD = field; SORT_DIR = field === 'lastLogin' ? -1 : 1; }
+  renderSortHeaders();
+  filterUsers();
+}
+
+function renderSortHeaders() {
+  const COLS = ['name','telegramId','kingdomName','language','score','gems','gold','wood','stone','food','usdtBalance','isVip','termsAccepted','referralsActive','lastLogin'];
+  document.querySelectorAll('#usersTableHead th[data-col]').forEach(th => {
+    const col = th.dataset.col;
+    const arrow = col === SORT_FIELD ? (SORT_DIR === 1 ? ' ▲' : ' ▼') : '';
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.style.color = col === SORT_FIELD ? '#5dade2' : '';
+    // update only the arrow span
+    const span = th.querySelector('.sort-arrow');
+    if (span) span.textContent = arrow;
+  });
+}
+
+function applySort(users) {
+  if (!SORT_FIELD) return users;
+  return [...users].sort((a, b) => {
+    let av = a[SORT_FIELD], bv = b[SORT_FIELD];
+    if (av == null) av = SORT_DIR === 1 ? Infinity : -Infinity;
+    if (bv == null) bv = SORT_DIR === 1 ? Infinity : -Infinity;
+    if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * SORT_DIR;
+    return (av > bv ? 1 : av < bv ? -1 : 0) * SORT_DIR;
+  });
+}
+
 async function loadUsers() {
   document.getElementById('usersTable').innerHTML = '<tr><td colspan="15" class="loading">טוען...</td></tr>';
   const r = await fetch(API + '/users', { headers: h() });
   ALL_USERS = await r.json();
-  renderUsers(ALL_USERS);
+  renderSortHeaders();
+  filterUsers();
 }
 
 function filterUsers() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  if (!q) { renderUsers(ALL_USERS); return; }
-  renderUsers(ALL_USERS.filter(u =>
+  let list = ALL_USERS;
+  if (q) list = list.filter(u =>
     (u.name||'').toLowerCase().includes(q) ||
     (u.username||'').toLowerCase().includes(q) ||
     (u.telegramId||'').includes(q) ||
     (u.kingdomName||'').toLowerCase().includes(q)
-  ));
+  );
+  renderUsers(applySort(list));
 }
 
 function renderUsers(users) {
@@ -388,6 +425,8 @@ function renderUsers(users) {
           </div>
           <button class="btn-sm btn-gold" onclick="giveVip('${u.telegramId}','${u.name||'?'}')">👑 תן VIP</button>
           <button class="btn-sm btn-purple" onclick="removeVip('${u.telegramId}','${u.name||'?'}')">👑 הסר VIP</button>
+          <button class="btn-sm" style="background:#0a1f2e;color:#5dade2;border:1px solid #5dade2" onclick="giveShield('${u.telegramId}','${u.name||'?'}')">🛡️ תן מגן</button>
+          <button class="btn-sm" style="background:#1a1a0a;color:#aaa;border:1px solid #666" onclick="removeShield('${u.telegramId}','${u.name||'?'}')">🛡️ הסר מגן</button>
           <button class="btn-sm btn-danger" onclick="banUser('${u.telegramId}','${u.name||'?'}')">🚫 חסום</button>
           <button class="btn-sm" style="background:#1a0a0a;color:#e74c3c;border:1px solid #e74c3c" onclick="deleteUser('${u.telegramId}','${u.name||'?'}')">🗑️ מחק</button>
         </div>
@@ -492,6 +531,26 @@ async function deleteUser(telegramId, name) {
   const r = await fetch(API + '/delete/' + telegramId, { method: 'POST', headers: h() });
   const d = await r.json();
   if (d.deleted) { showToast('🗑️ משתמש נמחק: ' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+}
+
+async function giveShield(telegramId, name) {
+  const hours = prompt('כמה שעות מגן לתת ל-' + name + '?', '24');
+  if (!hours) return;
+  const r = await fetch(API + '/give-shield/' + telegramId, {
+    method: 'POST', headers: h(),
+    body: JSON.stringify({ hours: parseInt(hours) })
+  });
+  const d = await r.json();
+  if (d.success) { showToast('🛡️ מגן ל-' + hours + 'ש׳ ניתן ל-' + name); loadUsers(); }
+  else showToast('❌ שגיאה: ' + JSON.stringify(d));
+}
+
+async function removeShield(telegramId, name) {
+  if (!confirm('להסיר מגן מ-' + name + '?')) return;
+  const r = await fetch(API + '/remove-shield/' + telegramId, { method: 'POST', headers: h() });
+  const d = await r.json();
+  if (d.success) { showToast('🛡️ מגן הוסר מ-' + name); loadUsers(); }
   else showToast('❌ שגיאה: ' + JSON.stringify(d));
 }
 

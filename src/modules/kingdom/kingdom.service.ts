@@ -173,10 +173,26 @@ export class KingdomService {
     throw new BadRequestException('השתמש ב-request-withdrawal עם כתובת ארנק');
   }
 
+  async exchangeGems(kingdomId: string, resource: 'gold' | 'wood' | 'stone' | 'food', amount: number) {
+    const GEMS_PER_PACK = 10;
+    const RESOURCES_PER_PACK = 500;
+    if (!['gold', 'wood', 'stone', 'food'].includes(resource)) throw new BadRequestException('Invalid resource');
+    if (amount <= 0 || amount % RESOURCES_PER_PACK !== 0) throw new BadRequestException(`Amount must be a multiple of ${RESOURCES_PER_PACK}`);
+    const packs = amount / RESOURCES_PER_PACK;
+    const gemsCost = packs * GEMS_PER_PACK;
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (kingdom.gems < gemsCost) throw new BadRequestException('Not enough gems');
+    kingdom.gems -= gemsCost;
+    kingdom[resource] = Math.min(kingdom[`max${resource.charAt(0).toUpperCase() + resource.slice(1)}`], kingdom[resource] + amount);
+    await this.kingdomRepo.save(kingdom);
+    this.auditService.log(AuditAction.EXCHANGE_GEMS, kingdomId, { gemsCost, resource, amount });
+    return { gems: kingdom.gems, [resource]: kingdom[resource] };
+  }
+
   async buyShield(kingdomId: string) {
     const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
-    const SHIELD_COST = 50;
-    if (kingdom.gems < SHIELD_COST) throw new BadRequestException('Need 50 gems');
+    const SHIELD_COST = 200;
+    if (kingdom.gems < SHIELD_COST) throw new BadRequestException('Need 200 gems');
     kingdom.gems -= SHIELD_COST;
     const base = kingdom.shieldUntil && new Date() < new Date(kingdom.shieldUntil)
       ? new Date(kingdom.shieldUntil) : new Date();
@@ -349,5 +365,13 @@ export class KingdomService {
 
   async clearMessages(userId: string) {
     return this.notifService.clearMessages(userId);
+  }
+
+  async useMagic(kingdomId: string, amount: number) {
+    const kingdom = await this.kingdomRepo.findOne({ where: { id: kingdomId } });
+    if (!kingdom) throw new Error('Kingdom not found');
+    kingdom.magic = Math.max(0, (kingdom.magic ?? 0) - amount);
+    await this.kingdomRepo.save(kingdom);
+    return { magic: kingdom.magic };
   }
 }

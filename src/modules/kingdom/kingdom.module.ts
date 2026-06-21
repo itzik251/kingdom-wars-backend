@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { KingdomController } from './kingdom.controller';
 import { KingdomService } from './kingdom.service';
@@ -12,7 +13,7 @@ import { AuditModule } from '../audit/audit.module';
 import { WithdrawalModule } from '../withdrawal/withdrawal.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule, AuditModule, WithdrawalModule],
+  imports: [ConfigModule, TypeOrmModule.forFeature([Kingdom, Building, Unit, User]), EconomyModule, NotificationModule, AuditModule, WithdrawalModule],
   controllers: [KingdomController],
   providers: [KingdomService],
   exports: [KingdomService],

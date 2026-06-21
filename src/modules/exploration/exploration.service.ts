@@ -88,10 +88,10 @@ export function generateKingdomMap(kingdomId: string): Omit<MapNode, 'id' | 'dis
       heroType = EXPLORATION_HEROES[heroesPlaced];
       heroesPlaced++;
     } else if (r < 0.12) {
-      // Rare resource (magic)
+      // Rare resource (magic) — fixed 3 per collection (24h cooldown)
       type = MapNodeType.RARE_RESOURCE;
       resourceType = 'magic';
-      amount = Math.floor(200 + rand() * 800);
+      amount = 3;
     } else {
       // Regular resource
       type = MapNodeType.RESOURCE;
@@ -366,7 +366,8 @@ export class ExplorationService {
     const gained: Record<string, number> = {};
 
     if (node.resourceType === 'magic') {
-      const amt = Math.min(node.amount, kingdom.maxMagic - (kingdom.magic ?? 0));
+      const MAGIC_PER_COLLECTION = 3;
+      const amt = Math.min(MAGIC_PER_COLLECTION, kingdom.maxMagic - (kingdom.magic ?? 0));
       kingdom.magic = (kingdom.magic ?? 0) + amt;
       gained.magic = amt;
     } else if (node.resourceType === 'gold') {

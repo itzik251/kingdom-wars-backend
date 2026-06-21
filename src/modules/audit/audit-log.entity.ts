@@ -14,6 +14,7 @@ export enum AuditAction {
   BUY_VIP        = 'buy_vip',
   EXPAND_STORAGE = 'expand_storage',
   HIRE_WORKER    = 'hire_worker',
+  EXCHANGE_GEMS  = 'exchange_gems',
 }
 
 @Entity('audit_logs')
@@ -30,7 +31,7 @@ export class AuditLog {
   @Column({ type: 'varchar' })
   action: AuditAction;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: process.env.NODE_ENV === 'production' ? 'jsonb' : ('simple-json' as any), nullable: true })
   details: Record<string, any>;
 
   @CreateDateColumn({ name: 'created_at' })

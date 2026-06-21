@@ -33,7 +33,7 @@ async function bootstrap() {
   // JS/CSS assets: long-lived cache (they have hashed filenames)
   app.useStaticAssets(join(__dirname, '..', '..', 'public'), {
     setHeaders: (res, path) => {
-      if (path.endsWith('index.html')) {
+      if (path.endsWith('index.html') || path.endsWith('version.json')) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');

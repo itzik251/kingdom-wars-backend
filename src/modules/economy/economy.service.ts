@@ -138,19 +138,141 @@ export class EconomyService {
 
     kingdom.lastResourceTick = now;
 
-    // Food shortage: soldiers desert (lose 0.5% per food unit short, max 5% per tick)
-    if (foodShortfall > 0) {
-      const desertionRate = Math.min(0.05, foodShortfall * 0.005);
-      let desertionChanged = false;
-      for (const unit of units) {
-        if (unit.count > 0 && !HERO_TYPES.has(unit.type as any)) {
-          const lost = Math.max(1, Math.floor(unit.count * desertionRate));
-          unit.count = Math.max(0, unit.count - lost);
-          desertionChanged = true;
-        }
+    // ── Strike system ──────────────────────────────────────────────
+    const workerSalaryPerHour = workerCount * 5;
+    const hourlyUpkeepCheck = this.calculateUpkeep(units, 1);
+    const heroUnitsAll = units.filter(u => HERO_TYPES.has(u.type as any) && u.count > 0);
+    const isGoldShortfall = workerCount > 0 && kingdom.gold <= 0 && workerSalaryPerHour > 0;
+    const isFoodShortfall = hourlyUpkeepCheck > 0 && kingdom.food <= 0;
+    const isGemShortfall  = heroUnitsAll.length > 0 && (kingdom.gems ?? 0) <= 0;
+    const isInStrike = isGoldShortfall || isFoodShortfall || isGemShortfall;
+
+    if (isInStrike && !kingdom.strikeStartedAt) {
+      kingdom.strikeStartedAt = now;
+      kingdom.strikeNotifiedAt = null;
+      kingdom.strikeRemovalNotifiedAt = null;
+      if (userId) {
+        const user2 = userObj ?? await this.userRepo?.findOne({ where: { id: userId } }).catch(() => null);
+        const up2 = user2 ? { telegramId: user2.telegramId, language: user2.language || 'en' } : {};
+        this.notifService.create(userId, 'strike_started', { ...up2 }).catch(() => {});
+        kingdom.strikeNotifiedAt = now;
       }
-      if (desertionChanged) {
-        await this.unitRepo.save(units.filter(u => u.count >= 0));
+    } else if (!isInStrike && kingdom.strikeStartedAt) {
+      // Resources restored — end strike
+      kingdom.strikeStartedAt = null;
+      kingdom.strikeNotifiedAt = null;
+      kingdom.strikeRemovalNotifiedAt = null;
+    }
+
+    // 72h passed — remove cheapest units gradually (1 batch per tick)
+    if (kingdom.strikeStartedAt && isInStrike) {
+      const strikeMs = now.getTime() - new Date(kingdom.strikeStartedAt).getTime();
+      const STRIKE_REMOVAL_DELAY_MS = 72 * 3_600_000;
+      const REMOVAL_WARNING_MS = (72 - 6) * 3_600_000; // 6h before removal
+
+      // Send 6h-warning once
+      if (strikeMs >= REMOVAL_WARNING_MS && !kingdom.strikeRemovalNotifiedAt && userId) {
+        const user3 = userObj ?? await this.userRepo?.findOne({ where: { id: userId } }).catch(() => null);
+        const up3 = user3 ? { telegramId: user3.telegramId, language: user3.language || 'en' } : {};
+        this.notifService.create(userId, 'strike_removal_warning', { ...up3 }).catch(() => {});
+        kingdom.strikeRemovalNotifiedAt = now;
+      }
+
+      // Start removing units after 72h
+      if (strikeMs >= STRIKE_REMOVAL_DELAY_MS) {
+        const hourlyFoodProduction = hoursElapsed > 0 ? (production.food * bonus) / hoursElapsed : 0;
+        let currentHourlyUpkeep = this.calculateUpkeep(units, 1);
+        const userForNotif = userId ? (userObj ?? await this.userRepo?.findOne({ where: { id: userId } }).catch(() => null)) : null;
+        const notifPayload = userForNotif ? { telegramId: userForNotif.telegramId, language: userForNotif.language || 'en' } : {};
+
+        // ── Food shortfall: regular soldiers first, then heroes ──
+        if (isFoodShortfall) {
+          const regularUnits = units.filter(u => u.count > 0 && !HERO_TYPES.has(u.type as any));
+          regularUnits.sort((a, b) => (UNIT_STATS[a.type]?.upkeep ?? 0) - (UNIT_STATS[b.type]?.upkeep ?? 0));
+          let removedSoldiers = 0;
+
+          for (const unit of regularUnits) {
+            if (currentHourlyUpkeep <= hourlyFoodProduction) break;
+            const upkeepPerUnit = UNIT_STATS[unit.type]?.upkeep ?? 0;
+            if (upkeepPerUnit === 0 || unit.count === 0) continue;
+            const deficit = currentHourlyUpkeep - hourlyFoodProduction;
+            const needed = Math.ceil(deficit / upkeepPerUnit);
+            const cut = Math.min(unit.count, needed);
+            unit.count -= cut;
+            currentHourlyUpkeep -= cut * upkeepPerUnit;
+            removedSoldiers += cut;
+          }
+
+          // If still in deficit after all regular soldiers — remove heroes too
+          let removedHeroes = 0;
+          if (currentHourlyUpkeep > hourlyFoodProduction) {
+            const heroByUpkeep = units.filter(u => u.count > 0 && HERO_TYPES.has(u.type as any));
+            heroByUpkeep.sort((a, b) => (UNIT_STATS[a.type]?.upkeep ?? 0) - (UNIT_STATS[b.type]?.upkeep ?? 0));
+            for (const unit of heroByUpkeep) {
+              if (currentHourlyUpkeep <= hourlyFoodProduction) break;
+              const upkeepPerUnit = UNIT_STATS[unit.type]?.upkeep ?? 0;
+              if (upkeepPerUnit === 0 || unit.count === 0) continue;
+              unit.count -= 1;
+              currentHourlyUpkeep -= upkeepPerUnit;
+              removedHeroes++;
+            }
+          }
+
+          if (removedSoldiers > 0 || removedHeroes > 0) {
+            await this.unitRepo.save(units);
+            const remainingDeficit = Math.max(0, currentHourlyUpkeep - hourlyFoodProduction);
+            const unitsAfter = units.filter(u => u.count > 0 && !HERO_TYPES.has(u.type as any));
+            let stillAtRisk = 0;
+            let tempDeficit = remainingDeficit;
+            for (const unit of [...unitsAfter].sort((a, b) => (UNIT_STATS[a.type]?.upkeep ?? 0) - (UNIT_STATS[b.type]?.upkeep ?? 0))) {
+              if (tempDeficit <= 0) break;
+              const upkeepPerUnit = UNIT_STATS[unit.type]?.upkeep ?? 0;
+              if (upkeepPerUnit === 0) continue;
+              const at = Math.min(unit.count, Math.ceil(tempDeficit / upkeepPerUnit));
+              stillAtRisk += at;
+              tempDeficit -= at * upkeepPerUnit;
+            }
+            if (userId) {
+              if (removedSoldiers > 0) {
+                this.notifService.create(userId, 'soldiers_deserted', { ...notifPayload, left: removedSoldiers, remaining: stillAtRisk }).catch(() => {});
+              }
+              if (removedHeroes > 0) {
+                this.notifService.create(userId, 'heroes_deserted_food', { ...notifPayload, left: removedHeroes }).catch(() => {});
+              }
+            }
+          }
+        }
+
+        // ── Gem shortfall: remove one hero per tick (most expensive gem salary first) ──
+        if (isGemShortfall) {
+          const heroByGemCost = units.filter(u => u.count > 0 && HERO_TYPES.has(u.type as any));
+          heroByGemCost.sort((a, b) => (HERO_SALARY_GEMS[b.type] ?? 0) - (HERO_SALARY_GEMS[a.type] ?? 0));
+          if (heroByGemCost.length > 0) {
+            heroByGemCost[0].count = Math.max(0, heroByGemCost[0].count - 1);
+            await this.unitRepo.save([heroByGemCost[0]]);
+            if (userId) {
+              this.notifService.create(userId, 'heroes_deserted_gems', { ...notifPayload, hero: heroByGemCost[0].type }).catch(() => {});
+            }
+          }
+        }
+
+        // ── Gold shortfall: fire one worker per tick ──
+        if (isGoldShortfall && kingdom.workers > 0) {
+          kingdom.workers = Math.max(0, kingdom.workers - 1);
+          if (userId) {
+            this.notifService.create(userId, 'worker_deserted', { ...notifPayload }).catch(() => {});
+          }
+        }
+
+        // End strike if fully resolved
+        const isGemShortfallNow  = units.filter(u => HERO_TYPES.has(u.type as any) && u.count > 0).length > 0 && (kingdom.gems ?? 0) <= 0;
+        const isGoldShortfallNow = kingdom.workers > 0 && kingdom.gold <= 0;
+        const balanceAchieved = currentHourlyUpkeep <= hourlyFoodProduction && !isGoldShortfallNow && !isGemShortfallNow;
+        if (balanceAchieved) {
+          kingdom.strikeStartedAt = null;
+          kingdom.strikeNotifiedAt = null;
+          kingdom.strikeRemovalNotifiedAt = null;
+        }
       }
     }
 
@@ -197,10 +319,14 @@ export class EconomyService {
       const user = userObj ?? await this.userRepo?.findOne({ where: { id: resolvedUserId } }).catch(() => null);
       const userPayload = user ? { telegramId: user.telegramId, language: user.language || 'en' } : {};
 
-      // Low food warning — only from cron (userId passed), once per ~5 ticks to avoid spam
+      // Low food warning — once per 24h
       const hasSoldiers = units.some(u => !HERO_TYPES.has(u.type) && u.count > 0);
       if (userId && hasSoldiers && kingdom.food <= 0 && foodShortfall > 0) {
-        this.notifService.create(resolvedUserId, 'low_food', { ...userPayload }).catch(() => {});
+        const lastFoodNotif = await this.notifRepo.findOne({ where: { user: { id: resolvedUserId }, type: 'low_food' }, order: { createdAt: 'DESC' } });
+        const foodCooldownOk = !lastFoodNotif || Date.now() - new Date(lastFoodNotif.createdAt).getTime() > NOTIF_COOLDOWN_MS;
+        if (foodCooldownOk) {
+          this.notifService.create(resolvedUserId, 'low_food', { ...userPayload }).catch(() => {});
+        }
       }
 
       // Low gems warning — once per 24h, only when gems < 12h of salary AND production doesn't cover salary

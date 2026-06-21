@@ -296,6 +296,32 @@ export class AdminController {
     return this.giveResource(telegramId, 'vip', body.days || VIP_DURATION_DAYS, headers);
   }
 
+  @Post('give-shield/:telegramId')
+  async giveShield(@Headers() headers: any, @Param('telegramId') telegramId: string, @Body() body: { hours?: number }) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+    if (!kingdom) return { error: 'Kingdom not found' };
+    const hours = body.hours || 24;
+    const from = Math.max(Date.now(), kingdom.shieldUntil?.getTime() ?? 0);
+    kingdom.shieldUntil = new Date(from + hours * 3_600_000);
+    await this.kingdomRepo.save(kingdom);
+    return { success: true, shieldUntil: kingdom.shieldUntil };
+  }
+
+  @Post('remove-shield/:telegramId')
+  async removeShield(@Headers() headers: any, @Param('telegramId') telegramId: string) {
+    this.guard(headers);
+    const user = await this.userRepo.findOne({ where: { telegramId } });
+    if (!user) return { error: 'User not found' };
+    const kingdom = await this.kingdomRepo.findOne({ where: { user: { id: user.id } } });
+    if (!kingdom) return { error: 'Kingdom not found' };
+    kingdom.shieldUntil = null;
+    await this.kingdomRepo.save(kingdom);
+    return { success: true };
+  }
+
   @Post('remove-vip/:telegramId')
   async removeVip(@Headers() headers: any, @Param('telegramId') telegramId: string) {
     this.guard(headers);

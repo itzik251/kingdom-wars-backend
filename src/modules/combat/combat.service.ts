@@ -67,6 +67,7 @@ export class CombatService {
     ]);
 
     if (!attacker || !defender) throw new BadRequestException('Kingdom not found');
+    if (attacker.strikeStartedAt) throw new BadRequestException('STRIKE_ACTIVE');
     if (defender.isShielded) throw new BadRequestException('Defender is shielded');
 
     // Alliance protection — cannot attack alliance members
@@ -235,9 +236,9 @@ export class CombatService {
     const arcaneLevel = attackerBuildings.find(b => b.type === BuildingType.ARCANE_TOWER)?.level ?? 0;
     const arcaneMult = 1 + arcaneLevel * 0.05;
 
-    // Watch Tower: +10% defense power multiplier per level
+    // Watch Tower: +5% defense power multiplier per level (L30 = ×2.5)
     const watchTowerLevel = defenderBuildings.find(b => b.type === BuildingType.WATCH_TOWER)?.level ?? 0;
-    const watchTowerMult = 1 + watchTowerLevel * 0.1;
+    const watchTowerMult = 1 + watchTowerLevel * 0.05;
 
     let attackPower = attackerUnits.reduce((sum, u) => sum + u.count * (UNIT_STATS[u.type]?.attackPower ?? 0), 0) * arcaneMult;
     let defensePower =
@@ -347,9 +348,26 @@ export class CombatService {
       report.streakBonus = 0;
     }
 
-    defender.shieldUntil = new Date(Date.now() + POST_ATTACK_SHIELD_HOURS * 3_600_000);
     attacker.lastAttackAt = new Date();
     await this.kingdomRepo.save([attacker, defender]);
+
+    // Set post-attack shield — on Postgres use atomic GREATEST to survive cron races.
+    const shieldUntil = new Date(Date.now() + POST_ATTACK_SHIELD_HOURS * 3_600_000);
+    const isPostgres = this.kingdomRepo.manager.connection.options.type === 'postgres';
+    if (isPostgres) {
+      await this.kingdomRepo
+        .createQueryBuilder()
+        .update()
+        .set({ shieldUntil: () => `GREATEST(COALESCE(shield_until, NOW()), :su)` })
+        .where('id = :id', { id: defender.id })
+        .setParameter('su', shieldUntil.toISOString())
+        .execute();
+    } else {
+      const current = defender.shieldUntil ? new Date(defender.shieldUntil).getTime() : 0;
+      defender.shieldUntil = new Date(Math.max(current, shieldUntil.getTime()));
+      await this.kingdomRepo.save(defender);
+    }
+    defender.shieldUntil = shieldUntil;
 
     this.auditService.log(AuditAction.COMBAT, attacker.id, {
       defenderKingdomId: defender.id,

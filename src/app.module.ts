@@ -22,6 +22,8 @@ import { AntiBotModule } from './modules/antibot/antibot.module';
 import { DevModule } from './modules/dev/dev.module';
 import { ExplorationModule } from './modules/exploration/exploration.module';
 import { WithdrawalModule } from './modules/withdrawal/withdrawal.module';
+import { WorldEventModule } from './modules/world-event/world-event.module';
+import { TradeModule } from './modules/trade/trade.module';
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { WithdrawalModule } from './modules/withdrawal/withdrawal.module';
     DevModule,
     ExplorationModule,
     WithdrawalModule,
+    WorldEventModule,
+    TradeModule,
   ],
 })
 export class AppModule {}
